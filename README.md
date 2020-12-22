@@ -10,3 +10,6 @@ $ zsh <br>
 
 ## image of terminal
 ![sample](https://user-images.githubusercontent.com/69618840/102887977-397c5000-449b-11eb-8815-3b5d7d3ec5ab.png)
+
+## image of vim
+![sample]()
