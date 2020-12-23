@@ -17,3 +17,5 @@ export PATH=$HOME/bin:usr/bin:/usr/local/bin:$PATH
 eval "$(anyenv init -)"
 # mysql
 export PATH="/usr/local/opt/mysql@5.6/bin:$PATH"
+# npm-global
+export PATH=$HOME/.npm-global/bin:$PATH
