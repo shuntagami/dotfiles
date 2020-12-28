@@ -16,25 +16,15 @@ brew upgrade --all
 formulas=(
     git
     anyenv
-    openssl
     docker
     docker-compose
-    z
-    colordiff
-    "--without-etcdir zsh"
-    zsh-completions
-    "--with-cocoa --srgb emacs"
     cask
+    mas
     hub
-    tig
-    node
     python3
     lua
     "vim --with-lua"
     mysql
-    composer
-    markdown
-    mecab
 )
 
 "brew tap..."
@@ -57,6 +47,8 @@ casks=(
     slack
     iterm2
     clipy
+    kindle
+    adobe-acrobat-reader
     visual-studio-code
     docker
 )

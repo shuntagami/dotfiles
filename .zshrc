@@ -12,8 +12,8 @@ fi
 
 # Customize to your needs...
 # path
-# export PATH=$HOME/bin:usr/bin:/usr/local/bin:$PATH
-export PATH=$HOME/bin:usr/local/bin:/usr/bin:$PATH
+# Homebrew
+export PATH=/usr/local/bin:$PATH
 # anyenv
 # mysql
 export PATH="/usr/local/opt/mysql@5.6/bin:$PATH"
