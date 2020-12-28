@@ -19,3 +19,4 @@ eval "$(anyenv init -)"
 export PATH="/usr/local/opt/mysql@5.6/bin:$PATH"
 # npm-global
 export PATH=$HOME/.npm-global/bin:$PATH
+export EDITOR="vim"
