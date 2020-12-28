@@ -1,15 +1,15 @@
 #!/bin/bash
 
-echo "installing homebrew..."
+echo installing homebrew...
 which brew >/dev/null 2>&1 || /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
-echo "run brew doctor..."
+echo run brew doctor...
 which brew >/dev/null 2>&1 && brew doctor
 
-echo "run brew update..."
+echo run brew update...
 which brew >/dev/null 2>&1 && brew update
 
-echo "ok. run brew upgrade..."
+echo ok. run brew upgrade...
 
 brew upgrade --all
 
@@ -23,7 +23,7 @@ formulas=(
     hub
     python3
     lua
-    "vim --with-lua"
+    vim
     mysql
 )
 
@@ -34,7 +34,7 @@ brew tap homebrew/homebrew-php
 brew tap homebrew/apache
 brew tap sanemat/font
 
-echo "start brew install apps..."
+echo start brew install apps...
 for formula in "${formulas[@]}"; do
     brew install $formula || brew upgrade $formula
 done
@@ -42,6 +42,7 @@ done
 casks=(
     dropbox
     evernote
+    gyazo
     google-chrome
     google-japanese-ime
     slack
@@ -51,12 +52,17 @@ casks=(
     adobe-acrobat-reader
     visual-studio-code
     docker
+    sequel-pro
+    zoom
 )
 
-echo "start brew cask install apps..."
+echo start brew cask install apps...
 for cask in "${casks[@]}"; do
     brew cask install $cask
 done
+
+echo Installing Apps from the App Store...
+mas install 539883307 #LINE
 
 brew cleanup
 brew cask cleanup
@@ -64,7 +70,7 @@ brew cask cleanup
 cat << END
 
 **************************************************
-HOMEBREW INSTALLED! bye.
+Everything is ready. Enjoy your new Mac!
 **************************************************
 
 END
