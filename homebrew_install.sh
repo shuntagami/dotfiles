@@ -1,5 +1,8 @@
 #!/bin/bash
 
+echo installing Command Line Tools...
+xcode-select --install
+
 echo installing homebrew...
 which brew >/dev/null 2>&1 || /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
@@ -11,20 +14,21 @@ which brew >/dev/null 2>&1 && brew update
 
 echo ok. run brew upgrade...
 
-brew upgrade --all
+brew upgrade
 
 formulas=(
-    git
-    anyenv
-    docker
-    docker-compose
-    cask
-    mas
-    hub
-    python3
-    lua
-    vim
-    mysql
+  git
+  git-secrets
+  anyenv
+  docker
+  docker-compose
+  cask
+  mas
+  hub
+  python3
+  lua
+  vim
+  mysql
 )
 
 "brew tap..."
@@ -36,29 +40,29 @@ brew tap sanemat/font
 
 echo start brew install apps...
 for formula in "${formulas[@]}"; do
-    brew install $formula || brew upgrade $formula
+  brew install $formula || brew upgrade $formula
 done
 
 casks=(
-    dropbox
-    evernote
-    gyazo
-    google-chrome
-    google-japanese-ime
-    slack
-    iterm2
-    clipy
-    kindle
-    adobe-acrobat-reader
-    visual-studio-code
-    docker
-    sequel-pro
-    zoom
+  dropbox
+  evernote
+  gyazo
+  google-chrome
+  google-japanese-ime
+  slack
+  iterm2
+  clipy
+  kindle
+  adobe-acrobat-reader
+  visual-studio-code
+  docker
+  sequel-pro
+  zoom
 )
 
 echo start brew cask install apps...
 for cask in "${casks[@]}"; do
-    brew cask install $cask
+ brew install --cask $cask
 done
 
 echo Installing Apps from the App Store...
