@@ -19,6 +19,7 @@ brew upgrade
 formulas=(
   git
   git-secrets
+  awscli
   anyenv
   docker
   docker-compose
@@ -29,6 +30,7 @@ formulas=(
   lua
   vim
   mysql
+  circleci
 )
 
 "brew tap..."
