@@ -47,6 +47,11 @@ call dein#add ( 'prabirshrestha/asyncomplete-lsp.vim' )
 call dein#add ('hashivim/vim-terraform')
 call dein#end()
 
+" 不足プラグインの自動インストール
+if has('vim_starting') && dein#check_install()
+  call dein#install()
+endif
+
 """""""""""""""""""""""""""""
 " terraform-lspの設定
 """"""""""""""""""""""""""""
