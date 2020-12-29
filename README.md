@@ -32,4 +32,4 @@ $ zsh
 ![sample](https://user-images.githubusercontent.com/69618840/103264511-44306b00-49ee-11eb-8e5e-4398c46d2993.png)
 
 ## image of vim
-![sample](https://user-images.githubusercontent.com/69618840/103264659-b1dc9700-49ee-11eb-916d-b03e954798d8.png)
+![sample](https://user-images.githubusercontent.com/69618840/103265101-249a4200-49f0-11eb-9f69-0cf5a6848d74.png)
