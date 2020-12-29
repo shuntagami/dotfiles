@@ -1,8 +1,8 @@
 # dotfiles
-Simple dotfiles includes
-.zsh with Prezto, 
-.vimrc with dein.vim,
-setting of iTerm,
+Simple dotfiles includes<br>
+.zsh with Prezto,<br> 
+.vimrc with dein.vim,<br>
+setting of iTerm,<br>
 installer of applications using brew, cask, and mas
 
 ## how to use
