@@ -29,7 +29,7 @@ $ zsh
 ```
 
 ## image of iTerm
-![sample](https://user-images.githubusercontent.com/69618840/102887977-397c5000-449b-11eb-8815-3b5d7d3ec5ab.png)
+![sample](https://user-images.githubusercontent.com/69618840/103264511-44306b00-49ee-11eb-8e5e-4398c46d2993.png)
 
 ## image of vim
 ![sample](https://user-images.githubusercontent.com/69618840/102888454-2d44c280-449c-11eb-94fe-7b235b0c2382.png)
