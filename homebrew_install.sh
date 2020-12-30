@@ -31,6 +31,7 @@ formulas=(
   vim
   mysql
   circleci
+  imagemagick
 )
 
 "brew tap..."
