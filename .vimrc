@@ -19,6 +19,9 @@ call dein#add('Shougo/unite.vim')
 call dein#add('Shougo/neomru.vim')
 " Ruby向けにendを自動挿入してくれる
 call dein#add('tpope/vim-endwise')
+" 自動保存
+call dein#add('907th/vim-auto-save')
+let g:auto_save = 1
 " コメントON/OFFを手軽に実行
 call dein#add('tomtom/tcomment_vim')
 " シングルクオートとダブルクオートの入れ替え等
