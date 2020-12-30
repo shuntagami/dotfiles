@@ -17,12 +17,8 @@ call dein#add('Shougo/vimproc.vim', {'build': 'make'})
 call dein#add('Shougo/unite.vim')
 " Unite.vimで最近使ったファイルを表示できるようにする
 call dein#add('Shougo/neomru.vim')
-" Gitを便利に使う
-call dein#add('tpope/vim-fugitive')
-
 " Ruby向けにendを自動挿入してくれる
 call dein#add('tpope/vim-endwise')
-
 " コメントON/OFFを手軽に実行
 call dein#add('tomtom/tcomment_vim')
 " シングルクオートとダブルクオートの入れ替え等
@@ -75,7 +71,7 @@ filetype plugin indent on
 """"""""""""""""""""""""""""""
 " タグファイルの指定(でもタグジャンプは使ったことがない)
 set tags=~/.tags
-" スワップファイルは使わない(ときどき面倒な警告が出るだけで役に立ったことがない)
+" スワップファイルは使わない
 set noswapfile
 " undoファイルは作成しない
 set noundofile
