@@ -7,10 +7,16 @@ installer of applications using brew, cask, and mas
 
 ## how to use
 
+Firstly, maku sure that <b>Command line tools for Xcode</b> is installed on your mac. If not, run next command.
+
+```
+$ xcode-select --install
+```
+
 ```
 $ git clone https://github.com/shuntagami/dotfiles.git
 $ cd dotfiles
-$ chmod +x homebrew_install.sh 
+$ chmod +x homebrew_install.sh
 $ ./homebrew_install.sh
 ```
 

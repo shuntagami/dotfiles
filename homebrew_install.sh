@@ -1,8 +1,5 @@
 #!/bin/bash
 
-echo installing Command Line Tools...
-xcode-select --install
-
 echo installing homebrew...
 which brew >/dev/null 2>&1 || /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
