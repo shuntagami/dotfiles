@@ -23,7 +23,6 @@ formulas=(
   cask
   mas
   hub
-  python3
   lua
   vim
   mysql
