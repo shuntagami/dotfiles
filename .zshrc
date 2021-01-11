@@ -13,7 +13,7 @@ fi
 # Customize to your needs...
 # path
 # Homebrew
-export PATH=/usr/local/bin:$PATH
+alias brew="PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin brew"
 # anyenv
 eval "$(anyenv init -)"
 # mysql
