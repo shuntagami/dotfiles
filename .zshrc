@@ -17,7 +17,7 @@ export PATH=/usr/local/bin:$PATH
 # anyenv
 eval "$(anyenv init -)"
 # mysql
-export PATH="/usr/local/opt/mysql@5.6/bin:$PATH"
+# export PATH="/usr/local/opt/mysql@5.6/bin:$PATH"
 # npm-global
 export PATH=$HOME/.npm-global/bin:$PATH
 
@@ -60,4 +60,3 @@ function chpwd() { ls }
 
 # ディレクトリ名だけで､ディレクトリの移動をする｡
 setopt auto_cd
-export PATH="/usr/local/sbin:$PATH"
