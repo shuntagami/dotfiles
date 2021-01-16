@@ -60,3 +60,7 @@ function chpwd() { ls }
 
 # ディレクトリ名だけで､ディレクトリの移動をする｡
 setopt auto_cd
+
+# 2つ上、3つ上にも移動できるようにする
+alias ...='cd ../..'
+alias ....='cd ../../..'
