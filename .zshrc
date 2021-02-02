@@ -52,13 +52,13 @@ setopt auto_param_keys
 # ディレクトリ名の補完で末尾の / を自動的に付加し、次の補完に備える
 setopt auto_param_slash
 
-# Ctrl+wで､直前の/までを削除する｡
+# Ctrl+wで､直前の/までを削除する
 WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
 
 # cd をしたときにlsを実行する
 function chpwd() { ls }
 
-# ディレクトリ名だけで､ディレクトリの移動をする｡
+# ディレクトリ名だけで､ディレクトリの移動をする
 setopt auto_cd
 
 # 2つ上、3つ上にも移動できるようにする
