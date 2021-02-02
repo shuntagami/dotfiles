@@ -32,7 +32,7 @@ call dein#add('w0ng/vim-hybrid')
 call dein#add('nathanaelkane/vim-indent-guides')
 " ログファイルを色づけしてくれる
 call dein#add('vim-scripts/AnsiEsc.vim')
-" 行末の半角スペースを可視化(うまく動かない？)
+" 行末の半角スペースを可視化
 call dein#add('bronson/vim-trailing-whitespace')
 " less用のsyntaxハイライト
 call dein#add('KohPoll/vim-less')
@@ -126,8 +126,6 @@ set tabstop=2
 set shiftwidth=2
 " 行頭の余白内で Tab を打ち込むと、'shiftwidth' の数だけインデントする
 set smarttab
-" カーソルを行頭、行末で止まらないようにする
-set whichwrap=b,s,h,l,<,>,[,]
 " 構文毎に文字色を変化させる
 syntax on
 " カラースキーマの指定
@@ -149,19 +147,42 @@ let g:netrw_preview=1
 "----------------------------------------------------------
 " neocomplete・neosnippetの設定
 "----------------------------------------------------------
-" Vim起動時にneocompleteを有効にする
-" let g:neocomplete#enable_at_startup = 1
-" smartcase有効化. 大文字が入力されるまで大文字小文字の区別を無視する
-"let g:neocomplete#enable_smart_case = 1
-" 3文字以上の単語に対して補完を有効にする
-"let g:neocomplete#min_keyword_length = 3
-" 区切り文字まで補完する
-"let g:neocomplete#enable_auto_delimiter = 1
-" 1文字目の入力から補完のポップアップを表示
-"let g:neocomplete#auto_completion_start_length = 1
-" バックスペースで補完のポップアップを閉じる
-"inoremap <expr><BS> neocomplete#smart_close_popup()."<C-h>"
+" vim-lspの各種オプション設定
+let g:lsp_signs_enabled = 1
+let g:lsp_diagnostics_enabled = 1
+let g:lsp_diagnostics_echo_cursor = 1
+let g:lsp_virtual_text_enabled = 1
+let g:lsp_signs_error = {'text': '✗'}
+let g:lsp_signs_warning = {'text': '‼'}
+let g:lsp_signs_information = {'text': 'i'}
+let g:lsp_signs_hint = {'text': '?'}
 
+if (executable('pyls'))
+    " pylsの起動定義
+    augroup LspPython
+        autocmd!
+        autocmd User lsp_setup call lsp#register_server({
+            \ 'name': 'pyls',
+            \ 'cmd': { server_info -> ['pyls'] },
+            \ 'whitelist': ['python'],
+            \})
+    augroup END
+endif
+
+" 定義ジャンプ(デフォルトのctagsによるジャンプを上書きしているのでこのあたりは好みが別れます)
+nnoremap <C-]> :<C-u>LspDefinition<CR>
+" 定義情報のホバー表示
+nnoremap K :<C-u>LspHover<CR>
+" 名前変更
+nnoremap <LocalLeader>R :<C-u>LspRename<CR>
+" 参照検索
+nnoremap <LocalLeader>n :<C-u>LspReferences<CR>
+" Lint結果をQuickFixで表示
+nnoremap <LocalLeader>f :<C-u>LspDocumentDiagnostics<CR>
+" テキスト整形
+nnoremap <LocalLeader>s :<C-u>LspDocumentFormat<CR>
+" オムニ補完を利用する場合、定義の追加
+set omnifunc=lsp#complete
 
 " 検索系
 " 検索文字列が小文字の場合は大文字小文字を区別なく検索する
@@ -272,4 +293,3 @@ imap ( ()<LEFT>
 """"""""""""""""""""""""""""""
 " filetypeの自動検出(最後の方に書いた方がいいらしい)
 filetype on
-
