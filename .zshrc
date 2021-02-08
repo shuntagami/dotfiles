@@ -17,7 +17,7 @@ alias brew="PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin br
 # anyenv
 eval "$(anyenv init -)"
 # mysql
-# export PATH="/usr/local/opt/mysql@5.6/bin:$PATH"
+export PATH="/usr/local/opt/mysql@5.6/bin:$PATH"
 # npm-global
 export PATH=$HOME/.npm-global/bin:$PATH
 

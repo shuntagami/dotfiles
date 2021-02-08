@@ -36,6 +36,8 @@ call dein#add('vim-scripts/AnsiEsc.vim')
 call dein#add('bronson/vim-trailing-whitespace')
 " less用のsyntaxハイライト
 call dein#add('KohPoll/vim-less')
+" slimファイルの色付け
+call dein#add('slim-template/vim-slim')
 
 
 
