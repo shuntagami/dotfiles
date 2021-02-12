@@ -13,6 +13,9 @@ call dein#begin(expand('~/.vim/dein'))
 call dein#add('Shougo/dein.vim')
 call dein#add('Shougo/vimproc.vim', {'build': 'make'})
 
+" neocompleteのインストール
+" call dein#add('Shougo/neocomplete.vim')
+" call dein#add('Shougo/neosnippet-snippets')
 " ファイルオープンを便利に
 call dein#add('Shougo/unite.vim')
 " Unite.vimで最近使ったファイルを表示できるようにする
@@ -39,33 +42,19 @@ call dein#add('KohPoll/vim-less')
 " slimファイルの色付け
 call dein#add('slim-template/vim-slim')
 
-
-
-call dein#add ( 'prabirshrestha/async.vim' )
-call dein#add ( 'prabirshrestha/vim-lsp' )
-call dein#add ( 'prabirshrestha/asyncomplete.vim' )
-call dein#add ( 'prabirshrestha/asyncomplete-lsp.vim' )
+" vim lsp
+call dein#add('prabirshrestha/async.vim')
+call dein#add('prabirshrestha/asyncomplete.vim')
+call dein#add('prabirshrestha/vim-lsp')
+call dein#add('mattn/vim-lsp-settings')
+call dein#add('prabirshrestha/asyncomplete-lsp.vim')
 call dein#add ('hashivim/vim-terraform')
 call dein#end()
 
 " 不足プラグインの自動インストール
-if has('vim_starting') && dein#check_install()
+if dein#check_install()
   call dein#install()
 endif
-
-"""""""""""""""""""""""""""""
-" terraform-lspの設定
-""""""""""""""""""""""""""""
-if executable('terraform-lsp')
-  au User lsp_setup call lsp#register_server({
-    \ 'name': 'terraform-lsp',
-    \ 'cmd': {server_info->['terraform-lsp']},
-    \ 'whitelist': ['terraform','tf'],
-    \ })
-endif
-" terraform fmtを自動で実行
-let g:terraform_fmt_on_save=1
-
 
 " Required:
 filetype plugin indent on
@@ -74,6 +63,8 @@ filetype plugin indent on
 """"""""""""""""""""""""""""""
 " 各種オプションの設定
 """"""""""""""""""""""""""""""
+" マウス操作を可能にする
+set mouse=a
 " タグファイルの指定(でもタグジャンプは使ったことがない)
 set tags=~/.tags
 " スワップファイルは使わない
@@ -88,8 +79,6 @@ set cmdheight=2
 set laststatus=2
 " ステータス行に表示させる情報の指定(どこからかコピペしたので細かい意味はわかっていない)
 set statusline=%<%f\ %m%r%h%w%{'['.(&fenc!=''?&fenc:&enc).']['.&ff.']'}%=%l,%c%V%8P
-" ステータス行に現在のgitブランチを表示する
-set statusline+=%{fugitive#statusline()}
 " ウインドウのタイトルバーにファイルのパス情報等を表示する
 set title
 " コマンドラインモードで<Tab>キーによるファイル名補完を有効にする
@@ -149,6 +138,19 @@ let g:netrw_preview=1
 "----------------------------------------------------------
 " neocomplete・neosnippetの設定
 "----------------------------------------------------------
+" Vim起動時にneocompleteを有効にする
+" let g:neocomplete#enable_at_startup = 1
+" " smartcase有効化. 大文字が入力されるまで大文字小文字の区別を無視する
+" let g:neocomplete#enable_smart_case = 1
+" " 3文字以上の単語に対して補完を有効にする
+" let g:neocomplete#min_keyword_length = 3
+" " 区切り文字まで補完する
+" let g:neocomplete#enable_auto_delimiter = 1
+" " 1文字目の入力から補完のポップアップを表示
+" let g:neocomplete#auto_completion_start_length = 1
+" " バックスペースで補完のポップアップを閉じる
+" inoremap <expr><BS> neocomplete#smart_close_popup()."<C-h>"
+
 " vim-lspの各種オプション設定
 let g:lsp_signs_enabled = 1
 let g:lsp_diagnostics_enabled = 1
@@ -171,20 +173,29 @@ if (executable('pyls'))
     augroup END
 endif
 
-" 定義ジャンプ(デフォルトのctagsによるジャンプを上書きしているのでこのあたりは好みが別れます)
-nnoremap <C-]> :<C-u>LspDefinition<CR>
-" 定義情報のホバー表示
-nnoremap K :<C-u>LspHover<CR>
-" 名前変更
-nnoremap <LocalLeader>R :<C-u>LspRename<CR>
-" 参照検索
-nnoremap <LocalLeader>n :<C-u>LspReferences<CR>
-" Lint結果をQuickFixで表示
-nnoremap <LocalLeader>f :<C-u>LspDocumentDiagnostics<CR>
-" テキスト整形
-nnoremap <LocalLeader>s :<C-u>LspDocumentFormat<CR>
-" オムニ補完を利用する場合、定義の追加
-set omnifunc=lsp#complete
+"""""""""""""""""""""""""""""
+" terraform-lspの設定
+""""""""""""""""""""""""""""
+if executable('terraform-lsp')
+  au User lsp_setup call lsp#register_server({
+    \ 'name': 'terraform-lsp',
+    \ 'cmd': {server_info->['terraform-lsp']},
+    \ 'whitelist': ['terraform','tf'],
+    \ })
+endif
+" terraform fmtを自動で実行
+let g:terraform_fmt_on_save=1
+
+if executable('solargraph')
+  " gem install solargraph
+  au User lsp_setup call lsp#register_server({
+    \ 'name': 'solargraph',
+    \ 'cmd': {server_info->[&shell, &shellcmdflag, 'solargraph stdio']},
+    \ 'initialization_options': {"diagnostics": "true"},
+    \ 'whitelist': ['ruby'],
+    \ })
+endif
+
 
 " 検索系
 " 検索文字列が小文字の場合は大文字小文字を区別なく検索する
@@ -222,7 +233,7 @@ noremap <C-P> :Unite buffer<CR>
 " ファイル一覧
 noremap <C-N> :Unite -buffer-name=file file<CR>
 " 最近使ったファイルの一覧
-" noremap <C-Z> :Unite file_mru<CR>
+noremap <C-X> :Unite file_mru<CR>
 " sourcesを「今開いているファイルのディレクトリ」とする
 noremap :uff :<C-u>UniteWithBufferDir file -buffer-name=file<CR>
 " ESCキーを2回押すと終了する
