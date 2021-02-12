@@ -67,8 +67,8 @@ filetype plugin indent on
 """"""""""""""""""""""""""""""
 " マウス操作を可能にする
 set mouse=a
-" タグファイルの指定(でもタグジャンプは使ったことがない)
-set tags=~/.tags
+" タグファイルの指定
+set tags=./.tags;
 " スワップファイルは使わない
 set noswapfile
 " undoファイルは作成しない

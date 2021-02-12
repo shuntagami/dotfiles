@@ -28,6 +28,7 @@ formulas=(
   mysql
   circleci
   imagemagick
+  --HEAD universal-ctags/universal-ctags/universal-ctags
 )
 
 "brew tap..."

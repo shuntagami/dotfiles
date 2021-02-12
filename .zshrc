@@ -66,3 +66,6 @@ setopt auto_cd
 # 2つ上、3つ上にも移動できるようにする
 alias ...='cd ../..'
 alias ....='cd ../../..'
+
+# universal-ctagsをデフォルトで使う
+alias ctags="`brew --prefix`/bin/ctags"
