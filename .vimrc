@@ -22,6 +22,10 @@ call dein#add('Shougo/unite.vim')
 call dein#add('Shougo/neomru.vim')
 " Ruby向けにendを自動挿入してくれる
 call dein#add('tpope/vim-endwise')
+" Rails向けのコマンドを提供する
+call dein#add('tpope/vim-rails')
+" slimファイルの色付け
+call dein#add('slim-template/vim-slim')
 " 自動保存
 call dein#add('907th/vim-auto-save')
 let g:auto_save = 1
@@ -39,8 +43,6 @@ call dein#add('vim-scripts/AnsiEsc.vim')
 call dein#add('bronson/vim-trailing-whitespace')
 " less用のsyntaxハイライト
 call dein#add('KohPoll/vim-less')
-" slimファイルの色付け
-call dein#add('slim-template/vim-slim')
 
 " vim lsp
 call dein#add('prabirshrestha/async.vim')
@@ -121,6 +123,9 @@ set smarttab
 syntax on
 " カラースキーマの指定
 colorscheme hybrid
+
+" pathogen.vim のインストールの際に追記
+execute pathogen#infect()
 
 "----------------------------------------------------------
 " netrwの設定
@@ -239,6 +244,8 @@ noremap :uff :<C-u>UniteWithBufferDir file -buffer-name=file<CR>
 " ESCキーを2回押すと終了する
 au FileType unite nnoremap <silent> <buffer> <ESC><ESC> :q<CR>
 au FileType unite inoremap <silent> <buffer> <ESC><ESC> <ESC>:q<CR>
+" 縦分割版gf
+noremap gs :vertical wincmd f<CR>
 """"""""""""""""""""""""""""""
 " http://inari.hatenablog.com/entry/2014/05/05/231307
 """"""""""""""""""""""""""""""
