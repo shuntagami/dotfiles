@@ -57,6 +57,8 @@ WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
 
 # cd をしたときにlsを実行する
 function chpwd() { ls }
+# hubコマンドをgitで使えるようにする
+function git(){hub "$@"}
 
 # ディレクトリ名だけで､ディレクトリの移動をする
 setopt auto_cd
