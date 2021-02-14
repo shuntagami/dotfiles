@@ -70,6 +70,7 @@ alias ....='cd ../../..'
 # universal-ctagsをデフォルトで使う
 alias ctags="`brew --prefix`/bin/ctags"
 
-PROMPT=$'
-%~ : \e[3%(?.2.1)mStatus %?\%1(j. : Job%2(j.s.) %j.) \e[m
-%# '
+# プロンプトにjobsを表示
+# PROMPT=$'
+# %~ : \e[3%(?.2.1)mStatus %?\%1(j. : Job%2(j.s.) %j.) \e[m
+# %# '
