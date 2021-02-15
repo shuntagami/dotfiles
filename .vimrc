@@ -123,6 +123,11 @@ set smarttab
 syntax on
 " カラースキーマの指定
 colorscheme hybrid
+" vimの背景を透明にする
+highlight Normal ctermbg=NONE guibg=NONE
+highlight NonText ctermbg=NONE guibg=NONE
+highlight SpecialKey ctermbg=NONE guibg=NONE
+highlight EndOfBuffer ctermbg=NONE guibg=NONE
 
 "----------------------------------------------------------
 " netrwの設定
