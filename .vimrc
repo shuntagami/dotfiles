@@ -26,6 +26,8 @@ call dein#add('tpope/vim-endwise')
 call dein#add('tpope/vim-rails')
 " slimファイルの色付け
 call dein#add('slim-template/vim-slim')
+" HTMLを爆速で書く
+call dein#add('mattn/emmet-vim')
 " 自動保存
 call dein#add('907th/vim-auto-save')
 let g:auto_save = 1
