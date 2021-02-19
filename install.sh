@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 
 # add submodule
 git submodule update --init --recursive
@@ -9,16 +9,61 @@ for rcfile in "${ZDOTDIR:-$HOME}"/.zprezto/runcoms/^README.md(.N); do
  ln -s "$rcfile" "${ZDOTDIR:-$HOME}/.${rcfile:t}"
 done
 
+set -e
+DOT_DIRECTORY="${HOME}/dotfiles"
+REMOTE_URL="git@github.com:shuntagami/dotfiles.git"
+
+has() {
+  type "$1" > /dev/null 2>&1
+}
+
 # symlink dotfiles
-ln -sf ~/dotfiles/.zprezto ~/.zprezto
-ln -sf ~/dotfiles/.vimrc ~/.vimrc
-ln -sf ~/dotfiles/.zshrc ~/.zshrc
-ln -sf ~/dotfiles/.zpreztorc ~/.zpreztorc
-ln -sf ~/dotfiles/.dein.toml ~/.dein.toml
-ln -sf ~/dotfiles/.dein_lazy.toml ~/.dein_lazy.toml
+for f in .??*
+do
+  [[ ${f} = ".git" ]] && continue
+  [[ ${f} = ".gitignore" ]] && continue
+  [[ ${f} = ".gitmodules" ]] && continue
+  ln -snfv ${DOT_DIRECTORY}/${f} ${HOME}/${f}
+done
+echo $(tput setaf 2)Deploy dotfiles complete!. ✔︎$(tput sgr0)
 
 # change shell
 chsh -s $(which zsh)
 
 source ~/dotfiles/.zshrc
 source ~/dotfiles/.zpreztorc
+
+if [ ! -d ${HOME}/.anyenv ]; then
+    anyenv init
+    anyenv install tfenv
+    anyenv install nodenv
+    anyenv install rbenv
+    exec $SHELL -l
+    [ ! -d $(anyenv root)/plugins/anyenv-update] && git clone -q https://github.com/znz/anyenv-update.git $(anyenv root)/plugins/anyenv-update
+fi
+
+set +e
+
+if has "rbenv"; then
+  [ ! -d $(rbenv root)/plugins/rbenv-default-gems ] && git clone -q https://github.com/rbenv/rbenv-default-gems.git $(rbenv root)/plugins/rbenv-default-gems
+  [ ! -e $(rbenv root)/default-gems ] && cp ${DOT_DIRECTORY}/default-gems $(rbenv root)/default-gems
+fi
+
+if has "rbenv"; then
+  # 最新のRubyを入れる
+  latest=`rbenv install --list | grep -v - | tail -n 1`
+  current=`rbenv versions | tail -n 1 | cut -d' ' -f 2`
+  if [ ${current} != ${latest} ]; then
+    rbenv install ${latest}
+    rbenv global ${latest}
+  fi
+fi
+
+if has "nodenv"; then
+  # nodenv-default-packagesの導入
+  [ ! -d $(nodenv root)/plugins/nodenv-default-packages ] && git clone -q https://github.com/nodenv/nodenv-default-packages.git "$(nodenv root)/plugins/nodenv-default-packages"
+  [ ! -e $(nodenv root)/default-packages] && cp ${DOT_DIRECTORY}/default-packages $(nodenv root)/default-packages
+  # 最新のnodeを入れる
+  latest=`nodenv install --list | grep -v - | grep -v rc | grep -v nightly | tail -n 1`
+  nodenv install ${latest}
+fi

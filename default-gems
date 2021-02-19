@@ -1,0 +1,6 @@
+bundler
+rubocop
+travis
+rcodetools
+pry
+rails ~>6.1.2.1
