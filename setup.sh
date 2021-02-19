@@ -7,14 +7,6 @@ has() {
   type "$1" > /dev/null 2>&1
 }
 
-# anyenv updateコマンドをインストール
-# [ ! -d "$(anyenv root)"/plugins/anyenv-update ] && git clone https://github.com/znz/anyenv-update.git "$(anyenv root)"/plugins/anyenv-update
-# anyenv init
-# anyenv install tfenv
-# anyenv install nodenv
-# anyenv install rbenv
-# exec $SHELL -l
-
 if has "nodenv"; then
   # nodenv-default-packagesの導入
   [ ! -d "$(nodenv root)"/plugins/nodenv-default-packages ] && git clone -q https://github.com/nodenv/nodenv-default-packages.git "$(nodenv root)"/plugins/nodenv-default-packages

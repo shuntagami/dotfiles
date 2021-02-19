@@ -29,7 +29,7 @@ formulas=(
   postgresql
   circleci
   imagemagick
-  --HEAD universal-ctags/universal-ctags/universal-ctags
+  ctags
 )
 
 "brew tap..."
@@ -71,6 +71,13 @@ mas install 539883307 #LINE
 
 brew cleanup
 brew cask cleanup
+
+# anyenv updateコマンドをインストール
+[ ! -d "$(anyenv root)"/plugins/anyenv-update ] && git clone https://github.com/znz/anyenv-update.git "$(anyenv root)"/plugins/anyenv-update
+anyenv install tfenv
+anyenv install nodenv
+anyenv install rbenv
+exec $SHELL -l
 
 cat << END
 
