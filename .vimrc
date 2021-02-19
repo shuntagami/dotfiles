@@ -1,61 +1,38 @@
 " 挙動を vi 互換ではなく、Vim のデフォルト設定にする
-set nocompatible
+if &compatible
+  set nocompatible
+endif
+
 " 一旦ファイルタイプ関連を無効化する
 filetype off
-""""""""""""""""""""""""""""""
-" プラグインのセットアップ
-""""""""""""""""""""""""""""""
 
-set runtimepath+=~/.vim/dein/repos/github.com/Shougo/dein.vim
+" dein.vimのディレクトリ
+let s:dein_dir = expand('~/.cache/dein')
+let s:dein_repo_dir = s:dein_dir . '/repos/github.com/Shougo/dein.vim'
 
-call dein#begin(expand('~/.vim/dein'))
+" なければgit clone
+if !isdirectory(s:dein_repo_dir)
+  execute '!git clone https://github.com/Shougo/dein.vim' s:dein_repo_dir
+endif
+execute 'set runtimepath^=' . s:dein_repo_dir
 
-call dein#add('Shougo/dein.vim')
-call dein#add('Shougo/vimproc.vim', {'build': 'make'})
+if dein#load_state(s:dein_dir)
+  call dein#begin(s:dein_dir)
 
-" neocompleteのインストール
-" call dein#add('Shougo/neocomplete.vim')
-" call dein#add('Shougo/neosnippet-snippets')
-" ファイルオープンを便利に
-call dein#add('Shougo/unite.vim')
-" Unite.vimで最近使ったファイルを表示できるようにする
-call dein#add('Shougo/neomru.vim')
-" Ruby向けにendを自動挿入してくれる
-call dein#add('tpope/vim-endwise')
-" Rails向けのコマンドを提供する
-call dein#add('tpope/vim-rails')
-" slimファイルの色付け
-call dein#add('slim-template/vim-slim')
-" HTMLを爆速で書く
-call dein#add('mattn/emmet-vim')
-" 自動保存
-call dein#add('907th/vim-auto-save')
-let g:auto_save = 1
-" コメントON/OFFを手軽に実行
-call dein#add('tomtom/tcomment_vim')
-" シングルクオートとダブルクオートの入れ替え等
-call dein#add('tpope/vim-surround')
-" hybridをインストール
-call dein#add('w0ng/vim-hybrid')
-" インデントに色を付けて見やすくする
-call dein#add('nathanaelkane/vim-indent-guides')
-" ログファイルを色づけしてくれる
-call dein#add('vim-scripts/AnsiEsc.vim')
-" 行末の半角スペースを可視化
-call dein#add('bronson/vim-trailing-whitespace')
-" less用のsyntaxハイライト
-call dein#add('KohPoll/vim-less')
+  " 管理するプラグインを記述したファイル
+  let s:toml = '~/.dein.toml'
+  let s:lazy_toml = '~/.dein_lazy.toml'
+  call dein#load_toml(s:toml, {'lazy': 0})
+  call dein#load_toml(s:lazy_toml, {'lazy': 1})
 
-" vim lsp
-call dein#add('prabirshrestha/async.vim')
-call dein#add('prabirshrestha/asyncomplete.vim')
-call dein#add('prabirshrestha/vim-lsp')
-call dein#add('mattn/vim-lsp-settings')
-call dein#add('prabirshrestha/asyncomplete-lsp.vim')
-call dein#add ('hashivim/vim-terraform')
-call dein#end()
+  call dein#end()
+  call dein#save_state()
+endif
+" プラグインの追加・削除やtomlファイルの設定を変更した後は
+" 適宜 call dein#update() や call dein#clear_state() を呼んでください。
+" そもそもキャッシュしなくて良いならload_state/save_stateを呼ばないようにしてください。
 
-" 不足プラグインの自動インストール
+" その他インストールしていないものはこちらに入れる
 if dein#check_install()
   call dein#install()
 endif
@@ -131,9 +108,7 @@ highlight NonText ctermbg=NONE guibg=NONE
 highlight SpecialKey ctermbg=NONE guibg=NONE
 highlight EndOfBuffer ctermbg=NONE guibg=NONE
 
-"----------------------------------------------------------
 " netrwの設定
-"----------------------------------------------------------
 let g:netrw_liststyle=1
 " ヘッダを非表示にする
 let g:netrw_banner=0
@@ -144,9 +119,7 @@ let g:netrw_timefmt="%Y/%m/%d(%a) %H:%M:%S"
 " プレビューウィンドウを垂直分割で表示する
 let g:netrw_preview=1
 
-"----------------------------------------------------------
 " neocomplete・neosnippetの設定
-"----------------------------------------------------------
 " Vim起動時にneocompleteを有効にする
 " let g:neocomplete#enable_at_startup = 1
 " " smartcase有効化. 大文字が入力されるまで大文字小文字の区別を無視する
@@ -170,6 +143,9 @@ let g:lsp_signs_warning = {'text': '‼'}
 let g:lsp_signs_information = {'text': 'i'}
 let g:lsp_signs_hint = {'text': '?'}
 
+" 自動保存をする
+let g:auto_save = 1
+
 if (executable('pyls'))
     " pylsの起動定義
     augroup LspPython
@@ -182,9 +158,7 @@ if (executable('pyls'))
     augroup END
 endif
 
-"""""""""""""""""""""""""""""
 " terraform-lspの設定
-""""""""""""""""""""""""""""
 if executable('terraform-lsp')
   au User lsp_setup call lsp#register_server({
     \ 'name': 'terraform-lsp',
@@ -204,7 +178,6 @@ if executable('solargraph')
     \ 'whitelist': ['ruby'],
     \ })
 endif
-
 
 " 検索系
 " 検索文字列が小文字の場合は大文字小文字を区別なく検索する
@@ -226,15 +199,14 @@ set formatoptions=q
 set formatoptions=q
 " クラッシュ防止（http://superuser.com/questions/810622/vim-crashes-freezes-on-specific-files-mac-osx-mavericks）
 set synmaxcol=200
-""""""""""""""""""""""""""""""
+
 " vimを立ち上げたときに、自動的にvim-indent-guidesをオンにする
 let g:indent_guides_enable_on_vim_startup = 1
 " grep検索の実行後にQuickFix Listを表示する
 autocmd QuickFixCmdPost *grep* cwindow
+
 " http://blog.remora.cx/2010/12/vim-ref-with-unite.html
-""""""""""""""""""""""""""""""
 " Unit.vimの設定
-""""""""""""""""""""""""""""""
 " 入力モードで開始する
 let g:unite_enable_start_insert=1
 " バッファ一覧
@@ -250,11 +222,9 @@ au FileType unite nnoremap <silent> <buffer> <ESC><ESC> :q<CR>
 au FileType unite inoremap <silent> <buffer> <ESC><ESC> <ESC>:q<CR>
 " 縦分割版gf
 noremap gs :vertical wincmd f<CR>
-""""""""""""""""""""""""""""""
+
 " http://inari.hatenablog.com/entry/2014/05/05/231307
-""""""""""""""""""""""""""""""
 " 全角スペースの表示
-""""""""""""""""""""""""""""""
 function! ZenkakuSpace()
     highlight ZenkakuSpace cterm=underline ctermfg=lightblue guibg=darkgray
 endfunction
@@ -266,11 +236,9 @@ if has('syntax')
     augroup END
     call ZenkakuSpace()
 endif
-""""""""""""""""""""""""""""""
+
 " https://sites.google.com/site/fudist/Home/vim-nihongo-ban/-vimrc-sample
-"""""""""""""""""""""""""""""
 " 挿入モード時、ステータスラインの色を変更
-""""""""""""""""""""""""""""""
 let g:hi_insert = 'highlight StatusLine guifg=darkblue guibg=darkyellow gui=none ctermfg=blue ctermbg=yellow cterm=none'
 if has('syntax')
   augroup InsertHook
@@ -297,23 +265,19 @@ function! s:GetHighlight(hi)
   let hl = substitute(hl, 'xxx', '', '')
   return hl
 endfunction
-""""""""""""""""""""""""""""""
-""""""""""""""""""""""""""""""
+
 " 最後のカーソル位置を復元する
-""""""""""""""""""""""""""""""
 if has("autocmd")
     autocmd BufReadPost *
     \ if line("'\"") > 0 && line ("'\"") <= line("$") |
     \   exe "normal! g'\"" |
     \ endif
 endif
-""""""""""""""""""""""""""""""
-""""""""""""""""""""""""""""""
+
 " 自動的に閉じ括弧を入力
-""""""""""""""""""""""""""""""
 imap { {}<LEFT>
 imap [ []<LEFT>
 imap ( ()<LEFT>
-""""""""""""""""""""""""""""""
+
 " filetypeの自動検出(最後の方に書いた方がいいらしい)
 filetype on

@@ -14,7 +14,8 @@ ln -sf ~/dotfiles/.zprezto ~/.zprezto
 ln -sf ~/dotfiles/.vimrc ~/.vimrc
 ln -sf ~/dotfiles/.zshrc ~/.zshrc
 ln -sf ~/dotfiles/.zpreztorc ~/.zpreztorc
-ln -sf ~/dotfiles/.vim ~/.vim
+ln -sf ~/dotfiles/.dein.toml ~/.dein.toml
+ln -sf ~/dotfiles/.dein_lazy.toml ~/.dein_lazy.toml
 
 # change shell
 chsh -s $(which zsh)

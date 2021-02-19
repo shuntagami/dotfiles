@@ -21,6 +21,9 @@ export PATH="/usr/local/opt/mysql@5.6/bin:$PATH"
 # npm-global
 export PATH=$HOME/.npm-global/bin:$PATH
 
+# 補完を有効にする
+autoload -U compinit
+compinit -u
 
 # デフォルトエディタの設定
 export EDITOR="vim"
