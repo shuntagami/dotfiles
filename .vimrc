@@ -18,7 +18,6 @@ execute 'set runtimepath^=' . s:dein_repo_dir
 
 if dein#load_state(s:dein_dir)
   call dein#begin(s:dein_dir)
-
   " 管理するプラグインを記述したファイル
   let s:toml = '~/.dein.toml'
   let s:lazy_toml = '~/.dein_lazy.toml'
@@ -31,19 +30,14 @@ endif
 " プラグインの追加・削除やtomlファイルの設定を変更した後は
 " 適宜 call dein#update() や call dein#clear_state() を呼んでください。
 " そもそもキャッシュしなくて良いならload_state/save_stateを呼ばないようにしてください。
-
-" その他インストールしていないものはこちらに入れる
 if dein#check_install()
   call dein#install()
 endif
 
 " Required:
 filetype plugin indent on
-""""""""""""""""""""""""""""""
 
-""""""""""""""""""""""""""""""
 " 各種オプションの設定
-""""""""""""""""""""""""""""""
 " マウス操作を可能にする
 set mouse=a
 " タグファイルの指定
@@ -166,11 +160,9 @@ if executable('terraform-lsp')
     \ 'whitelist': ['terraform','tf'],
     \ })
 endif
-" terraform fmtを自動で実行
 let g:terraform_fmt_on_save=1
 
 if executable('solargraph')
-  " gem install solargraph
   au User lsp_setup call lsp#register_server({
     \ 'name': 'solargraph',
     \ 'cmd': {server_info->[&shell, &shellcmdflag, 'solargraph stdio']},
