@@ -34,15 +34,32 @@ source ~/dotfiles/.zshrc
 source ~/dotfiles/.zpreztorc
 
 if [ ! -d ${HOME}/.anyenv ]; then
+    # anyenv updateコマンドをインストール
+    [ ! -d $(anyenv root)/plugins/anyenv-update] && git clone -q https://github.com/znz/anyenv-update.git $(anyenv root)/plugins/anyenv-update
     anyenv init
     anyenv install tfenv
     anyenv install nodenv
     anyenv install rbenv
     exec $SHELL -l
-    [ ! -d $(anyenv root)/plugins/anyenv-update] && git clone -q https://github.com/znz/anyenv-update.git $(anyenv root)/plugins/anyenv-update
 fi
 
-set +e
+# nodenv-default-packagesにインストールされたものが入るディレクトリを作っておく
+if [ ! -d ${HOME}/.npm-global ]; then
+    mkdir .npm-global
+    mkdir .npm-global/bin
+    mkdir .npm-global/lib
+    mkdir .npm-global/lib/node_modules
+fi
+
+if has "nodenv"; then
+  # nodenv-default-packagesの導入
+  [ ! -d $(nodenv root)/plugins/nodenv-default-packages ] && git clone -q https://github.com/nodenv/nodenv-default-packages.git "$(nodenv root)/plugins/nodenv-default-packages"
+  [ ! -e $(nodenv root)/default-packages] && cp ${DOT_DIRECTORY}/default-packages $(nodenv root)/default-packages
+  # 最新のnodeを入れる
+  latest=`nodenv install --list | grep -v - | grep -v rc | grep -v nightly | tail -n 1`
+  nodenv install ${latest}
+  nodenv global ${latest}
+fi
 
 if has "rbenv"; then
   [ ! -d $(rbenv root)/plugins/rbenv-default-gems ] && git clone -q https://github.com/rbenv/rbenv-default-gems.git $(rbenv root)/plugins/rbenv-default-gems
@@ -57,13 +74,4 @@ if has "rbenv"; then
     rbenv install ${latest}
     rbenv global ${latest}
   fi
-fi
-
-if has "nodenv"; then
-  # nodenv-default-packagesの導入
-  [ ! -d $(nodenv root)/plugins/nodenv-default-packages ] && git clone -q https://github.com/nodenv/nodenv-default-packages.git "$(nodenv root)/plugins/nodenv-default-packages"
-  [ ! -e $(nodenv root)/default-packages] && cp ${DOT_DIRECTORY}/default-packages $(nodenv root)/default-packages
-  # 最新のnodeを入れる
-  latest=`nodenv install --list | grep -v - | grep -v rc | grep -v nightly | tail -n 1`
-  nodenv install ${latest}
 fi
