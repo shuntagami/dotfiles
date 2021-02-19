@@ -26,6 +26,7 @@ formulas=(
   lua
   vim
   mysql
+  postgresql
   circleci
   imagemagick
   --HEAD universal-ctags/universal-ctags/universal-ctags
