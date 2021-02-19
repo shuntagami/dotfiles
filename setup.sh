@@ -29,5 +29,6 @@ if has "rbenv"; then
   if [ "${current}" != "${latest}" ]; then
     rbenv install "${latest}"
     rbenv global "${latest}"
+    rbenv rehash
   fi
 fi
