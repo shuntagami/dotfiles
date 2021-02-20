@@ -47,6 +47,7 @@ done
 casks=(
   dropbox
   evernote
+  github
   gyazo
   google-chrome
   google-japanese-ime
