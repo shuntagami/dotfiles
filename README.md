@@ -1,6 +1,6 @@
 # dotfiles
 Simple dotfiles includes<br>
-.zsh with Prezto,<br> 
+.zshrc with Prezto,<br> 
 .vimrc with dein.vim,<br>
 setting of iTerm,<br>
 installer of applications using brew, cask, and mas
@@ -13,24 +13,38 @@ Firstly, maku sure that <b>Command line tools for Xcode</b> is installed on your
 $ xcode-select --install
 ```
 
+Clone this repo.
 ```
 $ git clone https://github.com/shuntagami/dotfiles.git
 $ cd dotfiles
-$ chmod +x homebrew_install.sh
-$ ./homebrew_install.sh
 ```
 
-After installing brew, you'll be able to swich to iTerm<br>
+Setup homebrew, and you can install rbenv, nodenv, tfenv by anyenv
+```
+$ chmod +x homebrew_setup.sh
+$ ./homebrew_setup.sh
+$ exec $SHELL -l
+```
+
+Switch to iTerm2, run next command, restart the iTerm2
 ```
 $ cd dotfiles
 $ defaults read com.googlecode.iterm2
 ```
 
-then, restart the iTerm(beautiful screen will appear)
+Setup zsh.
 
 ```
-$ chmod +x install.sh
-$ ./install.sh
+$ chmod +x setup_zsh.sh
+$ ./setup_zsh.sh
+$ zsh
+```
+
+Setup anyenv
+
+```
+$ chmod +x setup_anyenv.sh
+$ ./setup_anyenv.sh
 $ zsh
 ```
 
