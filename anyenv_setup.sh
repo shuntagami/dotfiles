@@ -12,9 +12,9 @@ if has "nodenv"; then
   [ ! -d "$(nodenv root)"/plugins/nodenv-default-packages ] && git clone -q https://github.com/nodenv/nodenv-default-packages.git "$(nodenv root)"/plugins/nodenv-default-packages
   [ ! -e "$(nodenv root)"/default-packages ] && cp "${DOT_DIRECTORY}"/default-packages "$(nodenv root)"/default-packages
   # 最新のnodeを入れる
-  latest=$(nodenv install --list | grep -v - | grep -v rc | grep -v nightly | tail -n 1)
-  nodenv install "${latest}"
-  nodenv global "${latest}"
+  # latest=$(nodenv install --list | grep -v - | grep -v rc | grep -v nightly | tail -n 1)
+  nodenv install 14.15.5
+  nodenv global 14.15.5
 fi
 
 if has "rbenv"; then
