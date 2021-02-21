@@ -6,21 +6,19 @@ git submodule update --init --recursive
 # prezto
 setopt EXTENDED_GLOB
 for rcfile in "${ZDOTDIR:-$HOME}"/.zprezto/runcoms/^README.md(.N); do
- ln -s "$rcfile" "${ZDOTDIR:-$HOME}/.${rcfile:t}"
+  ln -s "$rcfile" "${ZDOTDIR:-$HOME}/.${rcfile:t}"
 done
 
 # symlink dotfiles
-for f in .??*
-do
-  [[ ${f} = ".git" ]] && continue
-  [[ ${f} = ".gitignore" ]] && continue
-  [[ ${f} = ".gitmodules" ]] && continue
-  ln -snfv ${DOT_DIRECTORY}/${f} ${HOME}/${f}
-done
-echo $(tput setaf 2)Deploy dotfiles complete!. ✔︎$(tput sgr0)
+ln -sf ~/dotfiles/.zprezto ~/.zprezto
+ln -sf ~/dotfiles/.vimrc ~/.vimrc
+ln -sf ~/dotfiles/.zshrc ~/.zshrc
+ln -sf ~/dotfiles/.zpreztorc ~/.zpreztorc
+ln -sf ~/dotfiles/.dein.toml ~/.dein.toml
+ln -sf ~/dotfiles/.dein_lazy.toml ~/.dein_lazy.toml
 
 # change shell
-# chsh -s $(which zsh)
+chsh -s $(which zsh)
 
 source ~/dotfiles/.zshrc
 source ~/dotfiles/.zpreztorc
