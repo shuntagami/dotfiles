@@ -35,16 +35,16 @@ $ defaults read com.googlecode.iterm2
 Setup zsh.
 
 ```
-$ chmod +x setup_zsh.sh
-$ ./setup_zsh.sh
+$ chmod +x zsh_setup.sh
+$ ./zsh_setup.sh
 $ zsh
 ```
 
 Setup anyenv
 
 ```
-$ chmod +x setup_anyenv.sh
-$ ./setup_anyenv.sh
+$ chmod +x anyenv_setup.sh
+$ ./anyenv_setup.sh
 $ zsh
 ```
 
