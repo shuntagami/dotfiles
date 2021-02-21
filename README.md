@@ -1,12 +1,15 @@
 # dotfiles
 Simple dotfiles includes<br>
-.zshrc with Prezto,<br> 
-.vimrc with dein.vim,<br>
-setting of iTerm,<br>
-installer of applications using brew, cask, and mas
+.zshrc with <a href="https://github.com/sorin-ionescu/prezto">Prezto</a>,<br> 
+.vimrc with <a href="https://github.com/Shougo/dein.vim">dein.vim</a>,<br>
+setting of macOS, iTerm, Homebrew.<br>
+It's possible to set up environment for creating Rails app 
+
+
+## Warning
+ If you want to give these dotfiles a try, you should first fork this repository, review the code, and remove things you don’t want or need. Don’t blindly use my settings unless you know what that entails. Use at your own risk!
 
 ## How to use
-
 Firstly, maku sure that <b>Command line tools for Xcode</b> is installed on your mac. If not, run next command.
 
 ```
@@ -25,7 +28,7 @@ $ ./homebrew_setup.sh
 $ exec $SHELL -l
 ```
 
-Switch to iTerm2, change the setting. (Preferences(⌘,) → Preferences → check `Load preferences from a custom folder or URL`, change it to `/Users/Username/dotfiles`)
+Switch to iTerm2, change the setting. (Preferences(⌘,) → Preferences → check <b>Load preferences from a custom folder or URL</b>, change it to <b>/Users/Username/dotfiles</b>)
 
 Setup macOS.
 ```
