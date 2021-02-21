@@ -5,7 +5,7 @@ Simple dotfiles includes<br>
 setting of iTerm,<br>
 installer of applications using brew, cask, and mas
 
-## how to use
+## How to use
 
 Firstly, maku sure that <b>Command line tools for Xcode</b> is installed on your mac. If not, run next command.
 
@@ -25,9 +25,9 @@ $ ./homebrew_setup.sh
 $ exec $SHELL -l
 ```
 
-Switch to iTerm2, change the setting. (Preferences(⌘,) → Preferences → check `Load preferences from a custom folder or URL`)
+Switch to iTerm2, change the setting. (Preferences(⌘,) → Preferences → check `Load preferences from a custom folder or URL`, change it to `/Users/Username/dotfiles`)
 
-Setup macOS
+Setup macOS.
 ```
 $ chmod +x macos.sh
 $ ./macos.sh
@@ -39,14 +39,14 @@ $ chmod +x zsh_setup.sh
 $ ./zsh_setup.sh
 ```
 
-Setup anyenv(install latest version of ruby, Node.js, and other plugins)
+Setup anyenv.(install latest version of ruby, Node.js, and other plugins)
 ```
 $ chmod +x anyenv_setup.sh
 $ ./anyenv_setup.sh
 ```
 
-## image of iTerm
+## Image of iTerm
 ![sample](https://user-images.githubusercontent.com/69618840/103264511-44306b00-49ee-11eb-8e5e-4398c46d2993.png)
 
-## image of vim
+## Image of vim
 ![sample](https://user-images.githubusercontent.com/69618840/103265226-6dea9180-49f0-11eb-8894-83dc523f6803.png)
