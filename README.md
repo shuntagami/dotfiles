@@ -52,4 +52,7 @@ $ ./anyenv_setup.sh
 ![sample](https://user-images.githubusercontent.com/69618840/108621267-0f341800-7475-11eb-8f4f-edec0d91fc1b.png)
 
 ## Image of vim
-![sample](https://user-images.githubusercontent.com/69618840/103265226-6dea9180-49f0-11eb-8894-83dc523f6803.png)
+![sample](https://user-images.githubusercontent.com/69618840/108621397-bca72b80-7475-11eb-8158-96624fff5de4.png)
+
+## Image of Finder.app
+![sample](https://user-images.githubusercontent.com/69618840/108621439-ed876080-7475-11eb-8a97-070d9aa5ab22.png)
