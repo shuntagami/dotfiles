@@ -15,37 +15,34 @@ $ xcode-select --install
 
 Clone this repo.
 ```
-$ git clone https://github.com/shuntagami/dotfiles.git
-$ cd dotfiles
+$ git clone https://github.com/shuntagami/dotfiles.git && cd dotfiles
 ```
 
-Setup homebrew, and you can install rbenv, nodenv, tfenv by anyenv
+Setup homebrew, and install rbenv, nodenv, tfenv by anyenv.
 ```
 $ chmod +x homebrew_setup.sh
 $ ./homebrew_setup.sh
 $ exec $SHELL -l
 ```
 
-Switch to iTerm2, run next command, restart the iTerm2
+Switch to iTerm2, change the setting. (Preferences(⌘,) → Preferences → check `Load preferences from a custom folder or URL`)
+
+Setup macOS
 ```
-$ cd dotfiles
-$ defaults read com.googlecode.iterm2
+$ chmod +x macos.sh
+$ ./macos.sh
 ```
 
 Setup zsh.
-
 ```
 $ chmod +x zsh_setup.sh
 $ ./zsh_setup.sh
-$ zsh
 ```
 
-Setup anyenv
-
+Setup anyenv(install latest version of ruby, Node.js, and other plugins)
 ```
 $ chmod +x anyenv_setup.sh
 $ ./anyenv_setup.sh
-$ zsh
 ```
 
 ## image of iTerm
