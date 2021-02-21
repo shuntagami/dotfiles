@@ -21,9 +21,13 @@ Clone this repo.
 $ git clone https://github.com/shuntagami/dotfiles.git && cd dotfiles
 ```
 
-Setup homebrew, and install rbenv, nodenv, tfenv by anyenv.
+Make files excutable.
 ```
-$ chmod +x homebrew_setup.sh
+chmod +x homebrew_setup.sh macos.sh zsh_setup.sh anyenv_setup.sh
+```
+
+Setup homebrew and homebrew-cask. You can install anyenv, git, etc. by homebrew and daily-use applications like zoom, slack, iTerm2, and others by homebrew-cask. Check it your own and add or remove as your needs. 
+```
 $ ./homebrew_setup.sh
 $ exec $SHELL -l
 ```
@@ -32,19 +36,16 @@ Switch to iTerm2, change the setting. (Preferences(⌘,) → Preferences → che
 
 Setup macOS.
 ```
-$ chmod +x macos.sh
 $ ./macos.sh
 ```
 
 Setup zsh.
 ```
-$ chmod +x zsh_setup.sh
 $ ./zsh_setup.sh
 ```
 
 Setup anyenv.(install latest version of ruby, Node.js, and other plugins)
 ```
-$ chmod +x anyenv_setup.sh
 $ ./anyenv_setup.sh
 ```
 
