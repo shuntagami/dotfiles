@@ -19,64 +19,59 @@ eval "$(anyenv init -)"
 # mysql
 export PATH="/usr/local/opt/mysql/bin:$PATH"
 
-# 補完を有効にする
+# enable auto-compleltion
 autoload -U compinit
 compinit -u
 
-# デフォルトエディタの設定
+# use vim as default editor
 export EDITOR="vim"
 
-# 直前と同じコマンドラインはヒストリに追加しない
+# ignore just before command in history
 setopt hist_ignore_dups
 
-# ヒストリにhistoryコマンドを記録しない
+# ignore history in command history
 setopt hist_no_store
 
-# 余分なスペースを削除してヒストリに記録する
+# remove blanks in command history
 setopt hist_reduce_blanks
 
-# 重複したヒストリは追加しない
+# prevent duplicatiton in command history
 setopt hist_ignore_all_dups
 
-# 補完候補が複数ある時に、一覧表示
+# show all candidates
 setopt auto_list
 
-# 保管結果をできるだけ詰める
+# tighten candidates
 setopt list_packed
 
-# 補完キー（Tab, Ctrl+I) を連打するだけで順に補完候補を自動で補完
+# easy complemention just tap(Tab or Ctrl+I)
 setopt auto_menu
 
-# カッコの対応などを自動的に補完
+# complement (), {},[]
 setopt auto_param_keys
 
-# ディレクトリ名の補完で末尾の / を自動的に付加し、次の補完に備える
+# add / automatically in command cd
 setopt auto_param_slash
 
-# Ctrl+wで､直前の/までを削除する
+# delete until / by Ctrl+w
 WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
 
-# cd をしたときにlsを実行する
+# excule ls after cd
 function chpwd() { ls }
-# hubコマンドをgitで使えるようにする
+
+# enable command git in command hub
 function git(){hub "$@"}
 
-# ディレクトリ名だけで､ディレクトリの移動をする
+# change directory without cd
 setopt auto_cd
 
-# 2つ上、3つ上にも移動できるようにする
 alias ...='cd ../..'
 alias ....='cd ../../..'
 
-# universal-ctagsをデフォルトで使う
+# use universal-ctags as default command
 alias ctags="`brew --prefix`/bin/ctags"
 
 # Other Settings
 has() {
   type "$1" > /dev/null 2>&1
 }
-
-# プロンプトにjobsを表示
-# PROMPT=$'
-# %~ : \e[3%(?.2.1)mStatus %?\%1(j. : Job%2(j.s.) %j.) \e[m
-# %# '
