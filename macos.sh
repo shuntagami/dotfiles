@@ -169,6 +169,9 @@ sudo chflags uchg /private/var/vm/sleepimage
 # Screen                                                                      #
 ###############################################################################
 
+# Change screenshots name
+defaults write com.apple.screencapture name "SS"
+
 # Require password immediately after sleep or screen saver begins
 defaults write com.apple.screensaver askForPassword -int 1
 defaults write com.apple.screensaver askForPasswordDelay -int 0
