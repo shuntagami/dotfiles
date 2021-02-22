@@ -34,6 +34,8 @@ $ exec $SHELL -l
 
 Switch to iTerm2, change the setting. (Preferences(⌘,) → Preferences → check <b>Load preferences from a custom folder or URL</b>, change it to <b>/Users/Username/dotfiles</b>)
 
+![sample](https://user-images.githubusercontent.com/69618840/108678965-2d5e4e80-752f-11eb-9e32-27862427c9b6.png)
+
 Setup macOS.
 ```
 $ ./macos.sh
