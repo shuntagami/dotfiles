@@ -5,7 +5,6 @@
   "workbench.activityBar.visible": false,
   "editor.fontFamily": "SourceHanCodeJP-Regular, Menlo, Monaco, 'Courier New', monospace",
   "editor.fontSize": 15,
-  "workbench.iconTheme": "file-icons",
   "ruby.format": "rubocop",
   "ruby.lint": {
     "rubocop": true,
