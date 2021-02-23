@@ -1,0 +1,10 @@
+[
+	{
+		"key": "ctrl+cmd+p",
+		"command": "extension.ghqOpen"
+	},
+	{
+		"key": "ctrl+t",
+		"command": "workbench.action.terminal.toggleTerminal"
+	},
+]
