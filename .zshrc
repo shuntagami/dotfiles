@@ -13,11 +13,13 @@ fi
 # Customize to your needs...
 # path
 # Homebrew
-alias brew="PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin brew"
+# alias brew="PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin brew"
+# Add Visual Studio Code (code)
+export PATH="$PATH:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
 # anyenv
 eval "$(anyenv init -)"
 # mysql
-export PATH="/usr/local/opt/mysql/bin:$PATH"
+export PATH="/usr/local/opt/mysql@5.6/bin:$PATH"
 
 # enable auto-compleltion
 autoload -U compinit
