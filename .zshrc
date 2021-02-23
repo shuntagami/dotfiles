@@ -11,15 +11,14 @@ if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
 fi
 
 # Customize to your needs...
-# path
-# Homebrew
-# alias brew="PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin brew"
-# Add Visual Studio Code (code)
+# brew path
+export PATH="usr/local/bin:/usr/local/sbin:$PATH"
+# vscode code command
 export PATH="$PATH:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
-# anyenv
-eval "$(anyenv init -)"
 # mysql
 export PATH="/usr/local/opt/mysql@5.6/bin:$PATH"
+# anyenv
+eval "$(anyenv init -)"
 
 # enable auto-compleltion
 autoload -U compinit
