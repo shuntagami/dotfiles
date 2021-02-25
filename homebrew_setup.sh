@@ -30,6 +30,7 @@ formulas=(
   circleci
   imagemagick
   ctags
+  tmux
 )
 
 "brew tap..."
@@ -52,6 +53,7 @@ casks=(
   google-chrome
   google-japanese-ime
   slack
+  the-unarchiver
   iterm2
   clipy
   kindle
@@ -59,6 +61,7 @@ casks=(
   visual-studio-code
   docker
   sequel-pro
+  virtualbox
   zoom
 )
 
