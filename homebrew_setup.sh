@@ -10,8 +10,11 @@ echo run brew update...
 which brew >/dev/null 2>&1 && brew update
 
 echo ok. run brew upgrade...
-
 brew upgrade
+
+echo change authority for brew...
+sudo chown -R $(whoami):admin /usr/local/*
+sudo chmod -R g+w /usr/local/*
 
 formulas=(
   git
@@ -51,6 +54,7 @@ casks=(
   github
   gyazo
   google-chrome
+  google-drive-file-stream
   google-japanese-ime
   slack
   the-unarchiver
