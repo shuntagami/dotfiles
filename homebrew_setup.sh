@@ -28,7 +28,6 @@ formulas=(
   hub
   lua
   vim
-  mysql
   postgresql
   circleci
   imagemagick
