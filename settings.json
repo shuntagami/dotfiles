@@ -102,5 +102,6 @@
   "solargraph.autoformat": true,
   "solargraph.checkGemVersion": false,
   "solargraph.diagnostics": true,
-  "solargraph.useBundler": true
+  "solargraph.useBundler": true,
+  "todo-tree.tree.showScanModeButton": false
 }
