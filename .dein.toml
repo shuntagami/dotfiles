@@ -64,3 +64,9 @@ repo = 'prabirshrestha/asyncomplete-lsp.vim'
 
 [[plugins]]
 repo = 'hashivim/vim-terraform'
+
+[[plugins]]
+repo = 'maksimr/vim-jsbeautify'
+
+[[plugins]]
+repo = 'editorconfig/editorconfig-vim'

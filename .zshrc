@@ -12,19 +12,17 @@ fi
 
 # Customize to your needs...
 # brew path
-# export PATH="usr/local/bin:/usr/local/sbin:$PATH"
+export PATH="/opt/homebrew/opt/openssl@1.1/bin:$PATH"
 export PATH="/opt/homebrew/bin:$PATH"
+
 # vscode code command
 export PATH="$PATH:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
 # mysql
 export PATH="/opt/homebrew/opt/mysql@5.7/bin:$PATH"
 # anyenv
 eval "$(anyenv init -)"
-# export PATH="~/.rbenv/shims:/usr/local/bin:$PATH"
-# rbenv
-# export PATH=~/.rbenv/shims:$PATH
-# export PATH="/opt/homebrew/bin/rbenv:$PATH"
-eval "$(rbenv init -)"
+# java
+export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
 
 # enable auto-compleltion
 autoload -U compinit
@@ -80,5 +78,3 @@ alias ....='cd ../../..'
 has() {
   type "$1" > /dev/null 2>&1
 }
-eval $(/opt/homebrew/bin/brew shellenv)
-export PATH="/opt/homebrew/opt/openssl@1.1/bin:$PATH"

@@ -1,22 +1,17 @@
 {
+  "editor.tabSize": 2,
   "editor.cursorStyle": "block",
-  "workbench.statusBar.visible": true,
-  "workbench.sideBar.location": "left",
-  "workbench.activityBar.visible": false,
   "editor.fontFamily": "SourceHanCodeJP-Regular, Menlo, Monaco, 'Courier New', monospace",
   "editor.fontSize": 15,
-  "ruby.format": "rubocop",
-  "ruby.lint": {
-    "rubocop": true,
-    "rails": true
-  },
-  "vim.statusBarColorControl": true,
-  "vim.statusBarColors.normal": ["#8ac6f2", "#444444"],
-  "vim.statusBarColors.insert": ["#95e454", "#444444"],
-  "vim.statusBarColors.visual": ["#f2c68a", "#444444"],
-  "vim.statusBarColors.visualline": ["#f2c68a", "#444444"],
-  "vim.statusBarColors.visualblock": ["#f2c68a", "#444444"],
-  "vim.statusBarColors.replace": ["#e5786d", "#444444"],
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.find.globalFindClipboard": true,
+  "editor.formatOnSaveTimeout": 2000,
+  "editor.formatOnSave": false,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": true
+   },
+  "workbench.editor.wrapTabs": true,
+  "workbench.sideBar.location": "left",
   "workbench.colorTheme": "Horizon",
   "workbench.colorCustomizations": {
     "statusBar.background": "#8ac6f2",
@@ -24,42 +19,42 @@
     "statusBar.debuggingBackground": "#8ac6f2",
     "statusBar.foreground": "#444444"
   },
-  "activitusbar.activeColour": "#999",
-  "activitusbar.inactiveColour": "#444",
-  "tslint.autoFixOnSave": true,
-  "tslint.packageManager": "yarn",
-  "tslint.run": "onType",
-  "workbench.startupEditor": "newUntitledFile",
-  "editor.find.globalFindClipboard": true,
-  "vim.useSystemClipboard": true,
-  "editor.minimap.enabled": false,
-  "editor.formatOnSave": true,
-  "[javascript]": {
-    "editor.formatOnSave": true
-  },
-  "[ruby]": {
-    "editor.formatOnSave": false
-  },
+  "window.zoomLevel": -1,
+  "window.clickThroughInactive": false,
+  "files.autoSave": "onFocusChange",
   "files.trimFinalNewlines": true,
   "files.trimTrailingWhitespace": true,
-  "editor.tabSize": 2,
-  "editor.formatOnSaveTimeout": 2000,
-  "vim.mouseSelectionGoesIntoVisualMode": true,
-  "breadcrumbs.enabled": true,
-  "eslint.alwaysShowStatus": true,
-  "eslint.run": "onSave",
-  "eslint.validate": ["javascript", "javascriptreact"],
-  "window.zoomLevel": 0,
-  "explorer.autoReveal": false,
+  "vim.statusBarColorControl": true,
+  "vim.statusBarColors.normal": ["#8ac6f2", "#444444"],
+  "vim.statusBarColors.insert": ["#95e454", "#444444"],
+  "vim.statusBarColors.visual": ["#f2c68a", "#444444"],
+  "vim.statusBarColors.visualline": ["#f2c68a", "#444444"],
+  "vim.statusBarColors.visualblock": ["#f2c68a", "#444444"],
+  "vim.statusBarColors.replace": ["#e5786d", "#444444"],
+  "vim.useSystemClipboard": true,
+  "vim.mouseSelectionGoesIntoVisualMode": false,
+  "ruby.format": "rubocop",
+  "ruby.lint": {
+    "rubocop": true,
+    "rails": true
+  },
   "ruby.rubocop.useBundler": true,
   "ruby.useBundler": true,
-  "window.clickThroughInactive": false,
-  "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": true
+  "[ruby]": {
+    "editor.formatOnSave": true
+  },
+  "[javascript]": {
+    // 自動修正
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+    "editor.formatOnSave": false
   },
   "javascript.updateImportsOnFileMove.enabled": "always",
   "typescript.updateImportsOnFileMove.enabled": "always",
-  "markdown.preview.breaks": true,
+  "tslint.autoFixOnSave": true,
+  "tslint.packageManager": "yarn",
+  "tslint.run": "onType",
+  "breadcrumbs.enabled": true,
+  "explorer.autoReveal": false,
   "launch": {
     "version": "0.2.0",
     "configurations": [
@@ -78,30 +73,8 @@
       }
     ]
   },
-  "go.formatTool": "goimports",
-  "[html]": {
-    "editor.formatOnSave": false
-  },
-  "go.useLanguageServer": true,
-  "vim.normalModeKeyBindings": [
-    {
-      "before": ["<C-n>"],
-      "after": ["g", "b"]
-    }
-  ],
-  "vim.visualModeKeyBindings": [
-    {
-      "before": ["<C-n>"],
-      "after": ["g", "b"]
-    }
-  ],
-  "gopls": {
-    "experimentalWorkspaceModule": true
-  },
-  "go.toolsEnvVars": {"GO111MODULE": "on"},
-  "solargraph.autoformat": true,
-  "solargraph.checkGemVersion": false,
-  "solargraph.diagnostics": true,
-  "solargraph.useBundler": true,
-  "todo-tree.tree.showScanModeButton": false
+  "editor.suggestSelection": "first",
+  "vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue",
+  "editor.formatOnPaste": false,
+  "editor.formatOnType": false
 }
