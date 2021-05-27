@@ -126,8 +126,8 @@ defaults write com.apple.universalaccess closeViewZoomFollowsFocus -bool true
 defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
 
 # Set a blazingly fast keyboard repeat rate
-defaults write -g InitialKeyRepeat -int 12 # normal minimum is 15 (225 ms)
-defaults write -g KeyRepeat -int 1 # normal minimum is 2 (30 ms)
+defaults write -g InitialKeyRepeat -int 8 # normal minimum is 15 (225 ms)
+defaults write -g KeyRepeat -int 0 # normal minimum is 2 (30 ms)
 
 
 ###############################################################################
@@ -170,7 +170,9 @@ sudo chflags uchg /private/var/vm/sleepimage
 ###############################################################################
 
 # Change screenshots name
-defaults write com.apple.screencapture name "SS"
+defaults write com.apple.screencapture name "screenshot"
+defaults write com.apple.screencapture include-date -bool false
+defaults write com.apple.screencapture “include-date” 0
 
 # Require password immediately after sleep or screen saver begins
 defaults write com.apple.screensaver askForPassword -int 1
