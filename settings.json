@@ -10,6 +10,11 @@
   "editor.codeActionsOnSave": {
     "source.fixAll": true
    },
+  "editor.suggestSelection": "first",
+  "editor.formatOnPaste": false,
+  "editor.formatOnType": false,
+  "editor.minimap.enabled": false,
+  "workbench.startupEditor": "newUntitledFile",
   "workbench.editor.wrapTabs": true,
   "workbench.sideBar.location": "left",
   "workbench.colorTheme": "Horizon",
@@ -19,11 +24,12 @@
     "statusBar.debuggingBackground": "#8ac6f2",
     "statusBar.foreground": "#444444"
   },
-  "window.zoomLevel": -1,
   "window.clickThroughInactive": false,
+  "window.title": "${activeEditorMedium}${separator}${rootName}",
   "files.autoSave": "onFocusChange",
   "files.trimFinalNewlines": true,
   "files.trimTrailingWhitespace": true,
+  "breadcrumbs.enabled": true,
   "vim.statusBarColorControl": true,
   "vim.statusBarColors.normal": ["#8ac6f2", "#444444"],
   "vim.statusBarColors.insert": ["#95e454", "#444444"],
@@ -38,11 +44,16 @@
     "rubocop": true,
     "rails": true
   },
-  "ruby.rubocop.useBundler": true,
-  "ruby.useBundler": true,
   "[ruby]": {
     "editor.formatOnSave": true
   },
+  "ruby.rubocop.useBundler": true,
+  "ruby.useBundler": true,
+  "ruby.pathToBundler": "/Users/shuntagami/.anyenv/envs/rbenv/shims/",
+  "ruby.intellisense": "rubyLocate",
+  "ruby.rubocop.executePath": "/Users/shuntagami/.anyenv/envs/rbenv/shims/",
+  "ruby.rubocop.onSave": true,
+  "ruby.codeCompletion": "rcodetools",
   "[javascript]": {
     // 自動修正
     "editor.defaultFormatter": "dbaeumer.vscode-eslint",
@@ -53,7 +64,6 @@
   "tslint.autoFixOnSave": true,
   "tslint.packageManager": "yarn",
   "tslint.run": "onType",
-  "breadcrumbs.enabled": true,
   "explorer.autoReveal": false,
   "launch": {
     "version": "0.2.0",
@@ -72,9 +82,5 @@
         "port": 9229
       }
     ]
-  },
-  "editor.suggestSelection": "first",
-  "vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue",
-  "editor.formatOnPaste": false,
-  "editor.formatOnType": false
+  }
 }
