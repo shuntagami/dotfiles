@@ -26,13 +26,13 @@ formulas=(
   cask
   mas
   hub
+  jmeter
   lua
   vim
   postgresql
   circleci
   imagemagick
-  ctags
-  tmux
+  watch
 )
 
 "brew tap..."
@@ -64,6 +64,7 @@ casks=(
   visual-studio-code
   docker
   sequel-pro
+  utm
   virtualbox
   zoom
 )

@@ -22,11 +22,7 @@ export PATH="/opt/homebrew/opt/mysql@5.7/bin:$PATH"
 # anyenv
 eval "$(anyenv init -)"
 # java
-export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
-
-# enable auto-compleltion
-autoload -U compinit
-compinit -u
+export PATH="${JAVA_HOME}/bin:$PATH"
 
 # use vim as default editor
 export EDITOR="vim"
@@ -73,8 +69,8 @@ setopt auto_cd
 alias ...='cd ../..'
 alias ....='cd ../../..'
 
-
 # Other Settings
 has() {
   type "$1" > /dev/null 2>&1
 }
+export PATH="$HOME/sls/node_modules/.bin/:$PATH"

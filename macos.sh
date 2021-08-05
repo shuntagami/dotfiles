@@ -126,8 +126,8 @@ defaults write com.apple.universalaccess closeViewZoomFollowsFocus -bool true
 defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
 
 # Set a blazingly fast keyboard repeat rate
-defaults write -g InitialKeyRepeat -int 8 # normal minimum is 15 (225 ms)
-defaults write -g KeyRepeat -int 0 # normal minimum is 2 (30 ms)
+defaults write -g InitialKeyRepeat -int 9 # normal minimum is 15 (225 ms)
+defaults write -g KeyRepeat -int 1 # normal minimum is 2 (30 ms)
 
 
 ###############################################################################

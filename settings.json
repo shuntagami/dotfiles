@@ -82,5 +82,7 @@
         "port": 9229
       }
     ]
-  }
+  },
+  "redhat.telemetry.enabled": true,
+  "window.zoomLevel": -2
 }
