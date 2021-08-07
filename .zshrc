@@ -63,6 +63,26 @@ function chpwd() { ls }
 # enable command git in command hub
 function git(){hub "$@"}
 
+pr_checkout () {
+  gh pr list;
+  echo "Type the number of PR to checkout: " && read number;
+  gh pr checkout ${number};
+}
+
+pr_diff () {
+  gh pr list;
+  echo "Type the number of PR to checkout: " && read number;
+  gh pr diff ${number};
+}
+
+init_repo () {
+  git init && git commit --allow-empty -m "empty commit" && git add -A && git status && git commit -v
+  echo "Type repository name: " && read name;
+  echo "Type repository description: " && read description;
+  gh repo create ${name} --description ${description};
+  git push origin HEAD;
+}
+
 # change directory without cd
 setopt auto_cd
 

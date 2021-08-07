@@ -19,6 +19,7 @@ sudo chmod -R g+w /usr/local/*
 formulas=(
   git
   git-secrets
+  gh
   awscli
   anyenv
   docker
