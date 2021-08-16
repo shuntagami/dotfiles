@@ -13,6 +13,7 @@ done
 ln -sf ~/dotfiles/.zprezto ~/.zprezto
 ln -sf ~/dotfiles/.vimrc ~/.vimrc
 ln -sf ~/dotfiles/.zshrc ~/.zshrc
+ln -sf ~/dotfiles/.zshenv ~/.zshenv
 ln -sf ~/dotfiles/.zpreztorc ~/.zpreztorc
 ln -sf ~/dotfiles/.dein.toml ~/.dein.toml
 ln -sf ~/dotfiles/.dein_lazy.toml ~/.dein_lazy.toml

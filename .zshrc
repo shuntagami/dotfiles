@@ -1,31 +1,11 @@
-#
-# Executes commands at the start of an interactive session.
-#
-# Authors:
-#   Sorin Ionescu <sorin.ionescu@gmail.com>
-#
-
 # Source Prezto.
 if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
   source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
 fi
 
 # Customize to your needs...
-# brew path
-export PATH="/opt/homebrew/opt/openssl@1.1/bin:$PATH"
-export PATH="/opt/homebrew/bin:$PATH"
-
-# vscode code command
-export PATH="$PATH:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
-# mysql
-export PATH="/opt/homebrew/opt/mysql@5.7/bin:$PATH"
 # anyenv
 eval "$(anyenv init -)"
-# java
-export PATH="${JAVA_HOME}/bin:$PATH"
-
-# use vim as default editor
-export EDITOR="vim"
 
 # ignore just before command in history
 setopt hist_ignore_dups
@@ -93,4 +73,3 @@ alias ....='cd ../../..'
 has() {
   type "$1" > /dev/null 2>&1
 }
-export PATH="$HOME/sls/node_modules/.bin/:$PATH"
