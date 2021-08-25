@@ -22,7 +22,8 @@
     "statusBar.background": "#8ac6f2",
     "statusBar.noFolderBackground": "#8ac6f2",
     "statusBar.debuggingBackground": "#8ac6f2",
-    "statusBar.foreground": "#444444"
+    "statusBar.foreground": "#444444",
+    "statusBar.debuggingForeground": "#444444"
   },
   "window.clickThroughInactive": false,
   "window.title": "${activeEditorMedium}${separator}${rootName}",
@@ -84,5 +85,15 @@
     ]
   },
   "redhat.telemetry.enabled": true,
-  "window.zoomLevel": -2
+  "window.zoomLevel": -2,
+  "todo-tree.general.tags": [
+    "BUG",
+    "HACK",
+    "FIXME",
+    "TODO",
+    "XXX",
+    "[ ]",
+    "[x]"
+  ],
+  "todo-tree.regex.regex": "(//|#|<!--|;|/\\*|^|^\\s*(-|\\d+.))\\s*($TAGS)"
 }
