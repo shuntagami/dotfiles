@@ -60,7 +60,7 @@ init_repo () {
   echo "Type repository name: " && read name;
   echo "Type repository description: " && read description;
   gh repo create ${name} --description ${description};
-  git push origin HEAD;
+  git push origin +HEAD;
 }
 
 # change directory without cd
@@ -68,8 +68,10 @@ setopt auto_cd
 
 alias ...='cd ../..'
 alias ....='cd ../../..'
+alias updatedb="sudo /usr/libexec/locate.updatedb"
 
 # Other Settings
 has() {
   type "$1" > /dev/null 2>&1
 }
+
