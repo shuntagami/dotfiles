@@ -63,12 +63,20 @@ init_repo () {
   git push origin +HEAD;
 }
 
+start_mysql () {
+  sudo rm -rf /opt/homebrew/var/mysql/shuntagami.pid
+  sudo rm -rf /opt/homebrew/var/mysql/shuntagami.err
+  sudo rm -rf /opt/homebrew/var/mysql/shuntagami.local.err
+  sudo mysql.server restart
+}
+
 # change directory without cd
 setopt auto_cd
 
 alias ...='cd ../..'
 alias ....='cd ../../..'
 alias updatedb="sudo /usr/libexec/locate.updatedb"
+alias relogin='exec $SHELL -l'
 
 # Other Settings
 has() {

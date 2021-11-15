@@ -48,6 +48,9 @@
   "[ruby]": {
     "editor.formatOnSave": true
   },
+  "[go]": {
+      "editor.defaultFormatter": "golang.go"
+  },
   "ruby.rubocop.useBundler": true,
   "ruby.useBundler": true,
   "ruby.pathToBundler": "/Users/shuntagami/.anyenv/envs/rbenv/shims/",
@@ -62,6 +65,9 @@
   },
   "javascript.updateImportsOnFileMove.enabled": "always",
   "typescript.updateImportsOnFileMove.enabled": "always",
+  "go.toolsEnvVars": {
+    "GOFLAGS": "-tags=test"
+  },
   "tslint.autoFixOnSave": true,
   "tslint.packageManager": "yarn",
   "tslint.run": "onType",
