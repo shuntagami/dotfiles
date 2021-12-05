@@ -17,22 +17,22 @@ sudo chown -R $(whoami):admin /usr/local/*
 sudo chmod -R g+w /usr/local/*
 
 formulas=(
-  git
-  git-secrets
-  gh
-  awscli
   anyenv
+  awscli
+  cask
+  circleci
   docker
   docker-compose
-  cask
-  mas
+  gh
+  git
+  git-secrets
   hub
+  imagemagick
   jmeter
   lua
-  vim
+  mas
   postgresql
-  circleci
-  imagemagick
+  vim
   watch
 )
 
@@ -49,24 +49,22 @@ for formula in "${formulas[@]}"; do
 done
 
 casks=(
+  adobe-acrobat-reader
+  clipy
+  docker
   dropbox
-  evernote
   github
-  gyazo
   google-chrome
   google-drive-file-stream
   google-japanese-ime
+  gyazo
+  iterm2
+  kindle
   slack
   the-unarchiver
-  iterm2
-  clipy
-  kindle
-  adobe-acrobat-reader
-  visual-studio-code
-  docker
-  sequel-pro
   utm
   virtualbox
+  visual-studio-code
   zoom
 )
 
