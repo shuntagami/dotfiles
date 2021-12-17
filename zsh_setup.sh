@@ -10,12 +10,13 @@ for rcfile in "${ZDOTDIR:-$HOME}"/.zprezto/runcoms/^README.md(.N); do
 done
 
 # symlink dotfiles
+ln -sf ~/dotfiles/.aliases ~/.aliases
 ln -sf ~/dotfiles/.editorconfig ~/.editorconfig
 ln -sf ~/dotfiles/.dein.toml ~/.dein.toml
 ln -sf ~/dotfiles/.dein_lazy.toml ~/.dein_lazy.toml
+ln -sf ~/dotfiles/.functions ~/.functions
 ln -sf ~/dotfiles/.gitconfig ~/.gitconfig
 ln -sf ~/dotfiles/.gitignore_gloal ~/.gitignore_gloal
-ln -sf ~/dotfiles/.tmux.conf ~/.tmux.conf
 ln -sf ~/dotfiles/.vimrc ~/.vimrc
 ln -sf ~/dotfiles/.zshenv ~/.zshenv
 ln -sf ~/dotfiles/.zprezto ~/.zprezto

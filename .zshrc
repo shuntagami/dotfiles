@@ -3,9 +3,19 @@ if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
   source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
 fi
 
-# Customize to your needs...
+# Load the shell dotfiles, and then some:
+# * ~/.path can be used to extend `$PATH`.
+# * ~/.extra can be used for other settings you don’t want to commit.
+for file in ~/.{aliases,functions,extra}; do
+	[ -r "$file" ] && [ -f "$file" ] && source "$file";
+done;
+unset file;
+
 # anyenv
 eval "$(anyenv init -)"
+
+# change directory without cd
+setopt auto_cd
 
 # ignore just before command in history
 setopt hist_ignore_dups
@@ -36,50 +46,4 @@ setopt auto_param_slash
 
 # delete until / by Ctrl+w
 WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
-
-# excule ls after cd
-function chpwd() { ls }
-
-# enable command git in command hub
-function git(){hub "$@"}
-
-pr_checkout () {
-  gh pr list;
-  echo "Type the number of PR to checkout: " && read number;
-  gh pr checkout ${number};
-}
-
-pr_diff () {
-  gh pr list;
-  echo "Type the number of PR to checkout: " && read number;
-  gh pr diff ${number};
-}
-
-init_repo () {
-  git init && git commit --allow-empty -m "empty commit" && git add -A && git status && git commit -v
-  echo "Type repository name: " && read name;
-  echo "Type repository description: " && read description;
-  gh repo create ${name} --description ${description};
-  git push origin +HEAD;
-}
-
-start_mysql () {
-  sudo rm -rf /opt/homebrew/var/mysql/shuntagami.pid
-  sudo rm -rf /opt/homebrew/var/mysql/shuntagami.err
-  sudo rm -rf /opt/homebrew/var/mysql/shuntagami.local.err
-  sudo mysql.server restart
-}
-
-# change directory without cd
-setopt auto_cd
-
-alias ...='cd ../..'
-alias ....='cd ../../..'
-alias updatedb="sudo /usr/libexec/locate.updatedb"
-alias relogin='exec $SHELL -l'
-
-# Other Settings
-has() {
-  type "$1" > /dev/null 2>&1
-}
 
