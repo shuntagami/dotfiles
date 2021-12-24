@@ -53,6 +53,10 @@
   "[go]": {
       "editor.defaultFormatter": "golang.go"
   },
+  "go.toolsEnvVars": {
+    "GOFLAGS": "-tags=test"
+  },
+  "go.useLanguageServer": true,
   "ruby.rubocop.useBundler": true,
   "ruby.useBundler": true,
   "ruby.pathToBundler": "/Users/shuntagami/.anyenv/envs/rbenv/shims/",
@@ -67,9 +71,6 @@
   },
   "javascript.updateImportsOnFileMove.enabled": "always",
   "typescript.updateImportsOnFileMove.enabled": "always",
-  "go.toolsEnvVars": {
-    "GOFLAGS": "-tags=test"
-  },
   "tslint.autoFixOnSave": true,
   "tslint.packageManager": "yarn",
   "tslint.run": "onType",
@@ -103,5 +104,6 @@
     "[x]"
   ],
   "todo-tree.regex.regex": "(//|#|<!--|;|/\\*|^|^\\s*(-|\\d+.))\\s*($TAGS)",
-  "window.zoomLevel": -1
+  "window.zoomLevel": -1,
+  "go.toolsManagement.autoUpdate": true
 }

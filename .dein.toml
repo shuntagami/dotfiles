@@ -70,3 +70,6 @@ repo = 'maksimr/vim-jsbeautify'
 
 [[plugins]]
 repo = 'editorconfig/editorconfig-vim'
+
+[[plugins]]
+repo = 'fatih/vim-go'
