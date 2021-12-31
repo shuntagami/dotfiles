@@ -28,10 +28,8 @@ formulas=(
   git-secrets
   hub
   imagemagick
-  jmeter
   lua
   mas
-  postgresql
   vim
   watch
 )
@@ -52,7 +50,6 @@ casks=(
   adobe-acrobat-reader
   clipy
   docker
-  dropbox
   github
   google-chrome
   google-drive-file-stream
@@ -61,7 +58,6 @@ casks=(
   iterm2
   kindle
   slack
-  the-unarchiver
   utm
   virtualbox
   visual-studio-code
