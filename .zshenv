@@ -12,6 +12,8 @@ fi
 export EDITOR='vim'
 export VISUAL='vim'
 export PAGER='less'
+export GOROOT=/opt/homebrew/Cellar/go/1.17.5/libexec
+export GOPATH=~/go
 
 # Language
 if [[ -z "$LANG" ]]; then
@@ -25,5 +27,7 @@ path=(
   /opt/homebrew/{bin,sbin}
   /opt/homebrew/opt/mysql@5.7/bin
   /Applications/Visual Studio Code.app/Contents/Resources/app/bin
+  $GOPATH/bin
   $path
 )
+

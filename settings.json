@@ -56,7 +56,6 @@
   "go.toolsEnvVars": {
     "GOFLAGS": "-tags=test"
   },
-  "go.useLanguageServer": true,
   "ruby.rubocop.useBundler": true,
   "ruby.useBundler": true,
   "ruby.pathToBundler": "/Users/shuntagami/.anyenv/envs/rbenv/shims/",
