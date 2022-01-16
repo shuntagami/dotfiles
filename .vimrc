@@ -92,6 +92,8 @@ set tabstop=2
 set shiftwidth=2
 " 行頭の余白内で Tab を打ち込むと、'shiftwidth' の数だけインデントする
 set smarttab
+
+set clipboard+=unnamed
 " 構文毎に文字色を変化させる
 syntax on
 " カラースキーマの指定

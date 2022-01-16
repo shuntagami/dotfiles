@@ -12,7 +12,13 @@ done;
 unset file;
 
 # anyenv
-eval "$(anyenv init -)"
+if [ -e "$HOME/.anyenv" ]
+then
+  if command -v anyenv 1>/dev/null 2>&1
+  then
+      eval "$(anyenv init -)"
+  fi
+fi
 
 # change directory without cd
 setopt auto_cd

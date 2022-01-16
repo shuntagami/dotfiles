@@ -42,6 +42,8 @@
   "vim.statusBarColors.replace": ["#e5786d", "#444444"],
   "vim.useSystemClipboard": true,
   "vim.mouseSelectionGoesIntoVisualMode": false,
+  "vim.vimrc.enable": true,
+  "vim.vimrc.path": "~/.vimrc",
   "ruby.format": "rubocop",
   "ruby.lint": {
     "rubocop": true,
