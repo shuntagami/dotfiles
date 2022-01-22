@@ -12,7 +12,7 @@ fi
 export EDITOR='vim'
 export VISUAL='vim'
 export PAGER='less'
-export GOROOT=/opt/homebrew/Cellar/go/1.17.5/libexec
+export GOROOT=/opt/homebrew/Cellar/go/1.17.6/libexec
 export GOPATH=~/go
 
 # Language
