@@ -53,7 +53,7 @@ alias update='brew update; brew upgrade; brew upgrade --cask --greedy; brew clea
 alias osupdate='sudo softwareupdate -i -a'
 
 # Google Chrome
-alias chrome='/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome'
+alias chrome='open -a Google\ Chrome'
 
 # IP addresses
 alias ip="dig +short myip.opendns.com @resolver1.opendns.com"
@@ -139,3 +139,4 @@ alias path='echo -e ${PATH//:/\\n}'
 # Update locate command
 alias updatedb="sudo /usr/libexec/locate.updatedb"
 
+alias pbp="pbpaste"

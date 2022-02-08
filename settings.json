@@ -10,7 +10,7 @@
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll": true
-   },
+  },
   "editor.suggestSelection": "first",
   "editor.formatOnPaste": true,
   "editor.formatOnType": true,
@@ -51,7 +51,7 @@
     "editor.formatOnSave": true
   },
   "[go]": {
-      "editor.defaultFormatter": "golang.go"
+    "editor.defaultFormatter": "golang.go"
   },
   "go.toolsEnvVars": {
     "GOFLAGS": "-tags=test"
