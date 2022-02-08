@@ -9,11 +9,12 @@ if [[ "$OSTYPE" == darwin* ]]; then
 fi
 
 # Editors
+export DOTFILES=$HOME/dotfiles
 export EDITOR='vim'
-export VISUAL='vim'
-export PAGER='less'
 export GOROOT=/opt/homebrew/Cellar/go/1.17.6/libexec
 export GOPATH=~/go
+export PAGER='less'
+export VISUAL='vim'
 
 # Language
 if [[ -z "$LANG" ]]; then

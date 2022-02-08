@@ -2,4 +2,4 @@ bundler
 rubocop
 rcodetools
 pry
-rails ~>6.1.4
+rails

@@ -55,6 +55,16 @@ function dataurl() {
 	echo "data:${mimeType};base64,$(openssl base64 -in "$1" | tr -d '\n')";
 }
 
+# show docker FAQ command
+function dockerh() {
+  cat <<EOF
+[build]     $ docker build -t name/image:1.1 .
+[run]       $ docker run -d -p 3000:80 name/image:2.0
+[nsenter]   $ docker run --rm -v /usr/local/bin:/target jpetazzo/nsenter
+[enter]     $ docker-enter PID
+EOF
+}
+
 # Use Git’s colored diff when available
 hash git &>/dev/null;
 if [ $? -eq 0 ]; then
@@ -98,6 +108,36 @@ init_repo () {
   gh repo create ${name} --description ${description} --public;
   git remote add origin git@github.com:shuntagami/${name}.git
   git push origin +HEAD;
+}
+
+# lint as filetype
+function lint() {
+  if [[ $# == 0 ]]; then
+    cat <<EOF
+$ lint foo.js  # eslint
+$ lint bar.md  # textlint
+$ lint bar.txt # textlint
+EOF
+    return
+  fi
+
+  FILEPATH=$1
+  EXTNAME=${FILEPATH##*.}
+
+  if [[ $EXTNAME == "js" ]]; then
+    eslint -c $DOTFILES/misc/.eslintrc $1
+    return
+  fi
+
+  if [[ $EXTNAME == "rb" ]]; then
+    rubocop -c $DOTFILES/misc/.rubocop.yml $1
+    return
+  fi
+
+  if [[ $EXTNAME == "md" || $EXTNAME == "txt" ]]; then
+    textlint -c $DOTFILES/misc/.textlintrc $1
+    return
+  fi
 }
 
 # Create a new directory and enter it

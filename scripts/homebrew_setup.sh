@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eux
+
 echo installing homebrew...
 which brew >/dev/null 2>&1 || /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
@@ -20,7 +22,6 @@ formulas=(
   anyenv
   awscli
   cask
-  circleci
   docker
   docker-compose
   gh
@@ -80,7 +81,6 @@ brew cask cleanup
 anyenv install tfenv
 anyenv install nodenv
 anyenv install rbenv
-exec $SHELL -l
 
 cat << END
 
