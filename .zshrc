@@ -3,23 +3,6 @@ if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
   source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
 fi
 
-# Load the shell dotfiles, and then some:
-# * ~/.path can be used to extend `$PATH`.
-# * ~/.extra can be used for other settings you don’t want to commit.
-for file in ~/.{aliases,docker-aliases,functions,extra}; do
-	[ -r "$file" ] && [ -f "$file" ] && source "$file";
-done;
-unset file;
-
-# anyenv
-if [ -e "$HOME/.anyenv" ]
-then
-  if command -v anyenv 1>/dev/null 2>&1
-  then
-      eval "$(anyenv init -)"
-  fi
-fi
-
 # change directory without cd
 setopt auto_cd
 
@@ -52,4 +35,28 @@ setopt auto_param_slash
 
 # delete until / by Ctrl+w
 WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
+
+# include
+[[ `uname` == "Darwin" && -f $DOTFILES/zsh/mac.zsh    ]] && source $DOTFILES/zsh/mac.zsh
+[[ `uname` == "Linux"  && -f $DOTFILES/zsh/ubuntu.zsh ]] && source $DOTFILES/zsh/ubuntu.zsh
+
+[[ -f $DOTFILES/zsh/aliases.zsh ]] && source $DOTFILES/zsh/aliases.zsh
+[[ -f $DOTFILES/zsh/common.zsh ]] && source $DOTFILES/zsh/common.zsh
+[[ -f $DOTFILES/zsh/docker_aliases.zsh ]] && source $DOTFILES/zsh/docker_aliases.zsh
+[[ -f $DOTFILES/zsh/extra.zsh ]] && source $DOTFILES/zsh/extra.zsh
+[[ -f $DOTFILES/zsh/functions.zsh ]] && source $DOTFILES/zsh/functions.zsh
+[[ -f $DOTFILES/zsh/http_status_codes.zsh ]] && source $DOTFILES/zsh/http_status_codes.zsh
+
+# core utils
+[[ -d "$DOTFILES/bin" ]] && addToPath $DOTFILES/bin
+
+
+# anyenv
+if [ -e "$HOME/.anyenv" ]
+then
+  if command -v anyenv 1>/dev/null 2>&1
+  then
+    eval "$(anyenv init -)"
+  fi
+fi
 

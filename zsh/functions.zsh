@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+function addToPath {
+  case ":$PATH:" in
+    *":$1:"*) PATH="$1:${PATH/:$1/}" ;; # already there
+    *) PATH="$1:$PATH";; # or PATH="$PATH:$1"
+  esac
+}
+
 function curlh() {
   cat <<EOF
 [show header]  --include
@@ -165,14 +172,6 @@ if [ ! $(uname -s) = 'Darwin' ]; then
 		alias open='xdg-open';
 	fi
 fi
-
-function pb() {
-  if [ -t 0 ]; then
-    cat $1 | pbcopy
-  else
-    pbcopy < /dev/stdin
-  fi
-}
 
 # Start a PHP server from a directory, optionally specifying the port
 # (Requires PHP 5.4.0+.)

@@ -3,12 +3,10 @@ if [[ ( "$SHLVL" -eq 1 && ! -o LOGIN ) && -s "${ZDOTDIR:-$HOME}/.zprofile" ]]; t
   source "${ZDOTDIR:-$HOME}/.zprofile"
 fi
 
-# Browser
 if [[ "$OSTYPE" == darwin* ]]; then
   export BROWSER='open'
 fi
 
-# Editors
 export DOTFILES=$HOME/dotfiles
 export EDITOR='vim'
 export GOROOT=/opt/homebrew/Cellar/go/1.17.6/libexec
@@ -25,8 +23,6 @@ fi
 typeset -gU path
 
 path=(
-  /opt/homebrew/{bin,sbin}
-  /opt/homebrew/opt/mysql@5.7/bin
   /Applications/Visual Studio Code.app/Contents/Resources/app/bin
   $GOPATH/bin
   $path

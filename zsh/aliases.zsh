@@ -85,8 +85,6 @@ alias spoton="sudo mdutil -a -i on"
 # Print each PATH entry on a separate line
 alias path='echo -e ${PATH//:/\\n}'
 
-alias pbp="pbpaste"
-
 # Reload the shell (i.e. invoke as a login shell)
 alias relogin="exec ${SHELL} -l"
 
