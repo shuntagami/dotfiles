@@ -19,6 +19,6 @@ if [ ! -d dotfiles ]; then
   git clone https://github.com/shuntagami/dotfiles.git && cd dotfiles && chmod +x ./scripts/*
 fi
 
-brew bundle install --file=$HOME/dotfiles/misc/.Brewfile
+brew bundle install --file=$HOME/dotfiles/misc/Brewfile
 
-./scripts/deploy.sh
+$HOME/dotfiles/scripts/deploy.sh
