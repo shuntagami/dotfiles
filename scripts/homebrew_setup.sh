@@ -33,6 +33,7 @@ formulas=(
   mas
   vim
   watch
+  zsh
 )
 
 "brew tap..."
