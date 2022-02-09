@@ -24,3 +24,5 @@ ln -sf ~/dotfiles/.zshrc ~/.zshrc
 
 # change shell
 chsh -s $(which zsh)
+
+exec ${SHELL} -l
