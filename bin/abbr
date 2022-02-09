@@ -1,0 +1,45 @@
+#!/usr/bin/env ruby
+
+########################################
+# HELP
+########################################
+HELP = <<~EOS
+  display abbreviation
+
+  $ abbr HTTP
+  Hyper Text Transer Protocol
+EOS
+
+if ARGV[0] == "-h"
+  puts HELP
+  exit 0
+end
+
+def describe(abbr)
+  puts case abbr
+       when "AES" then "Advanced Encryption Standard"
+       when "ARP" then "Address Resolution Protocol"
+       when "CORS" then "Cross Origin Resource Sharing"
+       when "DER" then "Distinguished Encoding Rules"
+       when "DHCP" then "Dynamic Host Configuration Protocol"
+       when "DNS" then "Domain Name System"
+       when "HMAC" then "Hash Based Message Authentication Code"
+       when "HTTP" then "Hyper Text Transer Protocol"
+       when "ICMP" then "Internet Control Message Protocol"
+       when "IP" then "Internet Protocol"
+       when "ISO" then "International Organization for Standardization"
+       when "MAC" then "Media Access Control Address"
+       when "NAT" then "Network Address Translation"
+       when "NAPT" then "Network Address Port Translation"
+       when "OSI" then "Open Systems Interconnection"
+       when "PEM" then "Privacy Enhanced Mail"
+       when "SHA" then "Secure Hash Algorithm"
+       when "SMTP" then "Simple Mail Transfer Protocol"
+       when "TCP" then "Transmission Control Protocol"
+       when "UDP" then "User Datagram Protocol"
+       else "Unknown"
+       end
+  exit 0
+end
+
+describe(ARGV[0].upcase) if ARGV[0]
