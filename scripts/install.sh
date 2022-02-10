@@ -2,23 +2,30 @@
 
 set -eux
 
-# Ask for the administrator password upfront
-sudo -v
+OS="$(uname -s)"
+DOTFILES="${HOME}/dotfiles"
+DOT_TARBALL="https://github.com/shuntagami/dotfiles/tarball/main"
+REMOTE_URL="https://github.com/shuntagami/dotfiles"
+
+has() {
+  type "$1" > /dev/null 2>&1
+}
 
 cd $HOME
 
-if ! type brew >/dev/null 2>&1; then
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# If missing, download and extract the dotfiles repository
+if [ ! -d ${DOTFILES} ]; then
+  echo "Downloading dotfiles..."
+  mkdir ${DOTFILES}
+
+  if has "git"; then
+    git clone "${REMOTE_URL}"
+  else
+    curl -fsSLo ${HOME}/dotfiles.tar.gz ${DOT_TARBALL}
+    tar -zxf ${HOME}/dotfiles.tar.gz --strip-components 1 -C ${DOTFILES}
+    rm -f ${HOME}/dotfiles.tar.gz
+  fi
+
+  echo $(tput setaf 2)Download dotfiles complete!. ✔︎$(tput sgr0)
 fi
 
-if ! type git >/dev/null 2>&1; then
-  brew install git
-fi
-
-if [ ! -d dotfiles ]; then
-  git clone https://github.com/shuntagami/dotfiles.git && cd dotfiles && chmod +x ./scripts/*
-fi
-
-brew bundle install --file=$HOME/dotfiles/misc/Brewfile
-
-$HOME/dotfiles/scripts/deploy.sh
