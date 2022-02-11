@@ -2,14 +2,19 @@
 
 set -eux
 
-# add submodule
-git submodule update --init --recursive
+if [ ! -d ${HOME}/.zprezto ]; then
+  git clone --recursive https://github.com/sorin-ionescu/prezto.git "${ZDOTDIR:-$HOME}/.zprezto"
+fi
 
 # prezto
 setopt EXTENDED_GLOB
 for rcfile in "${ZDOTDIR:-$HOME}"/.zprezto/runcoms/^README.md(.N); do
   ln -s "$rcfile" "${ZDOTDIR:-$HOME}/.${rcfile:t}"
 done
+
+# add and update submodule
+cd $ZPREZTODIR && git pull && git submodule sync --recursive && git submodule update --init --recursive
+
 
 # symlink dotfiles
 ln -sf ~/dotfiles/.dein.toml ~/.dein.toml
