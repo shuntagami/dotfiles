@@ -51,9 +51,9 @@ WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
 [[ -d "$DOTFILES/bin" ]] && addToPath $DOTFILES/bin
 
 # anyenv
-if [ -e "$HOME/.anyenv" ]; then
-  export ANYENV_ROOT="$HOME/.anyenv"
-  export PATH="$ANYENV_ROOT/bin:$PATH"
+if [ -e "$DOTFILES/pkg/.anyenv" ]; then
+  export ANYENV_ROOT="$DOTFILES/pkg/.anyenv"
+  addToPath $ANYENV_ROOT/bin
   if command -v anyenv 1>/dev/null 2>&1; then
     eval "$(anyenv init - zsh)"
   fi
