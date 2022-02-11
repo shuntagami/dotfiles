@@ -15,10 +15,8 @@ done
 # add and update submodule
 cd $ZPREZTODIR && git pull && git submodule sync --recursive && git submodule update --init --recursive
 
-
 # symlink dotfiles
 ln -sf ~/dotfiles/.dein.toml ~/.dein.toml
-ln -sf ~/dotfiles/.dein_lazy.toml ~/.dein_lazy.toml
 ln -sf ~/dotfiles/.gitconfig ~/.gitconfig
 ln -sf ~/dotfiles/.gitignore_gloal ~/.gitignore_gloal
 ln -sf ~/dotfiles/.vimrc ~/.vimrc
