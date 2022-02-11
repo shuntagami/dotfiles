@@ -9,11 +9,11 @@ fi
 # prezto
 setopt EXTENDED_GLOB
 for rcfile in "${ZDOTDIR:-$HOME}"/.zprezto/runcoms/^README.md(.N); do
-  ln -s "$rcfile" "${ZDOTDIR:-$HOME}/.${rcfile:t}"
+  ln -sf "$rcfile" "${ZDOTDIR:-$HOME}/.${rcfile:t}"
 done
 
 # add and update submodule
-cd $ZPREZTODIR && git pull && git submodule sync --recursive && git submodule update --init --recursive
+cd ${HOME}/.zprezto && git pull && git submodule sync --recursive && git submodule update --init --recursive
 
 # symlink dotfiles
 ln -sf ~/dotfiles/.dein.toml ~/.dein.toml
