@@ -16,42 +16,31 @@ has () {
 }
 
 install_anyenv() {
+  # anyenv
   if ! has "${DEST}"/bin/anyenv; then
     rm -rf $DEST
     git clone https://github.com/anyenv/anyenv "${DEST}" && "${DEST}"/bin/anyenv install --init
   fi
 
+  # anyenv-update
   if ! has "${DEST}"/plugins/anyenv-update; then
     [ ! -d "${DEST}"/plugins/anyenv-update ] && git clone https://github.com/znz/anyenv-update.git "${DEST}"/plugins/anyenv-update
   fi
 
+  # nodenv
   if ! has "${NODENV_ROOT}"/bin/nodenv; then
-    # install nodenv
     "${DEST}"/bin/anyenv install nodenv
 
-    # install nodenv-default-packages
+    # nodenv-default-packages
     [ ! -d "${NODENV_ROOT}"/plugins/nodenv-default-packages ] && git clone -q https://github.com/nodenv/nodenv-default-packages.git "${NODENV_ROOT}"/plugins/nodenv-default-packages
     [ ! -e "${NODENV_ROOT}"/default-packages ] && cp "${DOTFILES}"/misc/default-packages "${NODENV_ROOT}"/default-packages
-    # install latest version of Node.js
-    # latest=$(nodenv install --list | grep -v - | grep -v rc | grep -v nightly | tail -n 1)
-    "${NODENV_ROOT}"/bin/nodenv install 16.13.1 && "${NODENV_ROOT}"/bin/nodenv global 16.13.1
   fi
 
   if ! has "${RBENV_ROOT}"/bin/rbenv; then
-    # install rbenv
     "${DEST}"/bin/anyenv install rbenv
 
-    # install rbenv-default-gems
+    # rbenv-default-gems
     [ ! -d "${RBENV_ROOT}"/plugins/rbenv-default-gems ] && git clone -q https://github.com/rbenv/rbenv-default-gems.git "${RBENV_ROOT}"/plugins/rbenv-default-gems
     [ ! -e "${RBENV_ROOT}"/default-gems ] && cp "${DOTFILES}"/misc/default-gems "${RBENV_ROOT}"/default-gems
-
-    # install latest version of ruby
-    latest=$("${RBENV_ROOT}"/bin/rbenv install --list | grep -v - | tail -n 1)
-    current=$("${RBENV_ROOT}"/bin/rbenv versions | tail -n 1 | cut -d' ' -f 2)
-    if [ "${current}" != "${latest}" ]; then
-      "${RBENV_ROOT}"/bin/rbenv install "${latest}"
-      "${RBENV_ROOT}"/bin/rbenv global "${latest}"
-      "${RBENV_ROOT}"/bin/rbenv rehash
-    fi
   fi
 }
