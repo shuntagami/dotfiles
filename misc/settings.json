@@ -58,9 +58,9 @@
   },
   "ruby.rubocop.useBundler": true,
   "ruby.useBundler": true,
-  "ruby.pathToBundler": "/Users/shuntagami/.anyenv/envs/rbenv/shims/",
+  "ruby.pathToBundler": "$HOME/dotfiles/pkg/.anyenv/envs/rbenv/shims/",
   "ruby.intellisense": "rubyLocate",
-  "ruby.rubocop.executePath": "/Users/shuntagami/.anyenv/envs/rbenv/shims/",
+  "ruby.rubocop.executePath": "$HOME/dotfiles/pkg/.anyenv/envs/rbenv/shims/",
   "ruby.rubocop.onSave": true,
   "ruby.codeCompletion": "rcodetools",
   "[javascript]": {
