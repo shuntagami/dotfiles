@@ -1,61 +1,62 @@
 # dotfiles
-Simple dotfiles includes<br>
-.zshrc with <a href="https://github.com/sorin-ionescu/prezto">Prezto</a>,<br> 
-.vimrc with <a href="https://github.com/Shougo/dein.vim">dein.vim</a>,<br>
-setting of macOS, iTerm, Homebrew.<br>
-It's possible to set up environment for creating Rails app 
 
+MacOS / Ubuntu dotfiles.
+
+With this dotfiles, it
+
+- allows you to setup dev environment in **just 3 commands** 🚀.
+- would work **both on MacOS and Ubuntu**✨.
 
 ## Warning
- If you want to give these dotfiles a try, you should first fork this repository, review the code, and remove things you don’t want or need. Don’t blindly use my settings unless you know what that entails. Use at your own risk!
 
-## How to use
-Firstly, maku sure that <b>Command line tools for Xcode</b> is installed on your mac. If not, run next command.
+If you want to give these dotfiles a try, you should first fork this repository, review the code, and remove things you don’t want or need. Don’t blindly use my settings unless you know what that entails. Use at your own risk!
 
-```
+## Requirement
+
+- Ubuntu(>=20.04)(for Ubuntu user.)
+- XCode Command Line Tools(for Mac user. if you don't have, get by runnning following command.)
+
+```bash
 $ xcode-select --install
 ```
 
-Clone this repo.
-```
-$ git clone https://github.com/shuntagami/dotfiles.git && cd dotfiles
+## How to use
+
+Run the following commnad.
+
+```bash
+$ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts/install_dotfiles.sh)"
+$ ~/dotfiles/scripts/install_packages.sh
+$ ~/dotfiles/scripts/deploy.sh
 ```
 
-Make files excutable.
-```
-chmod +x homebrew_setup.sh macos.sh zsh_setup.sh anyenv_setup.sh
+### For Mac user
+
+- Setup macOS.
+
+```bash
+$ ~/dotfiles/scripts/macos.sh
 ```
 
-Setup homebrew and homebrew-cask. You can install anyenv, git, etc. by homebrew and daily-use applications like zoom, slack, iTerm2, and others by homebrew-cask. Check it your own and add or remove as your needs. 
-```
-$ ./homebrew_setup.sh
-$ exec $SHELL -l
-```
+- Setup Iterm.
 
-Switch to iTerm2, change the setting. (Preferences(⌘,) → Preferences → check <b>Load preferences from a custom folder or URL</b>, change it to <b>/Users/Username/dotfiles</b>)
+_(Preferences(⌘,)_ → _Preferences_ → check <b>Load preferences from a custom folder or URL</b>, change it to <b>/Users/Username/dotfiles/misc</b>)
 
-![sample](https://user-images.githubusercontent.com/69618840/108678965-2d5e4e80-752f-11eb-9e32-27862427c9b6.png)
+![sample](https://user-images.githubusercontent.com/69618840/153607360-dc173d13-c551-4f2c-9ce5-02cbfeb0a120.png)
 
-Setup macOS.
-```
-$ ./macos.sh
-```
+### For Visual Studio Code user
 
-Setup zsh.
-```
-$ ./zsh_setup.sh
+- Setup Visual Studio Code
+
+```bash
+$ ~/dotfiles/scripts/vscode.sh
 ```
 
-Setup anyenv.(install latest version of ruby, Node.js, and other plugins)
-```
-$ ./anyenv_setup.sh
-```
+## Keywords
 
-## Image of iTerm
-![sample](https://user-images.githubusercontent.com/69618840/108621267-0f341800-7475-11eb-8f4f-edec0d91fc1b.png)
-
-## Image of vim
-![sample](https://user-images.githubusercontent.com/69618840/108621397-bca72b80-7475-11eb-8158-96624fff5de4.png)
-
-## Image of Finder.app
-![sample](https://user-images.githubusercontent.com/69618840/108621439-ed876080-7475-11eb-8a97-070d9aa5ab22.png)
+- [Zsh](https://www.zsh.org/)([sorin-ionescu/prezto](https://github.com/sorin-ionescu/prezto))
+- [vim](https://github.com/vim/vim)([Shugo/dein.vim](https://github.com/Shougo/dein.vim))
+- [Homebrew](https://github.com/Homebrew/brew), [Debian/apt](https://github.com/Debian/apt)
+- [anyenv](https://github.com/anyenv/anyenv)
+- [iTerm2](https://github.com/gnachman/iTerm2)
+- [Visual Studio Code](https://github.com/microsoft/vscode)

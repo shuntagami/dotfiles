@@ -2,7 +2,8 @@
 
 set -eux
 
-VSCODE_SETTING_DIR=~/Library/Application\ Support/Code/User
+[[ `uname` == "Darwin" ]] && VSCODE_SETTING_DIR=$HOME/Library/Application\ Support/Code/User
+[[ `uname` == "Linux" ]] && VSCODE_SETTING_DIR=$HOME/.config/Code/User
 
 ln -sf "${DOTFILES}"/misc/settings.json "${VSCODE_SETTING_DIR}"/settings.json
 ln -sf "${DOTFILES}"/misc/keybindings.json "${VSCODE_SETTING_DIR}"/keybindings.json
