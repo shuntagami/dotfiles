@@ -40,7 +40,6 @@ WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
 [[ `uname` == "Darwin" && -f $DOTFILES/zsh/mac.zsh    ]] && source $DOTFILES/zsh/mac.zsh
 [[ `uname` == "Linux"  && -f $DOTFILES/zsh/ubuntu.zsh ]] && source $DOTFILES/zsh/ubuntu.zsh
 
-[[ -f $DOTFILES/zsh/aliases.zsh ]] && source $DOTFILES/zsh/aliases.zsh
 [[ -f $DOTFILES/zsh/common.zsh ]] && source $DOTFILES/zsh/common.zsh
 [[ -f $DOTFILES/zsh/docker_aliases.zsh ]] && source $DOTFILES/zsh/docker_aliases.zsh
 [[ -f $DOTFILES/zsh/extra.zsh ]] && source $DOTFILES/zsh/extra.zsh
