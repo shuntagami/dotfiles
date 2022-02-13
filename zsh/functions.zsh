@@ -72,6 +72,14 @@ function dockerh() {
 EOF
 }
 
+# show find FAQ command
+function findh() {
+  cat <<EOF
+[name] $ find ./ -name *.md
+[each] $ find ./ -name *.md | xargs -L 1 echo
+EOF
+}
+
 # Use Git’s colored diff when available
 hash git &>/dev/null;
 if [ $? -eq 0 ]; then
@@ -80,6 +88,13 @@ if [ $? -eq 0 ]; then
 	}
 fi;
 
+# combination of --fixup and --squash options to help later invocation of interactive rebase
+function fixup() {
+  git log --oneline -n 10;
+  echo "Type the commit number to fixup: " && read number;
+  git commit --fixup ${number} && git stash -u;
+  git rebase -i --autosquash `git log --pretty=%P -n 1 ${number}`;
+}
 # Determine size of a file or total size of a directory
 function fs() {
 	if du -b /dev/null > /dev/null 2>&1; then
