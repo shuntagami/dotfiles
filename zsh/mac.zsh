@@ -2,10 +2,11 @@
 
 # Shortcuts
 alias d="cd ~/dotfiles"
-alias dl="cd ~/Downloads"
+alias dls="cd ~/Downloads"
 alias dt="cd ~/Desktop"
 alias p="cd ~/projects"
 alias g="git"
+alias icloud="cd ~/Library/Mobile\ Documents/com~apple~CloudDocs"
 
 # homebrew
 if [ -d "/opt/homebrew" ]; then
