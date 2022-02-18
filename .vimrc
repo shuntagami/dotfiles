@@ -93,7 +93,7 @@ set smarttab
 
 set clipboard+=unnamed
 
-" set wildoptions=pum
+set wildoptions=pum
 
 " 構文毎に文字色を変化させる
 syntax on
