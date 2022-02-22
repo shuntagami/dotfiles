@@ -584,7 +584,7 @@
 				</dict>
 			</dict>
 			<key>Minimum Contrast</key>
-			<real>0.47738370028409088</real>
+			<real>0.70003995028409094</real>
 			<key>Mouse Reporting</key>
 			<true/>
 			<key>Name</key>
@@ -642,7 +642,7 @@
 			<key>Terminal Type</key>
 			<string>xterm-256color</string>
 			<key>Transparency</key>
-			<real>0.29057701254971485</real>
+			<real>0.36627515084758722</real>
 			<key>Unlimited Scrollback</key>
 			<false/>
 			<key>Use Bold Font</key>
