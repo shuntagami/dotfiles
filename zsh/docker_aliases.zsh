@@ -8,10 +8,11 @@
 alias dl="docker ps -l -q"
 
 # Get container process
-alias dps="docker ps"
+alias dps='docker ps --format "table {{.Names}}\t{{.Command}}\t{{.Ports}}\t{{.Image}}"'
+
 
 # Get process included stop container
-alias dpa="docker ps -a"
+alias dpa='docker ps -a --format "table {{.Names}}\t{{.Command}}\t{{.Ports}}\t{{.Image}}"'
 
 # Get images
 alias di="docker images"
