@@ -9,7 +9,7 @@ fi
 
 export DOTFILES=$HOME/dotfiles
 export EDITOR='vim'
-export GOROOT=/opt/homebrew/Cellar/go/1.17.6/libexec
+export GOROOT=/opt/homebrew/Cellar/go/1.17.8/libexec
 export GOPATH=$HOME/dotfiles/pkg/go
 export PAGER='less'
 export VISUAL='vim'
