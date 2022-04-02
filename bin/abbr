@@ -17,6 +17,7 @@ end
 
 def describe(abbr)
   puts case abbr
+       when "ACID" then "Atomicity Consistency Isolation Durability"
        when "AES" then "Advanced Encryption Standard"
        when "ARP" then "Address Resolution Protocol"
        when "CORS" then "Cross Origin Resource Sharing"
@@ -38,6 +39,7 @@ def describe(abbr)
        when "OSI" then "Open Systems Interconnection"
        when "PEM" then "Privacy Enhanced Mail"
        when "PNG" then "Portable Network Graphics"
+       when "RPC" then "Remote Procedure Call"
        when "SCP" then "Secure Copy Protocol"
        when "SFTP" then "SSH File Transfer Protocol"
        when "SHA" then "Secure Hash Algorithm"
