@@ -2,47 +2,47 @@
 	user = shuntagami
 
 [user]
-  name = shuntagami
-  email = "shun.tagami@i-nations.tokyo"
+	name = shuntagami
+	email = "shun.tagami@i-nations.tokyo"
 
 [core]
-  editor = vim -c \"set fenc=utf-8\"
-  excludesfile = ~/.gitignore_global
+	editor = vim -c \"set fenc=utf-8\"
+	excludesfile = ~/.gitignore_global
 
-  # Treat spaces before tabs and all kinds of trailing whitespace as an error.
+	# Treat spaces before tabs and all kinds of trailing whitespace as an error.
 	# [default] trailing-space: looks for spaces at the end of a line
 	# [default] space-before-tab: looks for spaces before tabs at the beginning of a line
 	whitespace = space-before-tab,-indent-with-non-tab,trailing-space
 
 [credential]
-  helper = osxkeychain
+	helper = osxkeychain
 
 [alias]
-  tree = log --graph --pretty=format:'%x09%C(auto) %h %Cgreen %ar %Creset%x09by"%C(cyan ul)%an%Creset" %x09%C(auto)%s %d'
+	tree = log --graph --pretty=format:'%x09%C(auto) %h %Cgreen %ar %Creset%x09by"%C(cyan ul)%an%Creset" %x09%C(auto)%s %d'
 
-  # View the current working tree status using the short format.
+	# View the current working tree status using the short format.
 	s = status -s
 
 	# Show the diff between the latest commit and the current state.
 	d = !"git diff-index --quiet HEAD -- || clear; git --no-pager diff --patch-with-stat"
 
-  dc = !"git diff --cached"
+	dc = !"git diff --cached"
 
-  # Switch to a branch, creating it if necessary.
+	# Switch to a branch, creating it if necessary.
 	goto = "!f() { git checkout -b \"$1\" 2> /dev/null || git checkout \"$1\"; }; f"
 
-  # Show verbose output about tags, branches or remotes
+	# Show verbose output about tags, branches or remotes
 	tags = tag -l
 	branches = branch --all
 	remotes = remote --verbose
 
-  # List aliases.
+	# List aliases.
 	aliases = config --get-regexp alias
 
-  # Interactive rebase with the given number of latest commits.
+	# Interactive rebase with the given number of latest commits.
 	reb = "!r() { git rebase -i HEAD~$1; }; r"
 
-  # Remove the old tag with this name and tag the latest commit with it.
+	# Remove the old tag with this name and tag the latest commit with it.
 	retag = "!r() { git tag -d $1 && git push origin :refs/tags/$1 && git tag $1; }; r"
 
 	# Find branches containing commit
@@ -67,7 +67,7 @@
 	# Show the user email for the current repository.
 	whoami = config user.email
 
-  # Amend the currently staged files to the latest commit.
+	# Amend the currently staged files to the latest commit.
 	amend = commit --amend --reuse-message=HEAD
 
 [apply]
@@ -116,4 +116,4 @@
 	log = true
 
 [init]
-  defaultBranch = main
+	defaultBranch = main
