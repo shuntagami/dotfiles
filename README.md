@@ -60,3 +60,4 @@ $ ~/dotfiles/scripts/vscode.sh
 - [anyenv](https://github.com/anyenv/anyenv)
 - [iTerm2](https://github.com/gnachman/iTerm2)
 - [Visual Studio Code](https://github.com/microsoft/vscode)
+- [btop](https://github.com/aristocratos/btop)

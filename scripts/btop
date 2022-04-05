@@ -1,0 +1,8 @@
+#!/bin/bash
+
+install_btop() {
+  cd ~/dotfiles
+  git clone https://github.com/aristocratos/btop.git  && cd btop
+  make && sudo make install && sudo make setuid
+  rm -rf ~/dotfiles/btop
+}
