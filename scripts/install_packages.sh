@@ -9,12 +9,10 @@ has() {
 cd $HOME/dotfiles
 
 if [[ `uname` == "Linux" ]]; then
-  source $HOME/dotfiles/scripts/apt-get
-  run_apt
-  source $HOME/dotfiles/scripts/anyenv
-  install_anyenv
-  source $HOME/dotfiles/scripts/gh
-  install_gh
+  source $HOME/dotfiles/scripts/apt-get && run_apt
+  source $HOME/dotfiles/scripts/anyenv && install_anyenv
+  source $HOME/dotfiles/scripts/gh && install_gh
+  source $HOME/dotfiles/scripts/btop && install_btop
 elif [[ `uname` == "Darwin" ]]; then
   if ! has "brew"; then
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
