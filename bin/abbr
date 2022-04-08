@@ -18,6 +18,7 @@ end
 def describe abbr
   case abbr
   when "ACID" then "Atomicity Consistency Isolation Durability"
+  when "ACL" then "Access Control List"
   when "AES" then "Advanced Encryption Standard"
   when "ARP" then "Address Resolution Protocol"
   when "CORS" then "Cross Origin Resource Sharing"
@@ -38,6 +39,7 @@ def describe abbr
   when "NAPT" then "Network Address Port Translation"
   when "OSI" then "Open Systems Interconnection"
   when "PEM" then "Privacy Enhanced Mail"
+  when "PKCS" then "Public Key Cryptography Standards"
   when "PNG" then "Portable Network Graphics"
   when "RPC" then "Remote Procedure Call"
   when "SCP" then "Secure Copy Protocol"
@@ -49,6 +51,7 @@ def describe abbr
   when "TCP" then "Transmission Control Protocol"
   when "TLS" then "Transport Layer Security"
   when "UDP" then "User Datagram Protocol"
+  when "WAF" then "Web Application Firewall"
   when "XSS" then "Crooo Site Scripting"
   else "Unknown"
   end
