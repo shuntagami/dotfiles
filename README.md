@@ -55,7 +55,7 @@ $ ~/dotfiles/scripts/vscode.sh
 ## Keywords
 
 - [Zsh](https://www.zsh.org/)([sorin-ionescu/prezto](https://github.com/sorin-ionescu/prezto))
-- [vim](https://github.com/vim/vim)([Shugo/dein.vim](https://github.com/Shougo/dein.vim))
+- [Vim](https://github.com/vim/vim)([Shugo/dein.vim](https://github.com/Shougo/dein.vim))
 - [Homebrew](https://github.com/Homebrew/brew), [Debian/apt](https://github.com/Debian/apt)
 - [anyenv](https://github.com/anyenv/anyenv)
 - [iTerm2](https://github.com/gnachman/iTerm2)
