@@ -18,6 +18,7 @@ brew "nghttp2"
 brew "cask"
 brew "curl"
 brew "docker", link: false
+brew "duf"
 brew "libspatialite"
 brew "numpy"
 brew "poppler-qt5"

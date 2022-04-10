@@ -25,6 +25,7 @@ run_apt() {
     'dnsmasq-base'
     'docker'
     'docker-compose'
+    'duf'
     'gcc'
     'gcc-11'
     'g++-11'
