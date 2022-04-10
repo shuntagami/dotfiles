@@ -44,6 +44,8 @@ alias map="xargs -n1"
 # Print each PATH entry on a separate line
 alias path='echo -e ${PATH//:/\\n}'
 
+alias port_in_use='lsof -i -P -n | grep LISTEN'
+
 # Reload the shell (i.e. invoke as a login shell)
 alias relogin="exec ${SHELL} -l"
 
