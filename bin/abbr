@@ -47,6 +47,7 @@ def describe abbr
   when "SHA" then "Secure Hash Algorithm"
   when "SMTP" then "Simple Mail Transfer Protocol"
   when "SSH" then "Secure Shell"
+  when "SSRF" then "Server Side Request Forgery"
   when "SSL" then "Secure Sockets Layer"
   when "TCP" then "Transmission Control Protocol"
   when "TLS" then "Transport Layer Security"
