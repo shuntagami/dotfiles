@@ -73,6 +73,10 @@
   "tslint.autoFixOnSave": true,
   "tslint.packageManager": "yarn",
   "tslint.run": "onType",
+  "protoc": {
+    "path": "/opt/homebrew/bin/protoc",
+    "options": ["--proto_path=proto"]
+  },
   "explorer.autoReveal": false,
   "launch": {
     "version": "0.2.0",
