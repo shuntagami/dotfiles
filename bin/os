@@ -19,7 +19,7 @@ end
 ########################################
 # Main
 ########################################
-if `uname` =~ /Linux/ then
+if `uname` =~ /Linux/
   lsb_release = File.open("/etc/lsb-release")
                     .read
                     .split("\n")
@@ -32,27 +32,10 @@ if `uname` =~ /Linux/ then
   version     = release['DISTRIB_RELEASE']
   osName      = release['DISTRIB_CODENAME']
   puts "#{productName} #{version} #{osName}"
-  exit(0)
+  exit 0
 end
 
-if `uname` =~ /Darwin/ then
-  MacVersion = {
-    "12.1"  => "Monterey",
-    "12.0"  => "Monterey",
-    "11.4"  => "Big Sur",
-    "11.3"  => "Big Sur",
-    "11.2"  => "Big Sur",
-    "11.1"  => "Big Sur",
-    "11.0"  => "Big Sur",
-    "10.15" => "Catalina",
-    "10.14" => "Mojave",
-    "10.13" => "High Sierra",
-    "10.12" => "Sierra",
-    "10.11" => "El Capitan",
-    "10.10" => "Yosemite",
-  }
-  MacVersion.default = "Unknown"
-
+if `uname` =~ /Darwin/
   # https://support.apple.com/en-us/HT201260
   productName = `sw_vers -productName`.sub("\n", "")
   version     = `sw_vers -productVersion`.sub("\n", "")
@@ -69,5 +52,5 @@ if `uname` =~ /Darwin/ then
                 end
 
   puts "#{productName} #{version} #{osName}"
-  exit(0)
+  exit 0
 end
