@@ -17,7 +17,7 @@ end
 
 def describe abbr
   case abbr
-  when "ACID" then "Atomicity Consistency Isolation Durability"
+  when "ACID" then "Atomicity, Consistency, Isolation, Durability"
   when "ACL" then "Access Control List"
   when "AES" then "Advanced Encryption Standard"
   when "ARP" then "Address Resolution Protocol"
@@ -26,6 +26,8 @@ def describe abbr
   when "CDN" then "Content Delivery Network"
   when "CORS" then "Cross Origin Resource Sharing"
   when "CSRF" then "Cross Site Request Forgery"
+  when "CVSS" then "Common Vulnerability Scoring System"
+  when "DAC" then "Discretionary Access Control"
   when "DER" then "Distinguished Encoding Rules"
   when "DHCP" then "Dynamic Host Configuration Protocol"
   when "DNS" then "Domain Name System"
@@ -38,7 +40,7 @@ def describe abbr
   when "IP" then "Internet Protocol"
   when "ISO" then "International Organization for Standardization"
   when "JPG" then "Joint Photographic Experts Group"
-  when "MAC" then "Media Access Control Address"
+  when "MAC" then "Media Access Control Address, Mandatory Access Control"
   when "NAT" then "Network Address Translation"
   when "NAPT" then "Network Address Port Translation"
   when "OSI" then "Open Systems Interconnection"
@@ -46,6 +48,7 @@ def describe abbr
   when "PKCS" then "Public Key Cryptography Standards"
   when "PNG" then "Portable Network Graphics"
   when "RAID" then "Redundant Array of Independent Disk"
+  when "RBAC" then "Role-Based Access Control"
   when "REST" then "REpresentational State Transfer"
   when "RPC" then "Remote Procedure Call"
   when "SCP" then "Secure Copy Protocol"
@@ -59,6 +62,7 @@ def describe abbr
   when "SSH" then "Secure Shell"
   when "SSRF" then "Server Side Request Forgery"
   when "SSL" then "Secure Sockets Layer"
+  when "STRIDE" then "Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege"
   when "TCP" then "Transmission Control Protocol"
   when "TLS" then "Transport Layer Security"
   when "UDP" then "User Datagram Protocol"
