@@ -11,7 +11,7 @@ ln -sf "${DOTFILES}"/misc/tsconfig.json "${VSCODE_SETTING_DIR}"/tsconfig.json
 
 cat < $DOTFILES/misc/extensions | while read -r line
 do
-  code --install-extension "$line"
+  code --install-extension "$line" --force
 done
 
 cp /dev/null $DOTFILES/misc/extensions
