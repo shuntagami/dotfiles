@@ -53,6 +53,7 @@ def describe abbr
   when "RAID"; "Redundant Array of Independent Disk"
   when "RBAC"; "Role-Based Access Control"
   when "REST"; "REpresentational State Transfer"
+  when "RFC"; "Request For Comments"
   when "RPC"; "Remote Procedure Call"
   when "SCP"; "Secure Copy Protocol"
   when "SFTP"; "SSH File Transfer Protocol"
