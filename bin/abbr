@@ -25,6 +25,7 @@ def describe abbr
   when "CAP"; "Consistency Availability Partition-tolerance"
   when "CDN"; "Content Delivery Network"
   when "CGI"; "Common Gateway Interface"
+  when "CIA"; "Confidentiality, Integrity, Availability"
   when "CORS"; "Cross Origin Resource Sharing"
   when "CSRF"; "Cross Site Request Forgery"
   when "CSS"; "Cascading Style Sheets"
