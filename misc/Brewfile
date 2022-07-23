@@ -30,6 +30,7 @@ brew "curl"
 brew "libavif"
 brew "php"
 brew "composer"
+brew "ctop"
 brew "docker", link: false
 brew "docker-compose"
 brew "duf"
