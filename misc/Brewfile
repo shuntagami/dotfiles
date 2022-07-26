@@ -35,6 +35,7 @@ brew "docker", link: false
 brew "docker-compose"
 brew "duf"
 brew "fd"
+brew "libdap"
 brew "libspatialite"
 brew "numpy"
 brew "gdal"
