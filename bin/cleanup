@@ -1,0 +1,61 @@
+# remove unused dotfiles at $HOME
+
+# ignore
+#  .config
+#  .gvfs
+#  .local
+
+target_files="
+.DS_Store
+.apport-ignore.xml
+.babel.json
+.calc_history
+.dbshell
+.dbus
+.esd_auth
+.evolution
+.gconf
+.gconfd
+.gnome
+.gnome2_private
+.goutputstream*
+.gstreamer-0.10
+.gtk-bookmarks
+.lesshst
+.nautilus
+.node_repl_history
+.php_history
+.pulse
+.pulse-cookie
+.python_history
+.recently-used.xbel*
+.rnd
+.sqlite_history
+.swt
+.thumbnails
+.v8flags.*
+.w3m
+.wget-hsts
+.xsel.log
+.xsession-errors
+.xsession-errors.old
+canary_debuglog.txt
+tmux-client-*.log
+.ts_node_repl_history
+.bash_history
+.irb_history
+.lesshst
+.node_repl_history
+.nuxtrc
+.viminfo
+.wget-hsts
+.zcompdump
+"
+
+for target in $target_files
+do
+  echo "rm -rf $HOME/$target"
+  rm -rf "$HOME/$target"
+done
+
+cp /dev/null SSLKEYLOGFILE.log

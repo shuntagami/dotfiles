@@ -25,7 +25,7 @@ alias airport='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/C
 alias chrome="open -a Google\ Chrome"
 
 # Recursively delete `.DS_Store` files
-alias cleanup="find . -name '.DS_Store' -type f -delete"
+alias rm_ds_store="find . -name '.DS_Store' -type f -delete"
 
 # Empty the Trash on all mounted volumes and the main HDD.
 # Also, clear Apple’s System Logs to improve shell startup speed.
