@@ -237,4 +237,3 @@ function targz() {
 
 	echo "${tmpFile}.gz ($((zippedSize / 1000)) kB) created successfully.";
 }
-

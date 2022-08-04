@@ -26,4 +26,3 @@ path=(
   $GOPATH/bin
   $path
 )
-

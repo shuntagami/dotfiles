@@ -53,4 +53,3 @@ dbash() { docker exec -it $(docker ps -aqf "name=$1") bash; }
 
 # Show all alias related docker
 dalias() { alias | grep 'docker' | sed "s/^\([^=]*\)=\(.*\)/\1 => \2/"| sed "s/['|\']//g" | sort; }
-
