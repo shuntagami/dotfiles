@@ -1,0 +1,45 @@
+#!/usr/bin/env node
+
+////////////////////////////////////////
+// HELP
+////////////////////////////////////////
+const HELP = `
+show rough status of system
+
+$ sys
+TODO
+`.trim()
+
+if (process.argv[2] === '-h') {
+  console.log(HELP);
+  process.exit(0);
+}
+
+
+////////////////////////////////////////
+// Main
+////////////////////////////////////////
+const os    = require('os');
+const exec  = require('child_process').exec;
+const free  = ( os.freemem()/(1000*1000*1000));
+const total = (os.totalmem()/(1000*1000*1000));
+
+const stat = `
+memory: ${free}/${total}G
+core:   ${os.cpus().length}
+host:   ${os.hostname()}
+type:   ${os.type()}
+arch:   ${os.arch()}
+kernel: ${os.release()}
+os:     ${os.platform()}
+cpu:    ${os.cpus()[0].model}
+`
+console.log(stat.trim(), '\n');
+
+exec('$DOTFILES/bin/os', (err, out) => {
+  console.log(out)
+});
+
+exec('$DOTFILES/bin/addr', (err, out) => {
+  console.log(out)
+});
