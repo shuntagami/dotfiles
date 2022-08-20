@@ -1,0 +1,35 @@
+#!/usr/bin/env node
+
+////////////////////////////////////////
+// HELP
+////////////////////////////////////////
+const HELP = `
+show Japanese era name
+
+$ era 2019-4-1
+令和元年
+`.trim()
+
+if (process.argv[2] === '-h') {
+  console.log(HELP);
+  process.exit(0);
+}
+
+const dateInput = process.argv[2].split('-')
+switch (dateInput.length) {
+  case 1:
+    dateInput.push(1, 1)
+    break;
+  case 2:
+    dateInput.push(1)
+    break;
+  case 3:
+    // NOP
+    break;
+  default:
+    console.log('Invalid date value')
+    console.log('Run `datetime -h` for usage.')
+    process.exit(1);
+}
+const dateTimeFormat = new Intl.DateTimeFormat("ja-JP-u-ca-japanese", {year: 'numeric'})
+console.log(dateTimeFormat.format(new Date(dateInput[0], dateInput[1], dateInput[2])))
