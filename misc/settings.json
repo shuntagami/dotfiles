@@ -56,6 +56,8 @@
   "go.toolsEnvVars": {
     "GOFLAGS": "-tags=test"
   },
+  "go.lintTool": "golangci-lint",
+  "go.lintFlags": ["--fast"],
   "ruby.rubocop.useBundler": true,
   "ruby.useBundler": true,
   "ruby.pathToBundler": "$HOME/dotfiles/pkg/.anyenv/envs/rbenv/shims/",
