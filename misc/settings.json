@@ -109,6 +109,5 @@
     "[x]"
   ],
   "todo-tree.regex.regex": "(//|#|<!--|;|/\\*|^|^\\s*(-|\\d+.))\\s*($TAGS)",
-  "window.zoomLevel": -1,
   "go.toolsManagement.autoUpdate": true
 }
