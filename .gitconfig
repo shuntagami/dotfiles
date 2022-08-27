@@ -3,7 +3,7 @@
 
 [user]
 	name = shuntagami
-	email = "shun.tagami@i-nations.tokyo"
+	email = shuntagami23@gmail.com
 
 [core]
 	editor = vim -c \"set fenc=utf-8\"
