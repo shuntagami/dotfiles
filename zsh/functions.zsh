@@ -123,7 +123,7 @@ has () {
 }
 
 # Put together dull routine when hosting repo on github
-init_repo () {
+init-repo () {
   git init && git commit --allow-empty -m "empty commit" && git add -A && git status && git commit -v
   echo "Type repository name: " && read name;
   echo "Type repository description: " && read description;
@@ -198,7 +198,7 @@ function phpserver() {
 }
 
 # Change current branch by PR number
-pr_checkout () {
+pr-checkout () {
   gh pr list;
   echo "Type the number of PR to checkout: " && read number;
   gh pr checkout ${number};

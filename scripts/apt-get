@@ -1,6 +1,6 @@
 #!/bin/bash
 
-run_apt() {
+run-apt() {
   echo "Installing Packages..."
 
   curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
@@ -76,4 +76,3 @@ run_apt() {
     [[ $? ]] && echo "$(tput setaf 2)Installed missing formulae ✔︎$(tput sgr0)"
   fi
 }
-

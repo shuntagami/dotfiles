@@ -25,8 +25,8 @@ $ xcode-select --install
 Run the following commnad.
 
 ```bash
-$ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts/install_dotfiles.sh)"
-$ ~/dotfiles/scripts/install_packages.sh
+$ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts/install-dotfiles.sh)"
+$ ~/dotfiles/scripts/install-packages.sh
 $ ~/dotfiles/scripts/deploy.sh
 ```
 
