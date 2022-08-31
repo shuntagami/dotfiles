@@ -46,10 +46,10 @@ WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
 [[ `uname` == "Linux"  && -f $DOTFILES/zsh/ubuntu.zsh ]] && source $DOTFILES/zsh/ubuntu.zsh
 
 [[ -f $DOTFILES/zsh/common.zsh ]] && source $DOTFILES/zsh/common.zsh
-[[ -f $DOTFILES/zsh/docker_aliases.zsh ]] && source $DOTFILES/zsh/docker_aliases.zsh
+[[ -f $DOTFILES/zsh/docker-aliases.zsh ]] && source $DOTFILES/zsh/docker-aliases.zsh
 [[ -f $DOTFILES/zsh/extra.zsh ]] && source $DOTFILES/zsh/extra.zsh
 [[ -f $DOTFILES/zsh/functions.zsh ]] && source $DOTFILES/zsh/functions.zsh
-[[ -f $DOTFILES/zsh/http_status_codes.zsh ]] && source $DOTFILES/zsh/http_status_codes.zsh
+[[ -f $DOTFILES/zsh/http-status-codes.zsh ]] && source $DOTFILES/zsh/http-status-codes.zsh
 
 # core utils
 [[ -d "$DOTFILES/bin" ]] && addToPath $DOTFILES/bin
