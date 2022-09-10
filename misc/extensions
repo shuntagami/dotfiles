@@ -22,6 +22,7 @@ IHunte.laravel-blade-wrapper
 jebbs.plantuml
 kaiwood.endwise
 Kelvin.vscode-sshfs
+KoichiSasada.vscode-rdbg
 mikestead.dotenv
 misogi.ruby-rubocop
 ms-azuretools.vscode-docker
@@ -29,6 +30,7 @@ ms-vscode-remote.remote-containers
 ms-vscode-remote.remote-ssh
 ms-vscode-remote.remote-ssh-edit
 ms-vscode-remote.vscode-remote-extensionpack
+ms-vscode.makefile-tools
 mubaidr.vuejs-extension-pack
 naoray.laravel-goto-components
 nmrmsys.vscode-sql-formatter-mod
@@ -42,6 +44,7 @@ ryannaddy.laravel-artisan
 sdras.vue-vscode-snippets
 shufo.vscode-blade-formatter
 shuworks.vscode-table-formatter
+sianglim.slim
 techer.open-in-browser
 toba.vsfire
 tombonnike.vscode-status-bar-format-toggle
