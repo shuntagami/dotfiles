@@ -1,4 +1,3 @@
 extra.zsh
-.zprezto
 pkg/*
 Brewfile.lock.json
