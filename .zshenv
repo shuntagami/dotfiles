@@ -24,10 +24,10 @@ if command -v direnv 1>/dev/null 2>&1; then
 fi
 
 # Paths
-typeset -gU path
-
 path=(
   /Applications/Visual Studio Code.app/Contents/Resources/app/bin
   $GOPATH/bin
   $path
 )
+
+typeset -gU PATH
