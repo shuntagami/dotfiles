@@ -17,6 +17,7 @@ cd ${HOME}/.zprezto && git pull && git submodule sync --recursive && git submodu
 
 # symlink dotfiles
 ln -sf ~/dotfiles/.dein.toml ~/.dein.toml
+ln -sf ~/dotfiles/.gemrc ~/.gemrc
 ln -sf ~/dotfiles/.gitconfig ~/.gitconfig
 ln -sf ~/dotfiles/.gitignore_global ~/.gitignore_global
 ln -sf ~/dotfiles/.golangci.yml ~/.golangci.yml
