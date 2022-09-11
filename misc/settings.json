@@ -43,13 +43,19 @@
   "vim.useSystemClipboard": true,
   "vim.mouseSelectionGoesIntoVisualMode": false,
   "ruby.format": "rubocop",
+  "ruby.useLanguageServer": true,
+  "ruby.intellisense": "rubyLocate",
   "ruby.lint": {
     "rubocop": true,
     "rails": true
   },
-  "[ruby]": {
-    "editor.formatOnSave": true
-  },
+  "ruby.rubocop.useBundler": true,
+  "ruby.useBundler": true,
+  "ruby.pathToBundler": "$HOME/dotfiles/pkg/.anyenv/envs/rbenv/shims/",
+  "ruby.intellisense": "rubyLocate",
+  "ruby.rubocop.executePath": "$HOME/dotfiles/pkg/.anyenv/envs/rbenv/shims/",
+  "ruby.rubocop.onSave": true,
+  "ruby.codeCompletion": "rcodetools",
   "[go]": {
     "editor.defaultFormatter": "golang.go"
   },
@@ -58,17 +64,9 @@
   },
   "go.lintTool": "golangci-lint",
   "go.lintFlags": ["--fast"],
-  "ruby.rubocop.useBundler": true,
-  "ruby.useBundler": true,
-  "ruby.pathToBundler": "$HOME/dotfiles/pkg/.anyenv/envs/rbenv/shims/",
-  "ruby.intellisense": "rubyLocate",
-  "ruby.rubocop.executePath": "$HOME/dotfiles/pkg/.anyenv/envs/rbenv/shims/",
-  "ruby.rubocop.onSave": true,
-  "ruby.codeCompletion": "rcodetools",
   "[javascript]": {
     // 自動修正
-    "editor.defaultFormatter": "dbaeumer.vscode-eslint",
-    "editor.formatOnSave": true
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint"
   },
   "javascript.updateImportsOnFileMove.enabled": "always",
   "typescript.updateImportsOnFileMove.enabled": "always",
