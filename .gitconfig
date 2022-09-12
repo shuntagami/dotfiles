@@ -31,6 +31,9 @@
 	# Switch to a branch, creating it if necessary.
 	goto = "!f() { git checkout -b \"$1\" 2> /dev/null || git checkout \"$1\"; }; f"
 
+	# Switch to a default branch
+	default = !"git checkout $(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')"
+
 	# Show verbose output about tags, branches or remotes
 	tags = tag -l
 	branches = branch --all
