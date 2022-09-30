@@ -31,6 +31,7 @@ target_files="
 .python_history
 .rdbg_history
 .recently-used.xbel*
+.rediscli_history
 .rnd
 .sqlite_history
 .swt
