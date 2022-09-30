@@ -46,6 +46,7 @@ def describe abbr
   when "MAC"; "Media Access Control Address, Mandatory Access Control"
   when "NAT"; "Network Address Translation"
   when "NAPT"; "Network Address Port Translation"
+  when "OCR"; "Optical Character Recoginition"
   when "OSI"; "Open Systems Interconnection"
   when "PEM"; "Privacy Enhanced Mail"
   when "PKCS"; "Public Key Cryptography Standards"
