@@ -65,3 +65,7 @@ alias update='cd ~/dotfiles/misc; brew update; brew bundle install --file=$HOME/
 
 # Update locate command
 alias updatedb="sudo /usr/libexec/locate.updatedb"
+
+# VPN
+alias vpn.connect="networksetup -connectpppoeservice 'ANDPAD-VPN (L2TP)'"
+alias vpn.disconnect="networksetup -disconnectpppoeservice 'ANDPAD-VPN (L2TP)'"
