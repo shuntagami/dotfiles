@@ -59,6 +59,7 @@
   "[go]": {
     "editor.defaultFormatter": "golang.go"
   },
+  "go.toolsManagement.autoUpdate": true,
   "go.toolsEnvVars": {
     "GOFLAGS": "-tags=test"
   },
@@ -107,5 +108,5 @@
     "[x]"
   ],
   "todo-tree.regex.regex": "(//|#|<!--|;|/\\*|^|^\\s*(-|\\d+.))\\s*($TAGS)",
-  "go.toolsManagement.autoUpdate": true
+  "prettier.singleQuote": true
 }
