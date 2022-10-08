@@ -69,3 +69,7 @@ alias updatedb="sudo /usr/libexec/locate.updatedb"
 # VPN
 alias vpn.connect="networksetup -connectpppoeservice 'ANDPAD-VPN (L2TP)'"
 alias vpn.disconnect="networksetup -disconnectpppoeservice 'ANDPAD-VPN (L2TP)'"
+
+# Wifi
+alias wifi.on="networksetup -setairportpower en0 on"
+alias wifi.off="networksetup -setairportpower en0 off"
