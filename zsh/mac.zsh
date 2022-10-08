@@ -38,7 +38,6 @@ alias flush="dscacheutil -flushcache && killall -HUP mDNSResponder"
 # copy
 alias pbp="pbpaste"
 
-#alias pb="pbcopy"
 function pb() {
   if [ -t 0 ]; then
     cat $1 | pbcopy
@@ -53,18 +52,22 @@ alias localip="ipconfig getifaddr en0"
 alias ips="ifconfig -a | grep -o 'inet6\? \(addr:\)\?\s\?\(\(\([0-9]\+\.\)\{3\}[0-9]\+\)\|[a-fA-F0-9:]\+\)' | awk '{ sub(/inet6? (addr:)? ?/, \"\"); print }'"
 
 # Get macOS Software Updates
-alias osupdate='sudo softwareupdate -i -a'
+alias os.update='sudo softwareupdate -i -a'
+
+function say() {
+  osascript -e "say \"{$1}\""
+}
 
 # Disable Spotlight
-alias spotoff="sudo mdutil -a -i off"
+alias spotlight.off="sudo mdutil -a -i off"
 # Enable Spotlight
-alias spoton="sudo mdutil -a -i on"
+alias spotlight.on="sudo mdutil -a -i on"
 
 # Update installed Ruby gems, Homebrew, npm, and their installed packages
 alias update='cd ~/dotfiles/misc; brew update; brew bundle install --file=$HOME/dotfiles/misc/Brewfile; rm -rf Brewfile; brew bundle dump; brew cleanup; npm install npm -g; npm update -g; sudo gem update --system; sudo gem update; sudo gem cleanup'
 
 # Update locate command
-alias updatedb="sudo /usr/libexec/locate.updatedb"
+alias db.update="sudo /usr/libexec/locate.updatedb"
 
 # VPN
 alias vpn.connect="networksetup -connectpppoeservice 'ANDPAD-VPN (L2TP)'"
