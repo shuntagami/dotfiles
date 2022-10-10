@@ -76,3 +76,4 @@ alias vpn.disconnect="networksetup -disconnectpppoeservice 'ANDPAD-VPN (L2TP)'"
 # Wifi
 alias wifi.on="networksetup -setairportpower en0 on"
 alias wifi.off="networksetup -setairportpower en0 off"
+alias wifi.hotspot="networksetup -setairportnetwork en0 pixel"
