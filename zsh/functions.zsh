@@ -177,6 +177,12 @@ function o() {
 	fi;
 }
 
+alias ggrep="git grep -A 5 -B 5"
+
+function gngrep() {
+  git grep -A "$1" -B "$1" "$2"
+}
+
 # Normalize `open` across Linux, macOS, and Windows.
 # This is needed to make the `o` function (see below) cross-platform.
 if [ ! $(uname -s) = 'Darwin' ]; then
