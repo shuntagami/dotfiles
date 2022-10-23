@@ -1,3 +1,5 @@
 extra.zsh
+karabiner/*
+!karabiner.json
 pkg/*
 Brewfile.lock.json
