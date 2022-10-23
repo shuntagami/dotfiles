@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# https://github.com/pqrs-org/Karabiner-Elements
+install-karabiner-elements() {
+  cd ~/dotfiles
+  git clone --depth 1 https://github.com/pqrs-org/Karabiner-Elements.git && cd Karabiner-Elements
+  git submodule update --init --recursive --depth 1
+  make package
+
+  # The make script will create a redistributable Karabiner-Elements-VERSION.dmg in the current directory.
+  DMG_FILE=$(basename *.dmg)
+  if [[ ${DMG_FILE} =~ ^(Karabiner-Elements-)+[0-9]+\.[0-9]+\.[0-9] ]]; then
+    mv ~/dotfiles/Karabiner-Elements/"${DMG_FILE}" ~/dotfiles
+    rm -rf ~/dotfiles/Karabiner-Elements
+    open ~/dotfiles/"${DMG_FILE}"
+  fi
+}

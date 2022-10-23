@@ -29,6 +29,11 @@ ln -sf ~/dotfiles/.zpreztorc ~/.zpreztorc
 ln -sf ~/dotfiles/.zshenv ~/.zshenv
 ln -sf ~/dotfiles/.zshrc ~/.zshrc
 
+# The location of the configuration file for kareabiner-elements
+# https://karabiner-elements.pqrs.org/docs/manual/misc/configuration-file-path/
+ln -s ~/dotfiles/karabiner ~/.config
+launchctl kickstart -k gui/`id -u`/org.pqrs.karabiner.karabiner_console_user_server
+
 # change shell
 chsh -s $(which zsh)
 
