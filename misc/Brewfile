@@ -91,6 +91,7 @@ brew "python@3.9"
 brew "redis", restart_service: true
 brew "ripgrep"
 brew "sfcgal"
+brew "slackcat"
 brew "twty"
 brew "vim"
 brew "w3m"
