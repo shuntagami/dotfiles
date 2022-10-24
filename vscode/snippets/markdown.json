@@ -1,0 +1,12 @@
+{
+  "Task": {
+    "prefix": "t",
+    "body": "- [x] ",
+    "description": "Insert task list item"
+  },
+  "Markdown Image Basic": {
+    "prefix": "mimage",
+    "body": ["![Alt](Image Path)"],
+    "description": "Image Basick"
+  }
+}

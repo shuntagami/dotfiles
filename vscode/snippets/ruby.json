@@ -1,0 +1,27 @@
+{
+  "attr_reader": {
+    "prefix": "r",
+    "body": ["attr_reader :"],
+    "description": "attr_reader"
+  },
+  "attr_accessor": {
+    "prefix": "rw",
+    "body": ["attr_accessor :"],
+    "description": "attr_accessor"
+  },
+  "describe_block": {
+    "prefix": "desc",
+    "body": ["describe '${1:description}' do", "\t$0", "end"],
+    "description": "'describe' block for testing with minispec"
+  },
+  "it_block": {
+    "prefix": "it",
+    "body": ["it '${1:description}' do", "\t$0", "end"],
+    "description": "'it' block for testing with minispec"
+  },
+  "test_block": {
+    "prefix": "test",
+    "body": ["test '${1:description}' do", "\t$0", "end"],
+    "description": "'test' block for testing with minispec"
+  }
+}

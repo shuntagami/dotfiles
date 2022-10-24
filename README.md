@@ -49,7 +49,7 @@ _(Preferences(⌘,)_ → _Preferences_ → check <b>Load preferences from a cust
 - Setup Visual Studio Code
 
 ```bash
-$ ~/dotfiles/scripts/vscode.sh
+$ ~/dotfiles/vscode/setup.sh
 ```
 
 ## Keywords

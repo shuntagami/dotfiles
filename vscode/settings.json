@@ -46,6 +46,9 @@
   "[c]": {
     "editor.defaultFormatter": "xaver.clang-format"
   },
+  "[markdown]": {
+    "editor.quickSuggestions": true
+  },
   "ruby.format": "rubocop",
   "ruby.useLanguageServer": true,
   "ruby.intellisense": "rubyLocate",
@@ -56,7 +59,6 @@
   "ruby.rubocop.useBundler": true,
   "ruby.useBundler": true,
   "ruby.pathToBundler": "$HOME/dotfiles/pkg/.anyenv/envs/rbenv/shims/",
-  "ruby.intellisense": "rubyLocate",
   "ruby.rubocop.executePath": "$HOME/dotfiles/pkg/.anyenv/envs/rbenv/shims/",
   "ruby.rubocop.onSave": true,
   "ruby.codeCompletion": "rcodetools",
