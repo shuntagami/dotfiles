@@ -29,6 +29,11 @@ ln -sf ~/dotfiles/.zpreztorc ~/.zpreztorc
 ln -sf ~/dotfiles/.zshenv ~/.zshenv
 ln -sf ~/dotfiles/.zshrc ~/.zshrc
 
+if ! grep -sq "require('keyboard')" ~/.hammerspoon/init.lua; then
+  ln -sf ~/dotfiles/hammerspoon/init.lua ~/.hammerspoon/init.lua
+  ln -sf ~/dotfiles/hammerspoon ~/.hammerspoon/keyboard
+fi
+
 # The location of the configuration file for kareabiner-elements
 # https://karabiner-elements.pqrs.org/docs/manual/misc/configuration-file-path/
 ln -s ~/dotfiles/karabiner ~/.config
