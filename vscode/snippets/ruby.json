@@ -14,6 +14,11 @@
     "body": ["describe '${1:description}' do", "\t$0", "end"],
     "description": "'describe' block for testing with minispec"
   },
+  "context_block": {
+    "prefix": "context",
+    "body": ["context '${1:description}' do", "\t$0", "end"],
+    "description": "'context' block for testing with minispec"
+  },
   "it_block": {
     "prefix": "it",
     "body": ["it '${1:description}' do", "\t$0", "end"],
