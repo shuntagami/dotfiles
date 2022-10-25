@@ -47,7 +47,11 @@
     "editor.defaultFormatter": "xaver.clang-format"
   },
   "[markdown]": {
-    "editor.quickSuggestions": true
+    "editor.quickSuggestions": {
+      "comments": "on",
+      "strings": "on",
+      "other": "on"
+    }
   },
   "ruby.format": "rubocop",
   "ruby.useLanguageServer": true,
