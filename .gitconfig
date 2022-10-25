@@ -117,3 +117,6 @@
 
 [init]
 	defaultBranch = main
+
+[grep]
+	lineNumber = true
