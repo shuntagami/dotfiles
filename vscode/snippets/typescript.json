@@ -1,0 +1,22 @@
+{
+  "Print to console": {
+    "prefix": "log",
+    "body": ["console.log('$1')", "$2"],
+    "description": "Log output to console2"
+  },
+  "For Loop": {
+    "prefix": ["for", "for-const"],
+    "body": ["for (const ${2:element} of ${1:array}) {", "\t$0", "}"],
+    "description": "A for loop."
+  },
+  "JS DOC": {
+    "prefix": "doc",
+    "body": [
+      "/**",
+      "* desc of function",
+      "* @param arg desc of arg",
+      "* @return desc of return value",
+      "*/"
+    ]
+  }
+}
