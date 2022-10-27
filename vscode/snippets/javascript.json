@@ -18,5 +18,11 @@
       "* @return desc of return value",
       "*/"
     ]
+  },
+  "JS comment": {
+    "prefix": "comment",
+    "body": [
+      "/** $1 */"
+    ]
   }
 }
