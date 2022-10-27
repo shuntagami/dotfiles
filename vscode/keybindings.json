@@ -1,10 +1,7 @@
 [
   {
-    "key": "ctrl+cmd+p",
-    "command": "extension.ghqOpen"
-  },
-  {
-    "key": "ctrl+t",
-    "command": "workbench.action.terminal.toggleTerminal"
+    "key": "cmd+shift+r",
+    "command": "workbench.action.reloadWindow",
+    "when": "editorTextFocus"
   }
 ]
