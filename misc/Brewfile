@@ -41,6 +41,7 @@ brew "docker", link: false
 brew "docker-compose"
 brew "duf"
 brew "harfbuzz"
+brew "openjdk"
 brew "elasticsearch@6", restart_service: true
 brew "fd"
 brew "hdf5"
@@ -111,6 +112,7 @@ cask "adoptopenjdk"
 cask "android-studio"
 cask "chromedriver"
 cask "clipy"
+cask "discord"
 cask "docker"
 cask "dotnet-sdk"
 cask "drawio"
@@ -135,6 +137,7 @@ cask "visual-studio-code"
 cask "ytmdesktop-youtube-music"
 cask "zoom"
 mas "Be Focused", id: 973134470
+mas "GIPHY CAPTURE", id: 668208984
 mas "LINE", id: 539883307
 mas "Numbers", id: 409203825
 mas "Okta Extension App", id: 1439967473
