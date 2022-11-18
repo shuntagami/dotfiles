@@ -54,5 +54,3 @@ alias urlencode='python3 -c "import sys, urllib as ul; print ul.quote_plus(sys.a
 
 # Get week number
 alias week='date +%V'
-
-alias top='btop'
