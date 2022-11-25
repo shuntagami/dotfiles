@@ -12,6 +12,9 @@ export EDITOR='vim'
 export GOPATH=$HOME/dotfiles/pkg/go
 export PAGER='less'
 export VISUAL='vim'
+export AWS_DEFAULT_REGION='ap-northeast-1'
+export AWS_ACCESS_KEY_ID=''
+export AWS_SECRET_ACCESS_KEY=''
 
 # Language
 if [[ -z "$LANG" ]]; then
