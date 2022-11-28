@@ -16,12 +16,14 @@ GabrielNordeborn.vscode-graphiql-explorer
 glitchbl.laravel-create-view
 golang.go
 groksrc.ruby
+hashicorp.terraform
 Hridoy.rails-snippets
 humao.rest-client
 IHunte.laravel-blade-wrapper
 jebbs.plantuml
 kaiwood.endwise
 Kelvin.vscode-sshfs
+kiadstudios.vscode-swift
 KoichiSasada.vscode-rdbg
 mikestead.dotenv
 misogi.ruby-rubocop
@@ -35,6 +37,7 @@ ms-vscode.cpptools
 ms-vscode.cpptools-extension-pack
 ms-vscode.cpptools-themes
 ms-vscode.makefile-tools
+ms-vscode.remote-explorer
 mubaidr.vuejs-extension-pack
 naoray.laravel-goto-components
 nmrmsys.vscode-sql-formatter-mod
