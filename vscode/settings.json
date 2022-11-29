@@ -74,6 +74,18 @@
     "!Transform mapping",
     "!Ref scalar"
   ],
+  "[terraform]": {
+    "editor.defaultFormatter": "hashicorp.terraform",
+    "editor.codeActionsOnSave": {
+      "source.formatAll.terraform": true
+    }
+  },
+  "[terraform-vars]": {
+    "editor.defaultFormatter": "hashicorp.terraform",
+    "editor.codeActionsOnSave": {
+      "source.formatAll.terraform": true
+    }
+  },
   "ruby.format": "rubocop",
   "ruby.useLanguageServer": true,
   "ruby.intellisense": "rubyLocate",
