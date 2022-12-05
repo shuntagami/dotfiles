@@ -61,7 +61,7 @@ alias spotlight.off="sudo mdutil -a -i off"
 alias spotlight.on="sudo mdutil -a -i on"
 
 # Update installed Ruby gems, Homebrew, npm, and their installed packages
-alias update='cd ~/dotfiles/misc; brew update; brew bundle install --file=$HOME/dotfiles/misc/Brewfile; rm -rf Brewfile; brew bundle dump; brew cleanup; npm install npm -g; npm update -g; sudo gem update --system; sudo gem update; sudo gem cleanup'
+alias update='cd ~/dotfiles/misc; brew update; brew bundle install --file=$HOME/dotfiles/misc/Brewfile; rm -rf Brewfile; brew bundle dump; brew cleanup; npm install npm -g; npm update -g; sudo gem update --system; sudo gem update; sudo gem cleanup; 1'
 
 # Update locate command
 alias db.update="sudo /usr/libexec/locate.updatedb"
