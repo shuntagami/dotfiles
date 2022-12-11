@@ -53,6 +53,7 @@ WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
 
 # core utils
 [[ -d "$DOTFILES/bin" ]] && addToPath $DOTFILES/bin
+[[ -d "$DOTFILES/bin/private" ]] && addToPath $DOTFILES/bin/private
 
 # anyenv
 if [ -e "$DOTFILES/pkg/.anyenv" ]; then
