@@ -78,7 +78,6 @@ linters:
     - nonamedreturns
     - nosnakecase
     - nosprintfhostport
-    - paralletest
     - prealloc
     - predeclared
     - promlinter
