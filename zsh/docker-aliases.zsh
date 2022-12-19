@@ -51,5 +51,7 @@ dbu() { docker build -t=$1 .; }
 # Bash into running container
 dbash() { docker exec -it $(docker ps -aqf "name=$1") bash; }
 
+dbash2() { docker exec -it $(docker ps -aqf "name=$1") bash -c "$2"; }
+
 # Show all alias related docker
 dalias() { alias | grep 'docker' | sed "s/^\([^=]*\)=\(.*\)/\1 => \2/"| sed "s/['|\']//g" | sort; }
