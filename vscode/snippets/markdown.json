@@ -8,5 +8,16 @@
     "prefix": "mimage",
     "body": ["![Alt](Image Path)"],
     "description": "Image Basick"
+  },
+  "wrap": {
+    "prefix": "w",
+    "body": [
+      "<detail>",
+      "<summary>wrapped text</summary>",
+      "",
+      "1. add an empty line and start from here",
+      "</detail>"
+    ],
+    "description": "wrapped text"
   }
 }
