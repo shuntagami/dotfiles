@@ -56,6 +56,7 @@ alias urlencode='python3 -c "import sys, urllib as ul; print ul.quote_plus(sys.a
 alias week='date +%V'
 
 # aws-vault
+alias exec-admin='aws-vault exec admin'
 alias exec-my='aws-vault exec my'
 alias exec-dev='aws-vault exec dev'
 alias exec-prod='aws-vault exec prod'
