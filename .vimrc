@@ -139,6 +139,7 @@ let g:lsp_signs_error = {'text': '✗'}
 let g:lsp_signs_warning = {'text': '‼'}
 let g:lsp_signs_information = {'text': 'i'}
 let g:lsp_signs_hint = {'text': '?'}
+let g:molder_show_hidden = 1
 
 " 自動保存をする
 let g:auto_save = 1

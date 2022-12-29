@@ -64,3 +64,6 @@ repo = 'editorconfig/editorconfig-vim'
 
 [[plugins]]
 repo = 'fatih/vim-go'
+
+[[plugins]]
+repo = 'mattn/vim-molder'
