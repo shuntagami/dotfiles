@@ -74,6 +74,7 @@ alias vpn.disconnect="networksetup -disconnectpppoeservice 'ANDPAD-VPN (L2TP)'"
 alias wifi.on="networksetup -setairportpower en0 on"
 alias wifi.off="networksetup -setairportpower en0 off"
 alias wifi.hotspot="networksetup -setairportnetwork en0 pixel"
+alias wifi.starbucks="networksetup -setairportnetwork en0 at_STARBUCKS_Wi2"
 
 # aws-vault
 alias avl='(){ open -na "Google Chrome" --args --incognito --user-data-dir=$HOME/Library/Application\ Support/Google/Chrome/aws-vault/$@ $(aws-vault login $@ --stdout) }'
