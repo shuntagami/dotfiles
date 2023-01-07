@@ -49,6 +49,7 @@ brew "elasticsearch@6", restart_service: true
 brew "fd"
 brew "libass"
 brew "ffmpeg"
+brew "gawk"
 brew "hdf5"
 brew "libxml2"
 brew "libdap"
