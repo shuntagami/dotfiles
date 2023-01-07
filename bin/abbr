@@ -69,6 +69,7 @@ def describe abbr
   when "SSRF" "Server Side Request Forgery"
   when "SSL"; "Secure Sockets Layer"
   when "STRIDE"; "Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege"
+  when "SVG"; "Scalable Vector Graphics"
   when "TCP"; "Transmission Control Protocol"
   when "TLS"; "Transport Layer Security"
   when "UDP"; "User Datagram Protocol"
