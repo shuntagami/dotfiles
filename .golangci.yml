@@ -21,7 +21,7 @@ linters:
     - bodyclose
     - containedctx
     - contextcheck
-    - cyclop
+    # - cyclop
     - decorder
     - depguard
     - dogsled
@@ -37,11 +37,11 @@ linters:
     - exportloopref
     - forbidigo
     - forcetypeassert
-    - funlen
+    # - funlen
     - gci
     - gochecknoglobals
     - gochecknoinits
-    - gocognit
+    # - gocognit
     - goconst
     - gocritic
     - gocyclo
@@ -95,7 +95,7 @@ linters:
     - unconvert
     - unparam
     - usestdlibvars
-    - varnamelen
+    # - varnamelen
     - wastedassign
     - whitespace
     - wrapcheck
