@@ -121,6 +121,7 @@
     "path": "/opt/homebrew/bin/protoc",
     "options": ["--proto_path=proto"]
   },
+  "java.home": "/Library/Java/JavaVirtualMachines/adoptopenjdk-16.jdk/Contents/Home",
   "explorer.autoReveal": false,
   "launch": {
     "version": "0.2.0",
