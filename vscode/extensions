@@ -46,6 +46,7 @@ onecentlin.laravel-blade
 onecentlin.laravel-extension-pack
 onecentlin.laravel5-snippets
 rebornix.ruby
+redhat.java
 redhat.vscode-yaml
 ryannaddy.laravel-artisan
 sdras.vue-vscode-snippets
@@ -61,6 +62,11 @@ twxs.cmake
 vadimcn.vscode-lldb
 VisualStudioExptTeam.intellicode-api-usage-examples
 VisualStudioExptTeam.vscodeintellicode
+vscjava.vscode-java-debug
+vscjava.vscode-java-dependency
+vscjava.vscode-java-pack
+vscjava.vscode-java-test
+vscjava.vscode-maven
 vscodevim.vim
 Vue.volar
 Vue.vscode-typescript-vue-plugin
