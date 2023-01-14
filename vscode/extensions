@@ -39,6 +39,7 @@ ms-vscode.cpptools-themes
 ms-vscode.makefile-tools
 ms-vscode.remote-explorer
 mubaidr.vuejs-extension-pack
+naco-siren.gradle-language
 naoray.laravel-goto-components
 nmrmsys.vscode-sql-formatter-mod
 oderwat.indent-rainbow
@@ -48,6 +49,7 @@ onecentlin.laravel5-snippets
 rebornix.ruby
 redhat.java
 redhat.vscode-yaml
+richardwillis.vscode-gradle-extension-pack
 ryannaddy.laravel-artisan
 sdras.vue-vscode-snippets
 shd101wyy.markdown-preview-enhanced
