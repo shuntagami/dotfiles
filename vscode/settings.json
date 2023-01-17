@@ -121,6 +121,12 @@
     "path": "/opt/homebrew/bin/protoc",
     "options": ["--proto_path=proto"]
   },
+  "[java]": {
+    "editor.defaultFormatter": "redhat.java",
+    "java.home": "/opt/homebrew/opt/openjdk@19/libexec/openjdk.jdk/Contents/Home",
+    "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
+    "java.format.settings.profile": "GoogleStyle"
+  },
   "explorer.autoReveal": false,
   "launch": {
     "version": "0.2.0",
