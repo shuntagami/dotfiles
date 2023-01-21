@@ -53,6 +53,9 @@
       "other": "on"
     }
   },
+  "[yaml]": {
+    "editor.formatOnSave": false
+  },
   "yaml.customTags": [
     "!Base64 scalar",
     "!Cidr scalar",
@@ -108,10 +111,6 @@
   },
   "go.lintTool": "golangci-lint",
   "go.lintFlags": ["--fast"],
-  "[javascript]": {
-    // 自動修正
-    "editor.defaultFormatter": "dbaeumer.vscode-eslint"
-  },
   "javascript.updateImportsOnFileMove.enabled": "always",
   "typescript.updateImportsOnFileMove.enabled": "always",
   "tslint.autoFixOnSave": true,
