@@ -35,11 +35,3 @@ os:     ${os.platform()}
 cpu:    ${os.cpus()[0].model}
 `
 console.log(stat.trim(), '\n');
-
-exec('$DOTFILES/bin/os', (err, out) => {
-  console.log(out)
-});
-
-exec('$DOTFILES/bin/addr', (err, out) => {
-  console.log(out)
-});
