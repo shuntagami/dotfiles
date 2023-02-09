@@ -6,7 +6,7 @@
   "editor.fontSize": 15,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.find.globalFindClipboard": true,
-  "editor.formatOnSaveTimeout": 2000,
+  "editor.formatOnSaveTimeout": 5000,
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll": true
@@ -88,6 +88,9 @@
     "editor.codeActionsOnSave": {
       "source.formatAll.terraform": true
     }
+  },
+  "[ruby]": {
+    "editor.defaultFormatter": "misogi.ruby-rubocop"
   },
   "ruby.format": "rubocop",
   "ruby.useLanguageServer": true,
