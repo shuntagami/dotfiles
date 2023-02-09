@@ -1,3 +1,6 @@
 bundler
 rubocop
+rubocop-committee
+rubocop-performance
+rubocop-rails
 rcodetools
