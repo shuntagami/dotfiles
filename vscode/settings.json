@@ -1,12 +1,11 @@
 {
   "editor.tabSize": 2,
-  "editor.guides.bracketPairs": "true",
+  "editor.guides.bracketPairs": true,
   "editor.cursorStyle": "block",
   "editor.fontFamily": "SourceHanCodeJP-Regular, Menlo, Monaco, 'Courier New', monospace",
   "editor.fontSize": 15,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.find.globalFindClipboard": true,
-  "editor.formatOnSaveTimeout": 5000,
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll": true
@@ -116,19 +115,16 @@
   "go.lintFlags": ["--fast"],
   "javascript.updateImportsOnFileMove.enabled": "always",
   "typescript.updateImportsOnFileMove.enabled": "always",
-  "tslint.autoFixOnSave": true,
-  "tslint.packageManager": "yarn",
-  "tslint.run": "onType",
   "protoc": {
     "path": "/opt/homebrew/bin/protoc",
     "options": ["--proto_path=proto"]
   },
   "[java]": {
-    "editor.defaultFormatter": "redhat.java",
-    "java.home": "/opt/homebrew/opt/openjdk@19/libexec/openjdk.jdk/Contents/Home",
-    "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
-    "java.format.settings.profile": "GoogleStyle"
+    "editor.defaultFormatter": "redhat.java"
   },
+  "java.jdt.ls.java.home": "/opt/homebrew/opt/openjdk@19/libexec/openjdk.jdk/Contents/Home",
+  "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
+  "java.format.settings.profile": "GoogleStyle",
   "explorer.autoReveal": false,
   "launch": {
     "version": "0.2.0",
@@ -143,21 +139,10 @@
           "--runInBand"
         ],
         "console": "integratedTerminal",
-        "internalConsoleOptions": "neverOpen",
-        "port": 9229
+        "internalConsoleOptions": "neverOpen"
       }
     ]
   },
   "redhat.telemetry.enabled": true,
-  "todo-tree.general.tags": [
-    "BUG",
-    "HACK",
-    "FIXME",
-    "TODO",
-    "XXX",
-    "[ ]",
-    "[x]"
-  ],
-  "todo-tree.regex.regex": "(//|#|<!--|;|/\\*|^|^\\s*(-|\\d+.))\\s*($TAGS)",
   "lldb.library": "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/LLDB"
 }
