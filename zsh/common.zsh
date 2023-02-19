@@ -60,3 +60,5 @@ alias exec-admin='aws-vault exec admin'
 alias exec-my='aws-vault exec my'
 alias exec-dev='aws-vault exec dev'
 alias exec-prod='aws-vault exec prod'
+
+alias k='kubectl'
