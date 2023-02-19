@@ -102,6 +102,7 @@ brew "poppler-qt5"
 brew "protobuf-c"
 brew "protoc-gen-go"
 brew "protoc-gen-go-grpc"
+brew "pstree"
 brew "python@3.9"
 brew "redis", restart_service: true
 brew "ripgrep"
