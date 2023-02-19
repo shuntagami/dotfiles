@@ -89,7 +89,7 @@
     }
   },
   "[ruby]": {
-    "editor.defaultFormatter": "misogi.ruby-rubocop"
+    // "editor.defaultFormatter": "misogi.ruby-rubocop"
   },
   "ruby.format": "rubocop",
   "ruby.useLanguageServer": true,
