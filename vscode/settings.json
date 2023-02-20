@@ -41,6 +41,16 @@
   "vim.statusBarColors.replace": ["#e5786d", "#444444"],
   "vim.useSystemClipboard": true,
   "vim.mouseSelectionGoesIntoVisualMode": false,
+  "vim.normalModeKeyBindings": [
+    {
+      "before": ["u"],
+      "commands": ["undo"]
+    },
+    {
+      "before": ["ctrl+r"],
+      "commands": ["redo"]
+    }
+  ],
   "C_Cpp.clang_format_style": "Google",
   "[c]": {
     "editor.defaultFormatter": "xaver.clang-format"
