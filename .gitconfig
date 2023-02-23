@@ -71,6 +71,8 @@
 	# Amend the currently staged files to the latest commit.
 	amend = commit --amend --reuse-message=HEAD
 
+	push-f = push --force-with-lease
+
 [apply]
 	# Detect whitespace errors when applying a patch.
 	whitespace = fix
@@ -124,3 +126,6 @@
 
 [pull]
 	rebase = false
+
+[push]
+	autoSetupRemote = true
