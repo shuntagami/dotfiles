@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+
+require 'uri'
+require 'net/http'
+require 'json'
+
+########################################
+# HELP
+########################################
+HELP = <<~EOS
+  translate Japanese into English using codic API
+
+  $ codic こんにちは
+  Hello
+EOS
+
+if ARGV[0] == '-h'
+  puts HELP
+  exit 0
+end
+
+def translate text
+  uri = URI('https://api.codic.jp/v1/engine/translate.json')
+  uri.query = URI.encode_www_form({text: text})
+  req = Net::HTTP::Get.new(uri)
+  req['Authorization'] = "Bearer #{ENV['CODIC_API_KEY']}"
+  res = Net::HTTP.start(uri.host, uri.port, use_ssl: true) { |http| http.request(req) }
+
+  if res.code == '200'
+    JSON.parse(res.body).map { |item| item['translated_text'] }
+  else
+    "Request failed with code #{res.code}"
+  end
+end
+
+puts translate ARGV[0] if ARGV[0]
