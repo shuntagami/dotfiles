@@ -16,6 +16,7 @@ export AWS_DEFAULT_REGION='ap-northeast-1'
 export AWS_ASSUME_ROLE_TTL=12h
 export AWS_SESSION_TOKEN_TTL=12h
 export JAVA_HOME='/opt/homebrew/opt/openjdk@19/libexec/openjdk.jdk/Contents/Home'
+export OPAMROOT=$HOME/dotfiles/pkg/.opam
 
 # Language
 if [[ -z "$LANG" ]]; then

@@ -65,4 +65,4 @@ if [ -e "$DOTFILES/pkg/.anyenv" ]; then
 fi
 
 # opam configuration
-[[ ! -r $HOME/.opam/opam-init/init.zsh ]] || source $HOME/.opam/opam-init/init.zsh  > /dev/null 2>&1
+[[ ! -r $DOTFILES/pkg/.opam/opam-init/init.zsh ]] || source $DOTFILES/pkg/.opam/opam-init/init.zsh  > /dev/null 2>&1
