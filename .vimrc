@@ -290,5 +290,13 @@ augroup ocaml_format
     autocmd BufWrite,FileWritePre,FileAppendPre *.mli\= call s:ocaml_format()
 augroup END
 
+if executable('ocamllsp')
+  au User lsp_setup call lsp#register_server({
+        \ 'name': 'ocaml',
+        \ 'cmd': {server_info->['ocamllsp', '--fallback-read-dot-merlin']},
+        \ 'whitelist': ['ocaml'],
+        \ })
+endif
+
 " filetypeの自動検出(最後の方に書いた方がいいらしい)
 filetype on
