@@ -63,3 +63,6 @@ if [ -e "$DOTFILES/pkg/.anyenv" ]; then
     eval "$(anyenv init - zsh)"
   fi
 fi
+
+# opam configuration
+[[ ! -r $DOTFILES/pkg/.opam/opam-init/init.zsh ]] || source $DOTFILES/pkg/.opam/opam-init/init.zsh  > /dev/null 2>&1

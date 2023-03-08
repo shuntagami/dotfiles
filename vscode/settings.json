@@ -135,6 +135,10 @@
   "java.jdt.ls.java.home": "/opt/homebrew/opt/openjdk@19/libexec/openjdk.jdk/Contents/Home",
   "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
   "java.format.settings.profile": "GoogleStyle",
+  "ocaml.server.extraEnv": {
+    "OCAMLLSP_SEMANTIC_HIGHLIGHTING": "full"
+  },
+  "ocaml.server.args": ["--fallback-read-dot-merlin"],
   "explorer.autoReveal": false,
   "launch": {
     "version": "0.2.0",

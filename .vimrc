@@ -273,5 +273,30 @@ imap { {}<LEFT>
 imap [ []<LEFT>
 imap ( ()<LEFT>
 
+" merlin
+let g:opamshare = substitute(system('opam config var share'),'\n$','','''')
+execute 'set rtp+=' . g:opamshare . '/merlin/vim'
+
+" ocp-indent
+execute 'set rtp^=' . g:opamshare . '/ocp-indent/vim'
+function! s:ocaml_format()
+    let now_line = line('.')
+    exec ':%! ocp-indent'
+    exec ':' . now_line
+endfunction
+
+augroup ocaml_format
+    autocmd!
+    autocmd BufWrite,FileWritePre,FileAppendPre *.mli\= call s:ocaml_format()
+augroup END
+
+if executable('ocamllsp')
+  au User lsp_setup call lsp#register_server({
+        \ 'name': 'ocaml',
+        \ 'cmd': {server_info->['ocamllsp', '--fallback-read-dot-merlin']},
+        \ 'whitelist': ['ocaml'],
+        \ })
+endif
+
 " filetypeの自動検出(最後の方に書いた方がいいらしい)
 filetype on
