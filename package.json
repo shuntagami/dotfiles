@@ -1,0 +1,10 @@
+{
+  "name": "dotfiles",
+  "type": "module",
+  "scripts": {
+    "wallpaper": "./scripts/setWallpaper.js"
+  },
+  "dependencies": {
+    "wallpaper": "^6.1.1"
+  }
+}
