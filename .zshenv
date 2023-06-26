@@ -30,11 +30,23 @@ fi
 
 # Paths
 path=(
-  /opt/homebrew/opt/imagemagick@6/bin
-  /Applications/Visual Studio Code.app/Contents/Resources/app/bin
-  ~/Library/Android/sdk/platform-tools
   $GOPATH/bin
   $path
 )
+
+if [[ "$OSTYPE" == darwin* ]]; then
+  path=(
+    /opt/homebrew/opt/imagemagick@6/bin
+    /Applications/Visual Studio Code.app/Contents/Resources/app/bin
+    ~/Library/Android/sdk/platform-tools
+    $path
+  )
+elif [[ "$OSTYPE" == "linux-gnu"* ]] && [[ ! -z "$WSL_DISTRO_NAME" ]]; then
+  # Add WSL2 specific paths here
+  path=(
+    /your/wsl2/specific/path
+    $path
+  )
+fi
 
 typeset -gU PATH
