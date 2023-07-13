@@ -111,7 +111,7 @@
   "ruby.rubocop.useBundler": true,
   "ruby.useBundler": true,
   "ruby.pathToBundler": "$HOME/dotfiles/pkg/.anyenv/envs/rbenv/shims/",
-  "ruby.rubocop.executePath": "$HOME/dotfiles/pkg/.anyenv/envs/rbenv/shims/",
+  "ruby.rubocop.executePath": "",
   "ruby.rubocop.onSave": true,
   "ruby.codeCompletion": "rcodetools",
   "[go]": {
