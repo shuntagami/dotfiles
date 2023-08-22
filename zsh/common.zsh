@@ -62,3 +62,9 @@ alias exec-dev='aws-vault exec dev'
 alias exec-prod='aws-vault exec prod'
 
 alias k='kubectl'
+
+# git grep
+git-grep-count() {
+  git grep -c "$1" | awk -F':' '{sum += $2} END {print sum}'
+}
+alias ggc="git-grep-count"
