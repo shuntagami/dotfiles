@@ -4,3 +4,4 @@ karabiner/*
 !karabiner.json
 pkg/*
 Brewfile.lock.json
+__pycache__/
