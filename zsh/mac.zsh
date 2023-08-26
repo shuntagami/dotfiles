@@ -78,3 +78,16 @@ alias wifi.starbucks="networksetup -setairportnetwork en0 at_STARBUCKS_Wi2"
 
 # aws-vault
 alias avl='(){ open -na "Google Chrome" --args --incognito --user-data-dir=$HOME/Library/Application\ Support/Google/Chrome/aws-vault/$@ $(aws-vault login $@ --stdout) }'
+
+# Display Manager
+## Mirror
+alias mirror.on='~/dotfiles/scripts/display_manager.py mirror enable ext0 main'
+alias mirror.off='~/dotfiles/scripts/display_manager.py mirror disable'
+
+## Res
+alias res.max='~/dotfiles/scripts/display_manager.py res highest main'
+alias res.default='~/dotfiles/scripts/display_manager.py res default all'
+alias res.31='~/dotfiles/scripts/display_manager.py res 3360 1890'
+alias res.27='~/dotfiles/scripts/display_manager.py res 3008 1692'
+alias res.qhd='~/dotfiles/scripts/display_manager.py res 2560 1440'
+alias res.fhd='~/dotfiles/scripts/display_manager.py res 1920 1080'
