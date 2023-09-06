@@ -90,7 +90,7 @@ fi;
 
 # combination of --fixup and --squash options to help later invocation of interactive rebase
 function fixup() {
-  git log --oneline -n 10;
+  git log --oneline -n 20;
   echo "Type the commit number to fixup: " && read number;
   git commit --fixup ${number} && git stash -u;
   git rebase -i --autosquash `git log --pretty=%P -n 1 ${number}`;
