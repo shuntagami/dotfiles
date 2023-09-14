@@ -12,11 +12,13 @@
   "wrap": {
     "prefix": "w",
     "body": [
-      "<detail>",
+      "<details>",
       "<summary>wrapped text</summary>",
       "",
+      "```",
       "1. add an empty line and start from here",
-      "</detail>"
+      "```",
+      "</details>"
     ],
     "description": "wrapped text"
   }
