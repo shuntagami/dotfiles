@@ -22,10 +22,10 @@ else
   ln -sf "${DOTFILES}"/vscode/snippets "${VSCODE_SETTING_DIR}"/snippets
 fi
 
-cat < $DOTFILES/vscode/extensions | while read -r line
-do
-  code --install-extension "$line" --force
-done
+# cat < $DOTFILES/vscode/extensions | while read -r line
+# do
+#   code --install-extension "$line" --force
+# done
 
-cp /dev/null $DOTFILES/vscode/extensions
-code --list-extensions > $DOTFILES/vscode/extensions
+# cp /dev/null $DOTFILES/vscode/extensions
+# code --list-extensions > $DOTFILES/vscode/extensions
