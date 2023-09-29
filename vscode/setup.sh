@@ -14,12 +14,12 @@ if [[ `uname` == "Linux" ]] && [[ -n "${WSL_DISTRO_NAME}" ]]; then
   cp -R "${DOTFILES}"/vscode/settings.json "${VSCODE_SETTING_DIR}"/settings.json
   cp -R "${DOTFILES}"/vscode/keybindings.json "${VSCODE_SETTING_DIR}"/keybindings.json
   cp -R "${DOTFILES}"/vscode/tsconfig.json "${VSCODE_SETTING_DIR}"/tsconfig.json
-  cp -R "${DOTFILES}"/vscode/snippets "${VSCODE_SETTING_DIR}"/snippets
+  cp -R "${DOTFILES}"/vscode/snippets "${VSCODE_SETTING_DIR}"
 else
   ln -sf "${DOTFILES}"/vscode/settings.json "${VSCODE_SETTING_DIR}"/settings.json
   ln -sf "${DOTFILES}"/vscode/keybindings.json "${VSCODE_SETTING_DIR}"/keybindings.json
   ln -sf "${DOTFILES}"/vscode/tsconfig.json "${VSCODE_SETTING_DIR}"/tsconfig.json
-  ln -sf "${DOTFILES}"/vscode/snippets "${VSCODE_SETTING_DIR}"/snippets
+  ln -sf "${DOTFILES}"/vscode/snippets "${VSCODE_SETTING_DIR}"
 fi
 
 # cat < $DOTFILES/vscode/extensions | while read -r line
