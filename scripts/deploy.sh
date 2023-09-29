@@ -32,8 +32,7 @@ ln -sf ~/dotfiles/.zshrc ~/.zshrc
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
   if ! grep -sq "require('keyboard')" ~/.hammerspoon/init.lua; then
-    ln -sf ~/dotfiles/hammerspoon/init.lua ~/.hammerspoon/init.lua
-    ln -sf ~/dotfiles/hammerspoon ~/.hammerspoon/keyboard
+    ln -sf ~/dotfiles/hammerspoon ~/.hammerspoon
   fi
 
   # The location of the configuration file for kareabiner-elements
