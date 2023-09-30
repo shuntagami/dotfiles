@@ -7,6 +7,7 @@ alias d="cd ~/dotfiles"
 alias dls="cd ~/Downloads"
 alias dt="cd ~/Desktop"
 alias p="cd ~/projects"
+alias 88labs="cd ~/projects/88labs"
 alias g="git"
 alias icloud="cd ~/Library/Mobile\ Documents/com~apple~CloudDocs"
 
