@@ -30,6 +30,11 @@ ln -sf ~/dotfiles/.zpreztorc ~/.zpreztorc
 ln -sf ~/dotfiles/.zshenv ~/.zshenv
 ln -sf ~/dotfiles/.zshrc ~/.zshrc
 
+# ssh config
+if [ ! -d ${HOME}/.ssh ]; then
+  mkdir -p ~/.ssh && chmod 700 ~/.ssh && touch ~/.ssh/config && chmod 600 ~/.ssh/config
+fi
+
 if [[ "$OSTYPE" == "darwin"* ]]; then
   if ! grep -sq "require('keyboard')" ~/.hammerspoon/init.lua; then
     ln -sf ~/dotfiles/hammerspoon ~/.hammerspoon
