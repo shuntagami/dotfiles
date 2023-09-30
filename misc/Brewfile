@@ -46,7 +46,6 @@ brew "php"
 brew "composer"
 brew "ctop"
 brew "direnv"
-brew "docker", link: false
 brew "docker-compose"
 brew "duf"
 brew "fd"
