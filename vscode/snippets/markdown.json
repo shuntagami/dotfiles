@@ -13,10 +13,10 @@
     "prefix": "w",
     "body": [
       "<details>",
-      "<summary>wrapped text</summary>",
+      "<summary>summary</summary>",
       "",
       "```",
-      "1. add an empty line and start from here",
+      "1. start from here",
       "```",
       "</details>"
     ],
