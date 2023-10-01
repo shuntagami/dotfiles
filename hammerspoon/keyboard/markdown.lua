@@ -23,6 +23,31 @@ function wrapSelectedText(wrapCharacters)
   end)
 end
 
+function wrapTextWithDetailsAndSummary()
+  -- Preserve the current contents of the system clipboard
+  local originalClipboardContents = hs.pasteboard.getContents()
+
+  -- Copy the currently-selected text to the system clipboard
+  keyUpDown('cmd', 'c')
+
+  -- Allow some time for the command+c keystroke to fire asynchronously before
+  -- we try to read from the clipboard
+  hs.timer.doAfter(0.2, function()
+    -- Construct the formatted output and paste it over top of the
+    -- currently-selected text
+    local selectedText = hs.pasteboard.getContents()
+    local wrappedText = '<details>\n<summary>summary</summary>\n\n```\n' .. selectedText .. '\n```\n\n</details>'
+    hs.pasteboard.setContents(wrappedText)
+    keyUpDown('cmd', 'v')
+
+    -- Allow some time for the command+v keystroke to fire asynchronously before
+    -- we restore the original clipboard
+    hs.timer.doAfter(0.2, function()
+      hs.pasteboard.setContents(originalClipboardContents)
+    end)
+  end)
+end
+
 function inlineLink()
   -- Fetch URL from the system clipboard
   local linkUrl = hs.pasteboard.getContents()
@@ -101,6 +126,10 @@ end)
 
 markdownMode:bindWithAutomaticExit('c', function()
   wrapSelectedText('`')
+end)
+
+markdownMode:bindWithAutomaticExit('w', function()
+  wrapTextWithDetailsAndSummary()
 end)
 
 -- Use Control+m to toggle Markdown Mode
