@@ -19,6 +19,7 @@ elif [[ `uname` == "Darwin" ]]; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
   fi
   if has "brew"; then
+    export HOMEBREW_CASK_OPTS="--no-quarantine"
     brew bundle install --file=$HOME/dotfiles/misc/Brewfile
     eval "$(/opt/homebrew/bin/brew shellenv)"
     source $HOME/dotfiles/scripts/anyenv && install-anyenv
