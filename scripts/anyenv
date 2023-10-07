@@ -33,7 +33,7 @@ install-anyenv() {
 
     # nodenv-default-packages
     [ ! -d "${NODENV_ROOT}"/plugins/nodenv-default-packages ] && git clone -q https://github.com/nodenv/nodenv-default-packages.git "${NODENV_ROOT}"/plugins/nodenv-default-packages
-    [ ! -e "${NODENV_ROOT}"/default-packages ] && cp "${DOTFILES}"/misc/default-packages "${NODENV_ROOT}"/default-packages
+    [ ! -e "${NODENV_ROOT}"/default-packages ] && ln -sf "${DOTFILES}"/misc/default-packages "${NODENV_ROOT}"/.
   fi
 
   if ! has "${RBENV_ROOT}"/bin/rbenv; then
@@ -41,6 +41,6 @@ install-anyenv() {
 
     # rbenv-default-gems
     [ ! -d "${RBENV_ROOT}"/plugins/rbenv-default-gems ] && git clone -q https://github.com/rbenv/rbenv-default-gems.git "${RBENV_ROOT}"/plugins/rbenv-default-gems
-    [ ! -e "${RBENV_ROOT}"/default-gems ] && cp "${DOTFILES}"/misc/default-gems "${RBENV_ROOT}"/default-gems
+    [ ! -e "${RBENV_ROOT}"/default-gems ] && ln -sf "${DOTFILES}"/misc/default-gems "${RBENV_ROOT}"/.
   fi
 }
