@@ -36,7 +36,7 @@ function wrapTextWithDetailsAndSummary()
     -- Construct the formatted output and paste it over top of the
     -- currently-selected text
     local selectedText = hs.pasteboard.getContents()
-    local wrappedText = '<details>\n<summary>summary</summary>\n\n```\n' .. selectedText .. '\n```\n\n</details>'
+    local wrappedText = '<details>\n<summary>' .. selectedText .. '</summary>\n\n```\n\n```\n\n</details>'
     hs.pasteboard.setContents(wrappedText)
     keyUpDown('cmd', 'v')
 
