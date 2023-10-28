@@ -52,6 +52,9 @@
     }
   ],
   "C_Cpp.clang_format_style": "Google",
+  "[makefile]": {
+    "editor.insertSpaces": false
+  },
   "[c]": {
     "editor.defaultFormatter": "xaver.clang-format"
   },
