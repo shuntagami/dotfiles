@@ -92,3 +92,6 @@ alias res.31='~/dotfiles/scripts/display_manager.py res 3360 1890'
 alias res.27='~/dotfiles/scripts/display_manager.py res 3008 1692'
 alias res.qhd='~/dotfiles/scripts/display_manager.py res 2560 1440'
 alias res.fhd='~/dotfiles/scripts/display_manager.py res 1920 1080'
+
+# Check typo between HEAD and default branch
+alias typocheck="git diff HEAD..$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@') --name-only | xargs -I {} typos {}"
