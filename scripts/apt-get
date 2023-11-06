@@ -24,6 +24,7 @@ run-apt() {
     'coreutils'
     'curl'
     'coreutils'
+    'direnv'
     'dnsmasq-base'
     'docker'
     'docker-compose'
