@@ -70,10 +70,9 @@ run-apt() {
 
   local installed=$(apt list --installed >&1 | grep -v deinstall | awk -F/ '{print $1}')
 
-  for index in ${!desired_formulae[*]}
-  do
-    local formula=`echo ${desired_formulae[$index]} | cut -d' ' -f 1`
-    if [[ -z `echo "${installed}" | grep "^${formula}$"` ]]; then
+  for index in ${!desired_formulae[*]}; do
+    local formula=$(echo ${desired_formulae[$index]} | cut -d' ' -f 1)
+    if [[ -z $(echo "${installed}" | grep "^${formula}$") ]]; then
       missing_formulae=("${missing_formulae[@]}" "${desired_formulae[$index]}")
     else
       echo "Installed ${formula}"
@@ -81,7 +80,7 @@ run-apt() {
   done
 
   if [[ "$missing_formulae" ]]; then
-    list_formulae=$( printf "%s " "${missing_formulae[@]}" )
+    list_formulae=$(printf "%s " "${missing_formulae[@]}")
 
     echo "Installing missing package formulae..."
     sudo apt install -y $list_formulae
