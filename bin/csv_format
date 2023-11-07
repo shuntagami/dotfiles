@@ -1,0 +1,43 @@
+#!/usr/bin/env ruby
+
+require 'bundler/inline'
+require 'csv'
+
+gemfile do
+  gem 'terminal-table'
+end
+
+require 'terminal-table'
+HELP = <<~HELP
+Formats and displays the content of the given CSV file of SQL explain in a table.
+
+$ csv_format ./example.csv
++----+-------------+-------+------------+------+---------------+-----+---------+-----+------+----------+----------------+
+| id | select_type | table | partitions | type | possible_keys | key | key_len | ref | rows | filtered | Extra          |
++----+-------------+-------+------------+------+---------------+-----+---------+-----+------+----------+----------------+
+| 1  | SIMPLE      |       |            |      |               |     |         |     |      |          | No tables used |
++----+-------------+-------+------------+------+---------------+-----+---------+-----+------+----------+----------------+
+HELP
+
+if ARGV.empty? || ARGV.include?('-h') || ARGV.include?('--help')
+  puts HELP
+  exit
+end
+
+def format_and_display_csv csv_file_path
+  unless File.exist?(csv_file_path) && File.extname(csv_file_path).casecmp?('.csv')
+    puts 'Error: The file specified is not a CSV file or does not exist.'
+    exit 1
+  end
+  csv_data = CSV.read(csv_file_path, headers: true)
+
+  table = Terminal::Table.new do |t|
+    t.headings = csv_data.headers
+    csv_data.each do |row|
+      t.add_row row.fields
+    end
+    t.style = { border_x: '-', border_i: '+', border_y: '|' }
+  end
+end
+
+puts format_and_display_csv ARGV[0] if ARGV[0]
