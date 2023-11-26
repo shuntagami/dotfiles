@@ -31,7 +31,7 @@ alias dex="docker exec -i -t"
 
 alias dc="docker compose"
 
-alias dcrm="docker compose run --rm"
+alias drun="docker compose run --rm"
 
 # Stop all containers
 dstop() { docker stop $(docker ps -a -q); }
