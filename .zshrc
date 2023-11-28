@@ -66,3 +66,4 @@ fi
 
 # opam configuration
 [[ ! -r $DOTFILES/pkg/.opam/opam-init/init.zsh ]] || source $DOTFILES/pkg/.opam/opam-init/init.zsh  > /dev/null 2>&1
+export PATH="/opt/homebrew/opt/gnu-getopt/bin:$PATH"
