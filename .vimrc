@@ -285,6 +285,18 @@ function! s:ocaml_format()
     exec ':' . now_line
 endfunction
 
+" [markdown] configure formatprg
+autocmd FileType markdown set formatprg=prettier\ --parser\ markdown
+
+" [markdown] format on save
+autocmd! BufWritePre *.md call s:mdfmt()
+function s:mdfmt()
+    let l:curw = winsaveview()
+    silent! exe "normal! a \<bs>\<esc>" | undojoin |
+        \ exe "normal gggqG"
+    call winrestview(l:curw)
+endfunction
+
 augroup ocaml_format
     autocmd!
     autocmd BufWrite,FileWritePre,FileAppendPre *.mli\= call s:ocaml_format()
