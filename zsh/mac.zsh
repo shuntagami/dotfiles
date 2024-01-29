@@ -95,3 +95,6 @@ alias res.fhd='~/dotfiles/scripts/display_manager.py res 1920 1080'
 
 # Check typo between HEAD and default branch
 alias typocheck="git diff HEAD..$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@') --name-only | xargs -I {} typos {}"
+
+# For Kindle, Extracts and copies the first line of clipboard content without a trailing newline
+alias cl1='pbpaste | head -n 1 | while IFS= read -r line; do printf "%s" "$line"; done | pbcopy'
