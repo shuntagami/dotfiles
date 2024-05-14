@@ -33,7 +33,7 @@ brew "bat"
 brew "boost"
 brew "gcc"
 brew "btop"
-brew "glib", link: false
+brew "glib"
 brew "coreutils"
 brew "unbound"
 brew "gnutls"
