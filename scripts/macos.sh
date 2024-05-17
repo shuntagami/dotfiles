@@ -490,6 +490,10 @@ defaults write com.google.Chrome.canary DisablePrintPreview -bool true
 defaults write com.google.Chrome PMPrintingExpandedStateForPrint2 -bool true
 defaults write com.google.Chrome.canary PMPrintingExpandedStateForPrint2 -bool true
 
+# computer name
+sudo scutil --set ComputerName "Shun-Tagami-MacBook"
+sudo scutil --set LocalHostName "Shun-Tagami-MacBook"
+
 ###############################################################################
 # Kill affected applications                                                  #
 ###############################################################################
