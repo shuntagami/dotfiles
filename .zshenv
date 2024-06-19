@@ -36,6 +36,7 @@ path=(
 
 if [[ "$OSTYPE" == darwin* ]]; then
   path=(
+    /opt/homebrew/opt/gnu-getopt/bin
     /opt/homebrew/opt/imagemagick@6/bin
     /Applications/Visual Studio Code.app/Contents/Resources/app/bin
     ~/Library/Android/sdk/platform-tools
@@ -50,3 +51,4 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]] && [[ ! -z "$WSL_DISTRO_NAME" ]]; then
 fi
 
 typeset -gU PATH
+export PATH="/opt/homebrew/opt/gnu-getopt/bin:$PATH"
