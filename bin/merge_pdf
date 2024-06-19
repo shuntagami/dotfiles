@@ -1,0 +1,43 @@
+#!/bin/bash
+
+show_help() {
+    echo "使い方: merge_pdf <original_pdf> <total_pages>"
+    echo "       merge_pdf -h"
+    echo ""
+    echo "オプション:"
+    echo "  -h            このヘルプメッセージを表示"
+    echo ""
+    echo "引数:"
+    echo "  <original_pdf>   元のPDFファイルのパス"
+    echo "  <total_pages>    作成する総ページ数"
+}
+
+if [ $# -ne 2 ] || [ "$1" = "-h" ]; then
+    show_help
+    exit 0
+fi
+
+original_pdf=$1
+total_pages=$2
+
+output_directory=$(pwd)
+
+for i in $(seq 2 $total_pages)
+do
+    new_pdf="${output_directory}/$(basename ${original_pdf%.pdf})_${i}.pdf"
+    cp "$original_pdf" "$new_pdf"
+done
+
+merge_list=$(for i in $(seq 2 $total_pages); do echo -n "${output_directory}/$(basename ${original_pdf%.pdf})_${i}.pdf "; done)
+
+merged_output="${output_directory}/$(basename ${original_pdf%.pdf})_${total_pages}page.pdf"
+cpdf $original_pdf $merge_list -o "$merged_output"
+
+for i in $(seq 2 $total_pages)
+do
+    rm "${output_directory}/$(basename ${original_pdf%.pdf})_${i}.pdf"
+done
+
+echo "${merged_output} generated"
+
+
