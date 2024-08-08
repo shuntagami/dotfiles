@@ -121,6 +121,7 @@ brew "opam"
 brew "openjdk@11"
 brew "openjdk@17"
 brew "pdftk-java"
+brew "peco"
 brew "plantuml"
 brew "poppler-qt5"
 brew "protobuf-c"
@@ -192,6 +193,7 @@ mas "GIPHY CAPTURE", id: 668208984
 mas "Keynote", id: 409183694
 mas "Kindle", id: 302584613
 mas "LINE", id: 539883307
+mas "Microsoft OneNote", id: 784801555
 mas "MOV to MP4 Converter", id: 1500825631
 mas "Numbers", id: 409203825
 mas "Okta Extension App", id: 1439967473
