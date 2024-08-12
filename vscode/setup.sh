@@ -18,6 +18,8 @@ if [[ `uname` == "Linux" ]] && [[ -n "${WSL_DISTRO_NAME}" ]]; then
   for line in $(cat "$DOTFILES/vscode/extensions"); do
     code --install-extension "$line" --force
   done
+  cp /dev/null $DOTFILES/vscode/extensions
+  code --list-extensions > $DOTFILES/vscode/extensions
 else
   ln -sf "${DOTFILES}"/vscode/settings.json "${VSCODE_SETTING_DIR}"/settings.json
   ln -sf "${DOTFILES}"/vscode/keybindings.json "${VSCODE_SETTING_DIR}"/keybindings.json
