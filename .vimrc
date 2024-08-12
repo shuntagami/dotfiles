@@ -91,7 +91,16 @@ set shiftwidth=2
 " 行頭の余白内で Tab を打ち込むと、'shiftwidth' の数だけインデントする
 set smarttab
 
-set clipboard+=unnamed
+if has("unix")
+  let s:uname = system("uname -s")
+  if s:uname == "Linux\n"
+    set clipboard=unnamedplus
+  elseif s:uname == "Darwin\n"
+    set clipboard=unnamed
+  endif
+else
+  set clipboard=unnamed
+endif
 
 set wildoptions=pum
 
