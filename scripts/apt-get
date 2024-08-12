@@ -66,6 +66,7 @@ run-apt() {
     'virt-manager'
     'virtinst'
     'wget'
+    'wslu'
     'zlib1g-dev'
     'zsh'
   )
