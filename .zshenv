@@ -5,6 +5,8 @@ fi
 
 if [[ "$OSTYPE" == darwin* ]]; then
   export BROWSER='open'
+elif [[ "$OSTYPE" == "linux-gnu"* ]] && [[ ! -z "$WSL_DISTRO_NAME" ]]; then
+  export BROWSER="wslview"
 fi
 
 export DOTFILES=$HOME/dotfiles
