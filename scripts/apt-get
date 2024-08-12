@@ -62,6 +62,7 @@ run-apt() {
     'sed'
     'sysstat'
     'vim'
+    'vim-gtk'
     'virt-manager'
     'virtinst'
     'wget'
