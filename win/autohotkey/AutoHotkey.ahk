@@ -7,8 +7,12 @@
 ; # = WIN
 
 #Requires AutoHotkey v2.0
+
+InstallKeybdHook
+#SingleInstance force
 SetTitleMatchMode(2)
 SendMode("Input")
 
 #include "textReplacement.ahk"
 #include "private.ahk"
+#include "macKeyboard.ahk"
