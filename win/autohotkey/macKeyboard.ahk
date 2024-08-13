@@ -97,6 +97,7 @@
 #q::Send("!{F4}")
 
 #Enter::Send("^{Enter}")
+#+Enter::Send("^+{Enter}")
 
 ; Remap Windows + Tab to Alt + Tab.
 Lwin & Tab::AltTab
