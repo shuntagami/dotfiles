@@ -102,8 +102,6 @@ else
   set clipboard=unnamed
 endif
 
-set wildoptions=pum
-
 " 構文毎に文字色を変化させる
 syntax on
 " カラースキーマの指定
