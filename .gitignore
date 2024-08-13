@@ -5,4 +5,3 @@ karabiner/*
 pkg/*
 Brewfile.lock.json
 __pycache__/
-private.ahk
