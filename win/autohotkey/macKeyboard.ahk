@@ -93,6 +93,9 @@
 ; close tab
 #w::Send("^w")
 
+; Reload
+#r::Send("^r")
+
 ; Close windows (cmd + q to Alt + F4)
 #q::Send("!{F4}")
 
