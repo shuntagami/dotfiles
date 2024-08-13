@@ -17,10 +17,10 @@
 ; --------------------------------------------------------------
 
 ; Capture entire screen with CMD/WIN + SHIFT + 3
-#+3::Send("#{PrintScreen}")
+$!+3::Send("#{PrintScreen}")
 
 ; Capture portion of the screen with CMD/WIN + SHIFT + 4
-#+4::Send("+#s")
+$!+4::Send("+#s")
 
 ; --------------------------------------------------------------
 ; media/function keys all mapped to the right option key
@@ -61,52 +61,56 @@
 ; --------------------------------------------------------------
 
 ; Make Ctrl + S work with cmd (windows) key
-#s::Send("^s")
+$!s::Send("^s")
 
 ; Selecting
-#a::Send("^a")
+$!a::Send("^a")
 
 ; Copying
-#c::Send("^c")
+$!c::Send("^c")
 
 ; Pasting
-#v::Send("^v")
+$!v::Send("^v")
 
 ; Cutting
-#x::Send("^x")
+$!x::Send("^x")
 
 ; Opening
-#o::Send("^o")
+$!o::Send("^o")
 
 ; Finding
-#f::Send("^f")
+$!f::Send("^f")
 
 ; Undo
-#z::Send("^z")
+$!z::Send("^z")
 
 ; Redo
-#y::Send("^y")
+$!y::Send("^y")
 
 ; New tab
-#t::Send("^t")
+$!t::Send("^t")
 
 ; close tab
-#w::Send("^w")
+$!w::Send("^w")
 
 ; Reload
-#r::Send("^r")
+$!r::Send("^r")
+$!+r::Send("^+r")
 
 ; Close windows (cmd + q to Alt + F4)
-#q::Send("!{F4}")
+$!q::Send("!{F4}")
 
-#Enter::Send("^{Enter}")
-#+Enter::Send("^+{Enter}")
-
-; Remap Windows + Tab to Alt + Tab.
-Lwin & Tab::AltTab
+$!Enter::Send("^{Enter}")
+$!+Enter::Send("^+{Enter}")
 
 ; minimize windows
-#m::WinMinimize("A")
+$!m::WinMinimize("A")
+
+; bind the arrow keys to alt+hjkl
+$!h::Send("{left}")
+$!j::Send("{down}")
+$!k::Send("{up}")
+$!l::Send("{right}")
 
 ; --------------------------------------------------------------
 ; OS X keyboard mappings for special chars
