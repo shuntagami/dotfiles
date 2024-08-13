@@ -106,6 +106,12 @@ $!+Enter::Send("^+{Enter}")
 ; minimize windows
 $!m::WinMinimize("A")
 
+; bind the arrow keys to alt+hjkl
+$!h::Send("{left}")
+$!j::Send("{down}")
+$!k::Send("{up}")
+$!l::Send("{right}")
+
 ; --------------------------------------------------------------
 ; OS X keyboard mappings for special chars
 ; --------------------------------------------------------------
