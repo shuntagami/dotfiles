@@ -1,6 +1,6 @@
 {
 	"$schema" : "https://aka.ms/winget-packages.schema.2.0.json",
-	"CreationDate" : "2024-08-12T13:39:16.141-00:00",
+	"CreationDate" : "2024-08-13T22:47:01.647-00:00",
 	"Sources" : 
 	[
 		{
@@ -31,6 +31,9 @@
 					"PackageIdentifier" : "Microsoft.VCRedist.2022.arm64"
 				},
 				{
+					"PackageIdentifier" : "AutoHotkey.AutoHotkey"
+				},
+				{
 					"PackageIdentifier" : "Discord.Discord"
 				},
 				{
@@ -41,6 +44,9 @@
 				},
 				{
 					"PackageIdentifier" : "Microsoft.OneDrive"
+				},
+				{
+					"PackageIdentifier" : "Microsoft.PowerToys"
 				},
 				{
 					"PackageIdentifier" : "Microsoft.VisualStudioCode"
