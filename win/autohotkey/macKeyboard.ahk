@@ -12,10 +12,6 @@
 ;
 ; Debug action snippet: MsgBox You pressed Control-A while Notepad is active.
 
-#Requires AutoHotkey v2.0
-SetTitleMatchMode(2)
-SendMode("Input")
-
 ; --------------------------------------------------------------
 ; Mac-like screenshots in Windows (requires Windows 10 Snip & Sketch)
 ; --------------------------------------------------------------
@@ -97,8 +93,14 @@ SendMode("Input")
 ; close tab
 #w::Send("^w")
 
+; Reload
+#r::Send("^r")
+
 ; Close windows (cmd + q to Alt + F4)
 #q::Send("!{F4}")
+
+#Enter::Send("^{Enter}")
+#+Enter::Send("^+{Enter}")
 
 ; Remap Windows + Tab to Alt + Tab.
 Lwin & Tab::AltTab
@@ -182,4 +184,3 @@ Lwin & Tab::AltTab
 #!u::Send("^u")
 
 #HotIf
-
