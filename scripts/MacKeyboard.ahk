@@ -12,31 +12,30 @@
 ;
 ; Debug action snippet: MsgBox You pressed Control-A while Notepad is active.
 
-#InstallKeybdHook
-#SingleInstance force
-SetTitleMatchMode 2
-SendMode Input
+#Requires AutoHotkey v2.0
+SetTitleMatchMode(2)
+SendMode("Input")
 
 ; --------------------------------------------------------------
 ; Mac-like screenshots in Windows (requires Windows 10 Snip & Sketch)
 ; --------------------------------------------------------------
 
 ; Capture entire screen with CMD/WIN + SHIFT + 3
-#+3::send #{PrintScreen}
+#+3::Send("#{PrintScreen}")
 
 ; Capture portion of the screen with CMD/WIN + SHIFT + 4
-#+4::#+s
+#+4::Send("+#s")
 
 ; --------------------------------------------------------------
 ; media/function keys all mapped to the right option key
 ; --------------------------------------------------------------
 
-;RAlt & F7::SendInput {Media_Prev}
-;RAlt & F8::SendInput {Media_Play_Pause}
-;RAlt & F9::SendInput {Media_Next}
-;F10::SendInput {Volume_Mute}
-;F11::SendInput {Volume_Down}
-;F12::SendInput {Volume_Up}
+;RAlt & F7::Send("{Media_Prev}")
+;RAlt & F8::Send("{Media_Play_Pause}")
+;RAlt & F9::Send("{Media_Next}")
+;F10::Send("{Volume_Mute}")
+;F11::Send("{Volume_Down}")
+;F12::Send("{Volume_Up}")
 
 ; swap left command/windows key with left alt
 ;LWin::LAlt
@@ -44,147 +43,143 @@ SendMode Input
 
 ; Remap Windows + Left OR Right to enable previous or next web page
 ; Use only if swapping left command/windows key with left alt
-;Lwin & Left::Send, !{Left}
-;Lwin & Right::Send, !{Right}
+;Lwin & Left::Send("!{Left}")
+;Lwin & Right::Send("!{Right}")
 
 ; Eject Key
-;F20::SendInput {Insert} ; F20 doesn't show up on AHK anymore, see #3
+;F20::Send("{Insert}") ; F20 doesn't show up on AHK anymore, see #3
 
 ; F13-15, standard windows mapping
-;F13::SendInput {PrintScreen}
-;F14::SendInput {ScrollLock}
-;F15::SendInput {Pause}
+;F13::Send("{PrintScreen}")
+;F14::Send("{ScrollLock}")
+;F15::Send("{Pause}")
 
 ;F16-19 custom app launchers, see http://www.autohotkey.com/docs/Tutorial.htm for usage info
-;F16::Run http://twitter.com
-;F17::Run http://tumblr.com
-;F18::Run http://www.reddit.com
-;F19::Run https://facebook.com
+;F16::Run("http://twitter.com")
+;F17::Run("http://tumblr.com")
+;F18::Run("http://www.reddit.com")
+;F19::Run("https://facebook.com")
 
 ; --------------------------------------------------------------
 ; OS X system shortcuts
 ; --------------------------------------------------------------
 
 ; Make Ctrl + S work with cmd (windows) key
-#s::Send, ^s
+#s::Send("^s")
 
 ; Selecting
-#a::Send, ^a
+#a::Send("^a")
 
 ; Copying
-#c::Send, ^c
+#c::Send("^c")
 
 ; Pasting
-#v::Send, ^v
+#v::Send("^v")
 
 ; Cutting
-#x::Send, ^x
+#x::Send("^x")
 
 ; Opening
-#o::Send ^o
+#o::Send("^o")
 
 ; Finding
-#f::Send ^f
+#f::Send("^f")
 
 ; Undo
-#z::Send ^z
+#z::Send("^z")
 
 ; Redo
-#y::Send ^y
+#y::Send("^y")
 
 ; New tab
-#t::Send ^t
+#t::Send("^t")
 
 ; close tab
-#w::Send ^w
+#w::Send("^w")
 
 ; Close windows (cmd + q to Alt + F4)
-#q::Send !{F4}
+#q::Send("!{F4}")
 
 ; Remap Windows + Tab to Alt + Tab.
 Lwin & Tab::AltTab
 
 ; minimize windows
-#m::WinMinimize,a
-
+#m::WinMinimize("A")
 
 ; --------------------------------------------------------------
 ; OS X keyboard mappings for special chars
 ; --------------------------------------------------------------
 
 ; Map Alt + L to @
-;!l::SendInput {@}
+;!l::Send("{@}")
 
 ; Map Alt + N to \
-;+!7::SendInput {\}
+;+!7::Send("{\}")
 
 ; Map Alt + N to ©
-;!g::SendInput {©}
+;!g::Send("{©}")
 
 ; Map Alt + o to ø
-;!o::SendInput {ø}
+;!o::Send("{ø}")
 
 ; Map Alt + 5 to [
-;!5::SendInput {[}
+;!5::Send("{[}")
 
 ; Map Alt + 6 to ]
-;!6::SendInput {]}
+;!6::Send("{]}")
 
 ; Map Alt + E to €
-;!e::SendInput {€}
+;!e::Send("{€}")
 
 ; Map Alt + - to –
-;!-::SendInput {–}
+;!-::Send("{–}")
 
 ; Map Alt + 8 to {
-;!8::SendInput {{}
+;!8::Send("{{}")
 
 ; Map Alt + 9 to }
-;!9::SendInput {}}
+;!9::Send("{}")
 
 ; Map Alt + - to ±
-;!+::SendInput {±}
+;!+::Send("{±}")
 
 ; Map Alt + R to ®
-;!r::SendInput {®}
+;!r::Send("{®}")
 
 ; Map Alt + N to |
-;!7::SendInput {|}
+;!7::Send("{|}")
 
 ; Map Alt + W to ∑
-;!w::SendInput {∑}
+;!w::Send("{∑}")
 
 ; Map Alt + N to ~
-;!n::SendInput {~}
+;!n::Send("{~}")
 
 ; Map Alt + 3 to #
-;!3::SendInput {#}
-
-
+;!3::Send("{#}")
 
 ; --------------------------------------------------------------
 ; Custom mappings for special chars
 ; --------------------------------------------------------------
 
-;#ö::SendInput {[}
-;#ä::SendInput {]}
+;#ö::Send("{[}")
+;#ä::Send("{]}")
 
-;^ö::SendInput {{}
-;^ä::SendInput {}}
-
+;^ö::Send("{{}")
+;^ä::Send("{}")
 
 ; --------------------------------------------------------------
 ; Application specific
 ; --------------------------------------------------------------
 
 ; Google Chrome
-#IfWinActive, ahk_class Chrome_WidgetWin_1
+#HotIf WinActive("ahk_class Chrome_WidgetWin_1")
 
 ; Show Web Developer Tools with cmd + alt + i
-#!i::Send {F12}
+#!i::Send("{F12}")
 
 ; Show source code with cmd + alt + u
-#!u::Send ^u
+#!u::Send("^u")
 
-#IfWinActive
+#HotIf
 
