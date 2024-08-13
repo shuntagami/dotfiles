@@ -96,6 +96,8 @@
 ; Close windows (cmd + q to Alt + F4)
 #q::Send("!{F4}")
 
+#Enter::Send("^{Enter}")
+
 ; Remap Windows + Tab to Alt + Tab.
 Lwin & Tab::AltTab
 
