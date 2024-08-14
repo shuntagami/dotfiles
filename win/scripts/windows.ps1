@@ -41,23 +41,10 @@ Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliver
 ###############################################################################
 Write-Host "Configuring Explorer, Taskbar, and System Tray..." -ForegroundColor "Yellow"
 
-function Set-RegistryItemProperty {
-    param (
-        [string]$Path,
-        [string]$Name,
-        [object]$Value
-    )
-
-    if (!(Test-Path -Path $Path)) {
-        New-Item -Path $Path -Force | Out-Null
-    }
-    Set-ItemProperty -Path $Path -Name $Name -Value $Value
-}
-
 # settings for wallpaper
 $wallpaperBlack = "C:\Users\$env:USERNAME\dotfiles\static\wallpaper-black.jpg"
-Set-RegistryItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP" -Name "LockScreenImagePath" -Value $wallpaperBlack
-Set-RegistryItemProperty -Path "HKCU:Control Panel\Desktop" -Name WallPaper -Value $wallpaperBlack
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP" -Name "LockScreenImagePath" -Value $wallpaperBlack
+Set-ItemProperty -Path "HKCU:Control Panel\Desktop" -Name WallPaper -Value $wallpaperBlack
 Remove-Variable -Name wallpaperBlack
 
 # Explorer: Show hidden files by default: Show Files: 1, Hide Files: 2
