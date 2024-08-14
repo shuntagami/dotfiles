@@ -7,6 +7,8 @@ ${function:....} = { Set-Location ..\..\.. }
 ${function:.....} = { Set-Location ..\..\..\.. }
 ${function:......} = { Set-Location ..\..\..\..\.. }
 
+${function:d} = { Set-Location ~\dotfiles }
+
 # Navigation Shortcuts
 ${function:drop} = { Set-Location ~\Documents\Dropbox }
 ${function:dt} = { Set-Location ~\Desktop }
