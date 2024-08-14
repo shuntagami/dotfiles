@@ -2,11 +2,10 @@
 
 ## Stratup フォルダに Autoohtkey.ahk のショートカットを配置
 
+```posh
+cd "$Home\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
+explorer.exe .
 ```
-cd ~/AppData/Roaming/Microsoft/Windows/ && cd Start\ Menu/Programs/Startup/
-```
-
-で移動し、ショートカットを配置する
 
 ## Setup PowerShell
 
@@ -14,11 +13,16 @@ cd ~/AppData/Roaming/Microsoft/Windows/ && cd Start\ Menu/Programs/Startup/
 ~/dotfiles/win/scripts/deploy.ps1
 ```
 
-相対パス`~/dotfiles`の書き方だと`.: Could not find a part of the path 'C:\Program Files\PowerShell\7\Microsoft.PowerShell_profile.ps1'.`のエラー発生した
-
 ## Setup scoop
 
 ```posh
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+scoop import "$Home\dotfiles\win\scoop.json"
+```
+
+## Setup windows default configuration
+
+```posh
+~/dotfiles/win/scripts/windows.ps1
 ```
