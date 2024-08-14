@@ -85,3 +85,7 @@ set-ItemProperty -path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer
 
 # Hide desktop icons
 Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name 'HideIcons' -Value 1
+
+# change the location of the screenshot folder
+$desktopPath = [System.Environment]::GetFolderPath('Desktop')
+Set-ItemProperty -Path $userShellFolders -Name "{B7BEDE81-DF94-4682-A7D8-57A52620B86F}" -Value $desktopPath
