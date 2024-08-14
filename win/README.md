@@ -15,3 +15,10 @@ New-Item -ItemType SymbolicLink -Path $Profile.AllUsersCurrentHost -Target "C:\U
 ```
 
 相対パス`~/dotfiles`の書き方だと`.: Could not find a part of the path 'C:\Program Files\PowerShell\7\Microsoft.PowerShell_profile.ps1'.`のエラー発生した
+
+## Setup scoop
+
+```posh
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+```
