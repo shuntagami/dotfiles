@@ -15,17 +15,24 @@
     ],
     "apps": [
         {
-            "Source": "main",
-            "Info": "",
             "Name": "7zip",
             "Updated": "2024-08-14T15:38:27.3491241+09:00",
+            "Info": "",
+            "Source": "main",
             "Version": "24.08"
         },
         {
-            "Source": "extras",
-            "Info": "64bit",
+            "Name": "gh",
+            "Updated": "2024-08-14T15:45:30.8265775+09:00",
+            "Info": "",
+            "Source": "main",
+            "Version": "2.54.0"
+        },
+        {
             "Name": "posh-git",
             "Updated": "2024-08-14T15:41:37.9288524+09:00",
+            "Info": "64bit",
+            "Source": "extras",
             "Version": "1.1.0"
         }
     ]
