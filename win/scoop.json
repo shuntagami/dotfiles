@@ -34,6 +34,13 @@
             "Info": "64bit",
             "Source": "extras",
             "Version": "1.1.0"
+        },
+        {
+            "Name": "vim",
+            "Updated": "2024-08-14T15:53:33.0598175+09:00",
+            "Info": "64bit",
+            "Source": "main",
+            "Version": "9.1.0"
         }
     ]
 }
