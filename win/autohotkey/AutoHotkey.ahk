@@ -15,3 +15,4 @@ SendMode("Input")
 
 #include "textReplacement.ahk"
 #include "macKeyboard.ahk"
+; #include "altIme.ahk" ; comment out this for JIS keyboard
