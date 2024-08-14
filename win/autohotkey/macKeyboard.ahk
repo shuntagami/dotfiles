@@ -104,6 +104,9 @@ $!q::Send("!{F4}")
 $!Enter::Send("^{Enter}")
 $!+Enter::Send("^+{Enter}")
 
+; cmd + / for comment out in Visual Studio Code
+$!/::Send("^/")
+
 ; minimize windows
 $!m::WinMinimize("A")
 
