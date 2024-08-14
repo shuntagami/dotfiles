@@ -19,6 +19,6 @@ New-Item -ItemType SymbolicLink -Path $Profile.AllUsersCurrentHost -Target "C:\U
 ## Setup scoop
 
 ```posh
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
-
 ```
