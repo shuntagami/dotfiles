@@ -100,6 +100,7 @@ $!+r::Send("^+r")
 ; Close windows (cmd + q to Alt + F4)
 $!q::Send("!{F4}")
 
+; Send msg with cmd + Enter or cmd + shift + Enter
 $!Enter::Send("^{Enter}")
 $!+Enter::Send("^+{Enter}")
 
