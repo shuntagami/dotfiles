@@ -42,8 +42,9 @@ setopt auto_param_slash
 WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
 
 # include
-[[ `uname` == "Darwin" && -f $DOTFILES/zsh/mac.zsh    ]] && source $DOTFILES/zsh/mac.zsh
-[[ `uname` == "Linux"  && -f $DOTFILES/zsh/ubuntu.zsh ]] && source $DOTFILES/zsh/ubuntu.zsh
+[[ $(uname) == "Darwin" && -f $DOTFILES/zsh/mac.zsh ]] && source $DOTFILES/zsh/mac.zsh
+[[ $(uname) == "Linux"  && -f $DOTFILES/zsh/ubuntu.zsh ]] && source $DOTFILES/zsh/ubuntu.zsh
+[[ $(uname -r) == *"microsoft-standard-WSL2"* && -f $DOTFILES/zsh/wsl.zsh ]] && source $DOTFILES/zsh/wsl.zsh
 
 [[ -f $DOTFILES/zsh/common.zsh ]] && source $DOTFILES/zsh/common.zsh
 [[ -f $DOTFILES/zsh/docker-aliases.zsh ]] && source $DOTFILES/zsh/docker-aliases.zsh
