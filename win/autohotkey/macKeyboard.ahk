@@ -104,9 +104,6 @@ $!q::Send("!{F4}")
 $!Enter::Send("^{Enter}")
 $!+Enter::Send("^+{Enter}")
 
-; cmd + / for comment out in Visual Studio Code
-$!/::Send("^/")
-
 ; minimize windows
 $!m::WinMinimize("A")
 
@@ -191,4 +188,22 @@ $!l::Send("{right}")
 ; Show source code with cmd + alt + u
 #!u::Send("^u")
 
+; open in secret window
+$!+n::Send("^+n")
+
+; open previous tab
+$!+t::Send("^+t")
+
+#HotIf
+
+; Visual Studio Code
+#HotIf WinActive("ahk_exe code.exe")
+; command palette
+$!+p::Send("^+p")
+
+; cmd + / for comment out in Visual Studio Code
+$!/::Send("^/")
+
+; close or open sidebar
+$!b::Send("^b")
 #HotIf
