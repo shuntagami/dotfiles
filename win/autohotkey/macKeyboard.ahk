@@ -61,57 +61,57 @@ $!+4::Send("+#s")
 ; --------------------------------------------------------------
 
 ; Make Ctrl + S work with cmd (windows) key
-$!s::Send("^s")
+!s::Send("^s")
 
 ; Selecting
-$!a::Send("^a")
+!a::Send("^a")
 
 ; Copying
-$!c::Send("^c")
+!c::Send("^c")
 
 ; Pasting
-$!v::Send("^v")
+!v::Send("^v")
 
 ; Cutting
-$!x::Send("^x")
+!x::Send("^x")
 
 ; Opening
-$!o::Send("^o")
+!o::Send("^o")
 
 ; Finding
-$!f::Send("^f")
+!f::Send("^f")
 
 ; Undo
-$!z::Send("^z")
+!z::Send("^z")
 
 ; Redo
-$!y::Send("^y")
+!y::Send("^y")
 
 ; New tab
-$!t::Send("^t")
+!t::Send("^t")
 
 ; close tab
-$!w::Send("^w")
+!w::Send("^w")
 
 ; Reload
-$!r::Send("^r")
-$!+r::Send("^+r")
+!r::Send("^r")
+!+r::Send("^+r")
 
 ; Close windows (cmd + q to Alt + F4)
-$!q::Send("!{F4}")
+!q::Send("!{F4}")
 
 ; Send msg with cmd + Enter or cmd + shift + Enter
-$!Enter::Send("^{Enter}")
-$!+Enter::Send("^+{Enter}")
+!Enter::Send("^{Enter}")
+!+Enter::Send("^+{Enter}")
 
 ; minimize windows
-$!m::WinMinimize("A")
+!m::WinMinimize("A")
 
 ; bind the arrow keys to alt+hjkl
-$!h::Send("{left}")
-$!j::Send("{down}")
-$!k::Send("{up}")
-$!l::Send("{right}")
+!h::Send("{left}")
+!j::Send("{down}")
+!k::Send("{up}")
+!l::Send("{right}")
 
 ; --------------------------------------------------------------
 ; OS X keyboard mappings for special chars
@@ -189,27 +189,27 @@ $!l::Send("{right}")
 #!u::Send("^u")
 
 ; open in secret window
-$!+n::Send("^+n")
+!+n::Send("^+n")
 
 ; open previous tab
-$!+t::Send("^+t")
+!+t::Send("^+t")
 
 #HotIf
 
 ; Visual Studio Code
 #HotIf WinActive("ahk_exe code.exe")
 ; filer
-$!p::Send("^p")
+!p::Send("^p")
 
 ; Terminal (defaut is ctrl + @)
-$!j::Send("^@")
+!j::Send("^@")
 
 ; command palette
-$!+p::Send("^+p")
+!+p::Send("^+p")
 
 ; cmd + / for comment out in Visual Studio Code
-$!/::Send("^/")
+!/::Send("^/")
 
 ; close or open sidebar
-$!b::Send("^b")
+!b::Send("^b")
 #HotIf
