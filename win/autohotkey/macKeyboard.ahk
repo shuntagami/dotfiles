@@ -198,6 +198,12 @@ $!+t::Send("^+t")
 
 ; Visual Studio Code
 #HotIf WinActive("ahk_exe code.exe")
+; filer
+$!p::Send("^p")
+
+; Terminal (defaut is ctrl + @)
+$!j::Send("^@")
+
 ; command palette
 $!+p::Send("^+p")
 
