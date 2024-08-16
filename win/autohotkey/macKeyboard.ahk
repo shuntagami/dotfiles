@@ -11,6 +11,12 @@
 ; # = WIN
 ;
 ; Debug action snippet: MsgBox You pressed Control-A while Notepad is active.
+; regard capslock as ctrl
+; FIXME: not working in vim
+SC03A::Return              ; CapsLock単独キーの無効化
++SC03A::+SC03A             ; Shift + CapsLock -> IME ON/OFF
+^SC03A::Send "{Caps:Lock}"  ; Ctrl + CapsLock -> CapsLock
+CapsLock::Ctrl
 
 ; --------------------------------------------------------------
 ; Mac-like screenshots in Windows (requires Windows 10 Snip & Sketch)
