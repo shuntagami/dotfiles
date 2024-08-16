@@ -52,7 +52,12 @@
     }
   ],
   "vim.handleKeys": {
-    "<C-f>": false
+    "<C-f>": false,
+    "<C-a>": false,
+    "<C-w>": false,
+    "<C-p>": false,
+    "<C-b>": false,
+    "<C-j>": false
   },
   "C_Cpp.clang_format_style": "Google",
   "[makefile]": {
