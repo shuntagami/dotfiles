@@ -251,3 +251,30 @@ function Start-IISExpress {
         & $iisExpress @("/path:${path}") /port:$port
     } else { Write-Warning "Unable to find iisexpress.exe"}
 }
+
+function Extract {
+    param (
+        [string]$file
+    )
+
+    Write-Host "Extracting $file ..."
+
+    if (Test-Path $file -PathType Leaf) {
+        switch -Wildcard ($file) {
+            "*.tar.bz2" { tar -xjf $file }
+            "*.tar.gz"  { tar -xzf $file }
+            "*.bz2"     { bunzip2 $file }
+            "*.rar"     { & "C:\Program Files\WinRAR\rar.exe" x $file }
+            "*.gz"      { gunzip $file }
+            "*.tar"     { tar -xf $file }
+            "*.tbz2"    { tar -xjf $file }
+            "*.tgz"     { tar -xzf $file }
+            "*.zip"     { Expand-Archive -Path $file -DestinationPath (Join-Path (Get-Location) ([System.IO.Path]::GetFileNameWithoutExtension($file))) }
+            "*.Z"       { uncompress $file }
+            "*.7z"      { & "C:\Program Files\7-Zip\7z.exe" x $file }
+            default     { Write-Host "'$file' cannot be extracted via Extract()" }
+        }
+    } else {
+        Write-Host "'$file' is not a valid file"
+    }
+}
