@@ -41,3 +41,7 @@ if (-not (Test-Path -Path "$Home\.ocamlinit")) {
 if (-not (Test-Path -Path "$Home\.vimrc")) {
     New-Item -ItemType SymbolicLink -Path "$Home\.vimrc" -Target "$Home\dotfiles\.vimrc"
 }
+
+if (-not (Test-Path -Path "$Home\AppData\Roaming\Code\User\settings.json")) {
+    New-Item -ItemType SymbolicLink -Path "$Home\AppData\Roaming\Code\User\settings.json" -Target "$Home\dotfiles\vscode\settings.json"
+}
