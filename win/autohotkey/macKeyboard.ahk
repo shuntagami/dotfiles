@@ -103,6 +103,15 @@ $!+4::Send("+#s")
 !r::Send("^r")
 !+r::Send("^+r")
 
+; Bold text
+!b::Send("^b")
+
+; Italic text
+!i::Send("^i")
+
+; Strike through text
+!+x::Send("^+x")
+
 ; Close windows (cmd + q to Alt + F4)
 !q::Send("!{F4}")
 
