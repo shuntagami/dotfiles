@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cat ~/dotfiles/scripts/copyHtml.mjs | pbcopy
+echo "copyHtml.mjs copied to clipboard!!"
