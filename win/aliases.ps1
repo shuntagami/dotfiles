@@ -75,3 +75,5 @@ Set-Alias unmute Set-SoundUnmute
 Set-Alias update System-Update
 
 Set-Alias open explorer.exe
+
+Set-Alias cl1 Copy-FirstLine

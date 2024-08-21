@@ -278,3 +278,9 @@ function Extract {
         Write-Host "'$file' is not a valid file"
     }
 }
+
+function Copy-FirstLine {
+    $clipboardContent = Get-Clipboard
+    $firstLine = $clipboardContent -split "`n" | Select-Object -First 1
+    Set-Clipboard -Value $firstLine
+}
