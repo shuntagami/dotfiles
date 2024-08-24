@@ -1,46 +1,60 @@
 {
+    "apps": [
+        {
+            "Name": "7zip",
+            "Source": "main",
+            "Info": "",
+            "Version": "24.08",
+            "Updated": "2024-08-14T15:38:27.3491241+09:00"
+        },
+        {
+            "Name": "ffmpeg",
+            "Source": "main",
+            "Info": "64bit",
+            "Version": "7.0.2",
+            "Updated": "2024-08-17T22:20:27.6284922+09:00"
+        },
+        {
+            "Name": "gh",
+            "Source": "main",
+            "Info": "",
+            "Version": "2.54.0",
+            "Updated": "2024-08-14T15:45:30.8265775+09:00"
+        },
+        {
+            "Name": "go",
+            "Source": "main",
+            "Info": "",
+            "Version": "1.23.0",
+            "Updated": "2024-08-14T16:41:06.9523074+09:00"
+        },
+        {
+            "Name": "posh-git",
+            "Source": "extras",
+            "Info": "64bit",
+            "Version": "1.1.0",
+            "Updated": "2024-08-14T15:41:37.9288524+09:00"
+        },
+        {
+            "Name": "vim",
+            "Source": "main",
+            "Info": "64bit",
+            "Version": "9.1.0",
+            "Updated": "2024-08-14T17:11:55.2946071+09:00"
+        }
+    ],
     "buckets": [
         {
             "Name": "main",
             "Source": "https://github.com/ScoopInstaller/Main.git",
-            "Updated": "2024-08-14T13:28:42+09:00",
-            "Manifests": 1337
+            "Updated": "2024-08-17T21:30:41+09:00",
+            "Manifests": 1338
         },
         {
             "Name": "extras",
             "Source": "https://github.com/ScoopInstaller/Extras",
-            "Updated": "2024-08-14T09:35:39+09:00",
-            "Manifests": 2054
-        }
-    ],
-    "apps": [
-        {
-            "Name": "7zip",
-            "Updated": "2024-08-14T15:38:27.3491241+09:00",
-            "Info": "",
-            "Source": "main",
-            "Version": "24.08"
-        },
-        {
-            "Name": "gh",
-            "Updated": "2024-08-14T15:45:30.8265775+09:00",
-            "Info": "",
-            "Source": "main",
-            "Version": "2.54.0"
-        },
-        {
-            "Name": "posh-git",
-            "Updated": "2024-08-14T15:41:37.9288524+09:00",
-            "Info": "64bit",
-            "Source": "extras",
-            "Version": "1.1.0"
-        },
-        {
-            "Name": "vim",
-            "Updated": "2024-08-14T15:53:33.0598175+09:00",
-            "Info": "64bit",
-            "Source": "main",
-            "Version": "9.1.0"
+            "Updated": "2024-08-17T21:32:38+09:00",
+            "Manifests": 2055
         }
     ]
 }
