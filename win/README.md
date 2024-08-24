@@ -3,7 +3,7 @@
 ## Stratup フォルダに Autoohtkey.ahk のショートカットを配置
 
 ```posh
-cd "$Home\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
+cd "$HOME\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
 explorer.exe .
 ```
 
@@ -18,7 +18,7 @@ explorer.exe .
 ```posh
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
-scoop import "$Home\dotfiles\win\scoop.json"
+scoop import "$HOME\dotfiles\win\scoop.json"
 ```
 
 ## Setup windows default configuration

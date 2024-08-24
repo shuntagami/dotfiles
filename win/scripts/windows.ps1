@@ -85,10 +85,10 @@ Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Persona
 Set-ItemProperty "HKCU:\SOFTWARE\Microsoft\Windows\DWM" "ColorPrevalence" 0
 
 # Change the default location of the Desktop folder
-# FIXME: $Home\OneDrive\Desktop is remaining. Can be removed from File Explorer.
+# FIXME: $HOME\OneDrive\Desktop is remaining. Can be removed from File Explorer.
 $userShellFolders = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
-set-ItemProperty -path $userShellFolders -name Desktop "$Home\Desktop"
-set-ItemProperty -path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" -name Desktop "$Home\Desktop"
+set-ItemProperty -path $userShellFolders -name Desktop "$HOME\Desktop"
+set-ItemProperty -path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" -name Desktop "$HOME\Desktop"
 
 # Hide desktop icons
 Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name 'HideIcons' -Value 1

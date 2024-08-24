@@ -1,8 +1,8 @@
 $script = @(
-    "$Home\dotfiles\win\function.ps1",
-    "$Home\dotfiles\win\components.ps1",
-    "$Home\dotfiles\win\aliases.ps1",
-    "$Home\dotfiles\win\exports.ps1"
+    "$HOME\dotfiles\win\function.ps1",
+    "$HOME\dotfiles\win\components.ps1",
+    "$HOME\dotfiles\win\aliases.ps1",
+    "$HOME\dotfiles\win\exports.ps1"
 )
 
 $script | ForEach-Object {
