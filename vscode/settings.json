@@ -8,7 +8,7 @@
   "editor.find.globalFindClipboard": true,
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
-    "source.fixAll": true
+    "source.fixAll": "explicit"
   },
   "editor.suggestSelection": "first",
   "editor.formatOnPaste": true,
@@ -99,13 +99,13 @@
   "[terraform]": {
     "editor.defaultFormatter": "hashicorp.terraform",
     "editor.codeActionsOnSave": {
-      "source.formatAll.terraform": true
+      "source.formatAll.terraform": "explicit"
     }
   },
   "[terraform-vars]": {
     "editor.defaultFormatter": "hashicorp.terraform",
     "editor.codeActionsOnSave": {
-      "source.formatAll.terraform": true
+      "source.formatAll.terraform": "explicit"
     }
   },
   "[ruby]": {
