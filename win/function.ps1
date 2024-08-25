@@ -24,7 +24,6 @@ function Update-WindowsStore() {
 # System Update - Update RubyGems, NPM, and their installed packages
 function System-Update() {
     Install-WindowsUpdate -IgnoreUserInput -IgnoreReboot -AcceptAll
-    Update-WindowsStore
     winget upgrade --all
     Update-Module
     Update-Help -Force

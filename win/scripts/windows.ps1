@@ -96,3 +96,21 @@ Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer
 # change the location of the screenshot folder
 $desktopPath = [System.Environment]::GetFolderPath('Desktop')
 Set-ItemProperty -Path $userShellFolders -Name "{B7BEDE81-DF94-4682-A7D8-57A52620B86F}" -Value $desktopPath
+
+### Install PowerShell Modules
+Write-Host "Installing PowerShell Modules..." -ForegroundColor "Yellow"
+Install-Module -Name PSWindowsUpdate -Force
+
+### Update Modules
+Write-Host "Updating Existing Powershell Modules..." -ForegroundColor "Yellow"
+Update-Module
+
+### Update Help for Modules
+Write-Host "Updating Help..." -ForegroundColor "Yellow"
+Update-Help -Force -ErrorAction SilentlyContinue
+
+### Initiating Windows Update
+Write-Host "Initiating Windows Update..." -ForegroundColor "Yellow"
+Install-WindowsUpdate -IgnoreUserInput -IgnoreReboot -AcceptAll
+
+Write-Host "Done. Note that some of these changes require a logout/restart to take effect."
