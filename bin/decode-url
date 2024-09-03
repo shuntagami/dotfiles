@@ -1,0 +1,21 @@
+#!/usr/bin/env pwsh
+
+param (
+    [string]$encodedUrl
+)
+
+function Decode-Url {
+    param (
+        [string]$url
+    )
+
+    # URLをデコード
+    $decodedUrl = [System.Web.HttpUtility]::UrlDecode([System.Web.HttpUtility]::UrlDecode($url))
+    Write-Output "Decoded URL: $decodedUrl"
+}
+
+if (-not $encodedUrl) {
+    Write-Output "Please provide an encoded URL as an argument."
+} else {
+    Decode-Url -url $encodedUrl
+}
