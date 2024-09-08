@@ -54,6 +54,7 @@ run-apt() {
     'libyaml-dev'
     'mlocate'
     'netcat-openbsd'
+    'peco'
     'procps'
     'python3'
     'python3-matplotlib'
