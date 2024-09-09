@@ -25,7 +25,9 @@ function Update-WindowsStore() {
 function System-Update() {
     Install-WindowsUpdate -IgnoreUserInput -IgnoreReboot -AcceptAll
     winget upgrade --all
+    scoop update --all
     Update-Module
+    Update-Help -Force -ErrorAction SilentlyContinue
     Update-Help -Force
     if ((which gem)) {
         gem update --system
