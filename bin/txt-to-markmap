@@ -1,0 +1,32 @@
+#!/usr/bin/env pwsh
+
+param (
+    [string]$inputFilePath
+)
+
+# ファイルのベース名を取得して.mdを拡張子として設定
+$baseName = [System.IO.Path]::GetFileNameWithoutExtension($inputFilePath)
+$outputFilePath = "$baseName.md"
+
+# 入力ファイルを読み込み
+$content = Get-Content -Path $inputFilePath
+
+# 出力ファイル用のバッファ
+$outputContent = @()
+
+# インデントに応じて箇条書きのレベルを変換
+foreach ($line in $content) {
+    # 行頭のタブを数える
+    $indentLevel = ($line -replace "[^\t]", "").Length
+
+    # タブを削除して行の内容を取得
+    $cleanLine = $line.Trim()
+
+    # 箇条書きの行を作成 (レベルに応じてスペースと - を追加)
+    $outputContent += (" " * $indentLevel * 2) + "- " + $cleanLine
+}
+
+# カレントディレクトリに.mdファイルを保存
+$outputContent | Out-File -FilePath $outputFilePath -Encoding utf8
+
+Write-Host "変換が完了しました。ファイル '$outputFilePath' が作成されました。"
