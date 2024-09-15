@@ -68,6 +68,7 @@ run-apt() {
     'virtinst'
     'wget'
     'wslu'
+    'xclip'
     'zlib1g-dev'
     'zsh'
   )
