@@ -1,4 +1,21 @@
 #!/bin/bash
 
-cat ~/dotfiles/scripts/copyHtml.mjs | pbcopy
-echo "copyHtml.mjs copied to clipboard!!"
+# Check the operating system
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  # macOS
+  cat ~/dotfiles/scripts/copyHtml.mjs | pbcopy
+  echo "copyHtml.mjs copied to clipboard!!"
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  # Linux (requires xclip or xsel to be installed)
+  if command -v xclip &> /dev/null; then
+    cat ~/dotfiles/scripts/copyHtml.mjs | xclip -selection clipboard
+    echo "copyHtml.mjs copied to clipboard!!"
+  elif command -v xsel &> /dev/null; then
+    cat ~/dotfiles/scripts/copyHtml.mjs | xsel --clipboard --input
+    echo "copyHtml.mjs copied to clipboard!!"
+  else
+    echo "Neither xclip nor xsel is installed. Please install one of them to copy to clipboard."
+  fi
+else
+  echo "Unsupported OS."
+fi
