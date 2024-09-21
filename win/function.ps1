@@ -27,8 +27,6 @@ function System-Update() {
     winget upgrade --all
     scoop update --all
     Update-Module
-    Update-Help -Force -ErrorAction SilentlyContinue
-    Update-Help -Force
     if ((which gem)) {
         gem update --system
         gem update

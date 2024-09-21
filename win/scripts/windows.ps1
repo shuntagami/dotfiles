@@ -107,7 +107,6 @@ Update-Module
 
 ### Update Help for Modules
 Write-Host "Updating Help..." -ForegroundColor "Yellow"
-Update-Help -Force -ErrorAction SilentlyContinue
 
 ### Initiating Windows Update
 Write-Host "Initiating Windows Update..." -ForegroundColor "Yellow"
