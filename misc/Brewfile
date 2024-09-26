@@ -21,10 +21,10 @@ brew "openssl@3"
 brew "protobuf"
 brew "re2"
 brew "grpc"
-brew "python@3.12"
 brew "apache-arrow"
 brew "pycparser"
 brew "lua"
+brew "python@3.12"
 brew "clingo"
 brew "python@3.11"
 brew "aspcud"
@@ -34,7 +34,6 @@ brew "awscli"
 brew "axel"
 brew "bat"
 brew "boost"
-brew "gcc"
 brew "btop"
 brew "glib"
 brew "coreutils"
@@ -65,6 +64,7 @@ brew "libass"
 brew "pango"
 brew "tesseract"
 brew "ffmpeg"
+brew "gcc"
 brew "open-mpi"
 brew "gawk"
 brew "gnupg"
@@ -203,6 +203,7 @@ mas "MOV to MP4 Converter", id: 1500825631
 mas "Numbers", id: 409203825
 mas "Okta Extension App", id: 1439967473
 mas "Prime Video", id: 545519333
+mas "Windows App", id: 1295203466
 mas "Xcode", id: 497799835
 mas "ジーニアス英和（第5版）・和英（第3版）辞典", id: 1080239400
 mas "広辞苑 第七版", id: 1327237002
@@ -249,6 +250,7 @@ vscode "ms-vscode.cpptools"
 vscode "ms-vscode.cpptools-extension-pack"
 vscode "ms-vscode.cpptools-themes"
 vscode "ms-vscode.makefile-tools"
+vscode "ms-vscode.powershell"
 vscode "ms-vscode.remote-explorer"
 vscode "ms-vscode.remote-server"
 vscode "naco-siren.gradle-language"
