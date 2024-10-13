@@ -168,5 +168,6 @@
     ]
   },
   "redhat.telemetry.enabled": true,
-  "lldb.library": "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/LLDB"
+  "lldb.library": "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/LLDB",
+  "security.allowedUNCHosts": ["wsl.localhost"]
 }
