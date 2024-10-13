@@ -14,14 +14,19 @@ $content = Get-Content -Path $inputFilePath
 # 出力ファイル用のバッファ
 $outputContent = @()
 
-# インデントに応じて箇条書きのレベルを変換
-foreach ($line in $content) {
+# 最初の行を処理
+if ($content.Count -gt 0) {
+    $firstLine = $content[0].Trim()
+    $outputContent += "# $firstLine"
+}
+
+# 2行目以降を処理
+for ($i = 1; $i -lt $content.Count; $i++) {
+    $line = $content[$i]
     # 行頭のタブを数える
     $indentLevel = ($line -replace "[^\t]", "").Length
-
     # タブを削除して行の内容を取得
     $cleanLine = $line.Trim()
-
     # 箇条書きの行を作成 (レベルに応じてスペースと - を追加)
     $outputContent += (" " * $indentLevel * 2) + "- " + $cleanLine
 }
