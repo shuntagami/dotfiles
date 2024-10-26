@@ -245,6 +245,20 @@ function! s:GetHighlight(hi)
   return hl
 endfunction
 
+function! AsyncGitSync()
+    " jobstart（Neovim）または job_start（Vim）を使用
+    if has('nvim')
+        call jobstart(['memo', 'git-sync'])
+    else
+        call job_start(['memo', 'git-sync'])
+    endif
+endfunction
+
+augroup memo_auto_git
+    autocmd!
+    autocmd BufWritePost */memo/_posts/*.md call AsyncGitSync()
+augroup END
+
 " 最後のカーソル位置を復元する
 if has("autocmd")
     autocmd BufReadPost *
