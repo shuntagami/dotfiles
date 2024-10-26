@@ -151,28 +151,6 @@ let g:molder_show_hidden = 1
 " 自動保存をする
 let g:auto_save = 1
 
-if (executable('pyls'))
-    " pylsの起動定義
-    augroup LspPython
-        autocmd!
-        autocmd User lsp_setup call lsp#register_server({
-            \ 'name': 'pyls',
-            \ 'cmd': { server_info -> ['pyls'] },
-            \ 'whitelist': ['python'],
-            \})
-    augroup END
-endif
-
-" terraform-lspの設定
-if executable('terraform-lsp')
-  au User lsp_setup call lsp#register_server({
-    \ 'name': 'terraform-lsp',
-    \ 'cmd': {server_info->['terraform-lsp']},
-    \ 'whitelist': ['terraform','tf'],
-    \ })
-endif
-let g:terraform_fmt_on_save=1
-
 if executable('solargraph')
   au User lsp_setup call lsp#register_server({
     \ 'name': 'solargraph',
@@ -279,43 +257,6 @@ endif
 imap { {}<LEFT>
 imap [ []<LEFT>
 imap ( ()<LEFT>
-
-" merlin
-let g:opamshare = substitute(system('opam config var share'),'\n$','','''')
-execute 'set rtp+=' . g:opamshare . '/merlin/vim'
-
-" ocp-indent
-execute 'set rtp^=' . g:opamshare . '/ocp-indent/vim'
-function! s:ocaml_format()
-    let now_line = line('.')
-    exec ':%! ocp-indent'
-    exec ':' . now_line
-endfunction
-
-" [markdown] configure formatprg
-autocmd FileType markdown set formatprg=prettier\ --parser\ markdown
-
-" [markdown] format on save
-" autocmd! BufWritePre *.md call s:mdfmt()
-" function s:mdfmt()
-"     let l:curw = winsaveview()
-"     silent! exe "normal! a \<bs>\<esc>" | undojoin |
-"         \ exe "normal gggqG"
-"     call winrestview(l:curw)
-" endfunction
-
-augroup ocaml_format
-    autocmd!
-    autocmd BufWrite,FileWritePre,FileAppendPre *.mli\= call s:ocaml_format()
-augroup END
-
-if executable('ocamllsp')
-  au User lsp_setup call lsp#register_server({
-        \ 'name': 'ocaml',
-        \ 'cmd': {server_info->['ocamllsp', '--fallback-read-dot-merlin']},
-        \ 'whitelist': ['ocaml'],
-        \ })
-endif
 
 " filetypeの自動検出(最後の方に書いた方がいいらしい)
 filetype on
