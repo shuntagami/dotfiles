@@ -35,6 +35,7 @@ alias flush="dscacheutil -flushcache && killall -HUP mDNSResponder"
 
 # copy
 alias pbp="pbpaste"
+alias copyfile='pbcopy <'
 
 function pb() {
   if [ -t 0 ]; then
