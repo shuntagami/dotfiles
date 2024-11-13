@@ -40,6 +40,7 @@ if `uname` =~ /Darwin/
   productName = `sw_vers -productName`.sub("\n", "")
   version     = `sw_vers -productVersion`.sub("\n", "")
   osName      = case version.split(".")[0..1].join(".")
+                when ->v{ v.start_with?("15.") } then "Sequoia"
                 when ->v{ v.start_with?("14.") } then "Sonoma"
                 when ->v{ v.start_with?("13.") } then "Ventura"
                 when ->v{ v.start_with?("12.") } then "Monterey"
