@@ -51,7 +51,6 @@ brew "cocoapods"
 brew "curl"
 brew "libavif"
 brew "gd"
-brew "openldap"
 brew "php"
 brew "composer"
 brew "ctop"
@@ -182,6 +181,7 @@ cask "hammerspoon"
 cask "intellij-idea"
 cask "iterm2"
 cask "karabiner-elements"
+cask "keycastr"
 cask "microsoft-edge"
 cask "microsoft-remote-desktop"
 cask "mono-mdk-for-visual-studio"
@@ -204,12 +204,15 @@ mas "Keynote", id: 409183694
 mas "Kindle", id: 302584613
 mas "LINE", id: 539883307
 mas "Microsoft OneNote", id: 784801555
+mas "MindNode", id: 1289197285
 mas "MOV to MP4 Converter", id: 1500825631
 mas "Numbers", id: 409203825
 mas "Okta Extension App", id: 1439967473
 mas "Prime Video", id: 545519333
+mas "TestFlight", id: 899247664
 mas "Windows App", id: 1295203466
 mas "Xcode", id: 497799835
+mas "Xmind", id: 1327661892
 mas "ジーニアス英和（第5版）・和英（第3版）辞典", id: 1080239400
 mas "広辞苑 第七版", id: 1327237002
 vscode "4ops.terraform"
