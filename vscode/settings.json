@@ -7,6 +7,7 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.find.globalFindClipboard": true,
   "editor.formatOnSave": true,
+  "editor.quickSuggestions": false,
   "editor.codeActionsOnSave": {
     "source.fixAll": "explicit"
   },
@@ -32,7 +33,7 @@
   "files.trimFinalNewlines": true,
   "files.trimTrailingWhitespace": true,
   "breadcrumbs.enabled": true,
-  "vim.statusBarColorControl": true,
+  "vim.statusBarColorControl": false,
   "vim.statusBarColors.normal": ["#8ac6f2", "#444444"],
   "vim.statusBarColors.insert": ["#95e454", "#444444"],
   "vim.statusBarColors.visual": ["#f2c68a", "#444444"],
@@ -41,6 +42,7 @@
   "vim.statusBarColors.replace": ["#e5786d", "#444444"],
   "vim.useSystemClipboard": true,
   "vim.mouseSelectionGoesIntoVisualMode": false,
+  "vim.autoSwitchInputMethod.enable": false,
   "vim.normalModeKeyBindings": [
     {
       "before": ["u"],
