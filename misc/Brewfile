@@ -200,6 +200,7 @@ cask "visual-studio-code"
 cask "ytmdesktop-youtube-music"
 cask "zoom"
 mas "Be Focused", id: 973134470
+mas "Fello AI", id: 6447705369
 mas "Gifski", id: 1351639930
 mas "GIPHY CAPTURE", id: 668208984
 mas "Keynote", id: 409183694
@@ -231,8 +232,6 @@ vscode "formulahendry.auto-complete-tag"
 vscode "formulahendry.auto-rename-tag"
 vscode "foxundermoon.shell-format"
 vscode "gera2ld.markmap-vscode"
-vscode "github.copilot"
-vscode "github.copilot-chat"
 vscode "github.vscode-github-actions"
 vscode "golang.go"
 vscode "groksrc.ruby"
