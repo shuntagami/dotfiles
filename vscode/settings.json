@@ -22,7 +22,6 @@
   "workbench.startupEditor": "newUntitledFile",
   "workbench.editor.wrapTabs": true,
   "workbench.sideBar.location": "left",
-  "workbench.colorTheme": "Horizon",
   "workbench.colorCustomizations": {
     "statusBar.background": "#8ac6f2",
     "statusBar.noFolderBackground": "#8ac6f2",
