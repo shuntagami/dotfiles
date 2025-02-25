@@ -113,9 +113,6 @@
       "source.formatAll.terraform": "explicit"
     }
   },
-  "[ruby]": {
-    // "editor.defaultFormatter": "misogi.ruby-rubocop"
-  },
   "ruby.format": "rubocop",
   "ruby.useLanguageServer": true,
   "ruby.intellisense": "rubyLocate",
@@ -174,5 +171,7 @@
   },
   "redhat.telemetry.enabled": true,
   "lldb.library": "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/LLDB",
-  "security.allowedUNCHosts": ["wsl.localhost"]
+  "makefile.configureOnOpen": true,
+  "gitlens.ai.generateCommitMessage.customInstructions": "Always write commit messages in English",
+  "gitlens.statusBar.tooltipFormat": "x",
 }
