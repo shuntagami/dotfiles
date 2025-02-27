@@ -171,7 +171,5 @@
   },
   "redhat.telemetry.enabled": true,
   "lldb.library": "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/LLDB",
-  "makefile.configureOnOpen": true,
-  "gitlens.ai.generateCommitMessage.customInstructions": "Always write commit messages in English",
-  "gitlens.statusBar.tooltipFormat": "x",
+  "makefile.configureOnOpen": true
 }
