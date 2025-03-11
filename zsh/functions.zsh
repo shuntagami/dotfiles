@@ -266,3 +266,10 @@ function extract {
       echo "'$1' is not a valid file"
   fi
 }
+
+function generate-gif() {
+    local input_file=$1
+    local output_file="${input_file%.*}.gif"
+    ffmpeg -i "$input_file" -r 10 "$output_file"
+    echo "GIF generated: $output_file"
+}
