@@ -171,5 +171,8 @@
   },
   "redhat.telemetry.enabled": true,
   "lldb.library": "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/LLDB",
-  "makefile.configureOnOpen": true
+  "makefile.configureOnOpen": true,
+  "cursor.cpp.disabledLanguages": [
+    "plaintext"
+  ]
 }
