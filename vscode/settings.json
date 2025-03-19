@@ -6,7 +6,7 @@
   "editor.fontSize": 15,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.find.globalFindClipboard": true,
-  "editor.formatOnSave": false,
+  "editor.formatOnSave": true,
   "editor.quickSuggestions": {
     "comments": "off",
     "strings": "off",
@@ -19,6 +19,7 @@
   "editor.formatOnPaste": false,
   "editor.formatOnType": false,
   "editor.minimap.enabled": false,
+  "prettier.proseWrap": "preserve",
   "workbench.startupEditor": "newUntitledFile",
   "workbench.editor.wrapTabs": true,
   "workbench.sideBar.location": "left",
@@ -75,7 +76,8 @@
       "comments": "on",
       "strings": "on",
       "other": "on"
-    }
+    },
+    "files.trimTrailingWhitespace": false
   },
   "[yaml]": {
     "editor.formatOnSave": false
