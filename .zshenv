@@ -26,9 +26,9 @@ if [[ -z "$LANG" ]]; then
 fi
 
 # direnv
-if command -v direnv 1>/dev/null 2>&1; then
-  eval "$(direnv hook zsh)"
-fi
+# if command -v direnv 1>/dev/null 2>&1; then
+#   eval "$(direnv hook zsh)"
+# fi
 
 # Paths
 path=(
