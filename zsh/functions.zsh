@@ -273,3 +273,23 @@ function generate-gif() {
     ffmpeg -i "$input_file" -r 10 "$output_file"
     echo "GIF generated: $output_file"
 }
+
+pdfcompress() {
+  local input="$1"
+  local output="$2"
+
+  if [[ -z "$input" ]]; then
+    echo "Usage: pdfcompress input.pdf [output.pdf]"
+    return 1
+  fi
+
+  if [[ -z "$output" ]]; then
+    local basename="${input%.*}"
+    local ext="${input##*.}"
+    output="${basename}_compressed.${ext}"
+  fi
+
+  gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 \
+     -dPDFSETTINGS=/ebook -dNOPAUSE -dQUIET -dBATCH \
+     -sOutputFile="$output" "$input"
+}
