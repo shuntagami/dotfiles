@@ -293,3 +293,27 @@ pdfcompress() {
      -dPDFSETTINGS=/ebook -dNOPAUSE -dQUIET -dBATCH \
      -sOutputFile="$output" "$input"
 }
+
+video-to-mp3() {
+  if [[ $# -eq 0 ]]; then
+    echo "使用方法: video-to-mp3 <動画ファイル>"
+    return 1
+  fi
+
+  local input_file="$1"
+  local output_file="${input_file%.*}.mp3"
+
+  if [[ ! -f "$input_file" ]]; then
+    echo "エラー: ファイル '$input_file' が見つかりません。"
+    return 1
+  fi
+
+  echo "変換中: $input_file → $output_file"
+  ffmpeg -i "$input_file" -vn -ab 128k "$output_file"
+
+  if [[ $? -eq 0 ]]; then
+    echo "変換完了: $output_file"
+  else
+    echo "変換失敗"
+  fi
+}
