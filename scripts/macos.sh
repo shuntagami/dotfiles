@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -eux
+set +e
 
 # Close any open System Preferences panes, to prevent them from overriding
 # settings we’re about to change
@@ -23,7 +24,7 @@ while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
 sudo nvram SystemAudioVolume=" "
 
 # Disable the "app-name is not from the App Store. are you sure you want to open it?" dialog
-sudo spctl --master-disable
+# sudo spctl --master-disable
 
 # Set highlight color to green
 defaults write NSGlobalDomain AppleHighlightColor -string "0.764700 0.976500 0.568600"
@@ -388,22 +389,22 @@ defaults write com.apple.dock wvous-bl-modifier -int 0
 ###############################################################################
 
 # Disable send and reply animations in Mail.app
-defaults write com.apple.mail DisableReplyAnimations -bool true
-defaults write com.apple.mail DisableSendAnimations -bool true
+# defaults write com.apple.mail DisableReplyAnimations -bool true
+# defaults write com.apple.mail DisableSendAnimations -bool true
 
 # Copy email addresses as `foo@example.com` instead of `Foo Bar <foo@example.com>` in Mail.app
-defaults write com.apple.mail AddressesIncludeNameOnPasteboard -bool false
+# defaults write com.apple.mail AddressesIncludeNameOnPasteboard -bool false
 
 # Display emails in threaded mode, sorted by date (oldest at the top)
-defaults write com.apple.mail DraftsViewerAttributes -dict-add "DisplayInThreadedMode" -string "yes"
-defaults write com.apple.mail DraftsViewerAttributes -dict-add "SortedDescending" -string "yes"
-defaults write com.apple.mail DraftsViewerAttributes -dict-add "SortOrder" -string "received-date"
+# defaults write com.apple.mail DraftsViewerAttributes -dict-add "DisplayInThreadedMode" -string "yes"
+# defaults write com.apple.mail DraftsViewerAttributes -dict-add "SortedDescending" -string "yes"
+# defaults write com.apple.mail DraftsViewerAttributes -dict-add "SortOrder" -string "received-date"
 
 # Disable inline attachments (just show the icons)
-defaults write com.apple.mail DisableInlineAttachmentViewing -bool true
+# defaults write com.apple.mail DisableInlineAttachmentViewing -bool true
 
 # Disable automatic spell checking
-defaults write com.apple.mail SpellCheckingBehavior -string "NoSpellCheckingEnabled"
+# defaults write com.apple.mail SpellCheckingBehavior -string "NoSpellCheckingEnabled"
 
 ###############################################################################
 # Activity Monitor                                                            #

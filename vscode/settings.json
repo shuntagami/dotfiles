@@ -184,5 +184,8 @@
   "[dotenv]": {
     "editor.defaultFormatter": "foxundermoon.shell-format"
   },
-  "git.openRepositoryInParentFolders": "always"
+  "git.openRepositoryInParentFolders": "always",
+  "[ignore]": {
+    "editor.defaultFormatter": "foxundermoon.shell-format"
+  }
 }
