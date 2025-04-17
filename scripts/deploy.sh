@@ -29,6 +29,7 @@ ln -sf ~/dotfiles/.vimrc ~/.vimrc
 ln -sf ~/dotfiles/.zpreztorc ~/.zpreztorc
 ln -sf ~/dotfiles/.zshenv ~/.zshenv
 ln -sf ~/dotfiles/.zshrc ~/.zshrc
+ln -sf ~/dotfiles/misc/docker-config.json ~/.docker/config.json
 
 # ssh config
 if [ ! -d ${HOME}/.ssh ]; then

@@ -1,0 +1,24 @@
+{
+	"auths": {
+		"acrchainlitapp.azurecr.io": {}
+	},
+	"credsStore": "desktop",
+	"currentContext": "desktop-linux",
+	"plugins": {
+		"-x-cli-hints": {
+			"enabled": "true"
+		},
+		"compose": {
+			"build": "bake"
+		},
+		"debug": {
+			"hooks": "exec"
+		},
+		"scout": {
+			"hooks": "pull,buildx build"
+		}
+	},
+	"features": {
+		"hooks": "true"
+	}
+}
