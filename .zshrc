@@ -69,7 +69,6 @@ fi
 [[ ! -r $DOTFILES/pkg/.opam/opam-init/init.zsh ]] || source $DOTFILES/pkg/.opam/opam-init/init.zsh  > /dev/null 2>&1
 export PATH="/opt/homebrew/opt/gnu-getopt/bin:$PATH"
 
-eval "$(direnv hook zsh)"
 # The following lines have been added by Docker Desktop to enable Docker CLI completions.
 fpath=(/Users/shun.tagami/.docker/completions $fpath)
 autoload -Uz compinit
