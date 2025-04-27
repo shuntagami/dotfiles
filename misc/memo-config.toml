@@ -1,0 +1,11 @@
+memodir = "/Users/shun.tagami/memo/_posts"
+editor = "vim"
+column = 20
+width = 0
+selectcmd = "peco"
+grepcmd = "grep -nH --color=always ${PATTERN} ${FILES} | less -R"
+memotemplate = ""
+assetsdir = "."
+pluginsdir = "/Users/shun.tagami/memo/plugins"
+templatedirfile = ""
+templatebodyfile = ""
