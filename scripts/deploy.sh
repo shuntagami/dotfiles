@@ -39,6 +39,7 @@ fi
 if [[ "$OSTYPE" == "darwin"* ]]; then
   if ! grep -sq "require('keyboard')" ~/.hammerspoon/init.lua; then
     ln -sf ~/dotfiles/hammerspoon ~/.hammerspoon
+    ln -sf ~/dotfiles/misc/claude_desktop_config.json ~/Library/Application\ Support/Claude/claude_desktop_config.json
   fi
 
   # The location of the configuration file for kareabiner-elements
