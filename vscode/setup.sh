@@ -2,6 +2,8 @@
 
 set -eux
 
+DOTFILES=$HOME/dotfiles
+
 # 設定ディレクトリの定義
 if [[ `uname` == "Darwin" ]]; then
   VSCODE_SETTING_DIR=$HOME/Library/Application\ Support/Code/User
@@ -19,7 +21,6 @@ CONFIG_FILES=(
   "settings.json"
   "keybindings.json"
   "tsconfig.json"
-  "snippets"
 )
 
 # WSL環境での処理
