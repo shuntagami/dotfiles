@@ -122,14 +122,51 @@ has () {
   type "$1" > /dev/null 2>&1
 }
 
-# Put together dull routine when hosting repo on github
-init-repo () {
-  git init && git commit --allow-empty -m "empty commit" && git add -A && git status && git commit -v
-  echo "Type repository name: " && read name;
-  echo "Type repository description: " && read description;
-  gh repo create ${name} --description ${description} --public;
-  git remote add origin git@github.com:shuntagami/${name}.git
-  git push origin +HEAD;
+init-repo() {
+  # ── Git 初期化・コミット
+  git init || return 1
+  git commit --allow-empty -m "Initial empty commit"
+  git add -A
+  git status
+  git commit -v -m "first"
+
+  # ── 入力
+  print -n "Repository name: ";     read name
+  print -n "Description: ";         read description
+
+  # ── GitHub ユーザー名 & 所属 org 取得
+  github_user=$(gh api user --jq .login)
+  orgs=(${(f)"$(gh api user/memberships/orgs --jq '.[].organization.login')"})
+  orgs+=("$github_user")
+
+  # ── メニュー表示
+  echo "Select account to host repository:"
+  for (( i=1; i<=${#orgs}; i++ )); do
+    echo "  $i) ${orgs[$i]}"
+  done
+
+  # ── 選択プロンプト（空入力→デフォルト）
+  while true; do
+    print -n "Enter number [1-${#orgs}] (default: ${github_user}): "; read choice
+    if [[ -z $choice ]]; then
+      selected=$github_user
+      break
+    elif (( choice >= 1 && choice <= ${#orgs} )); then
+      selected=${orgs[choice]}
+      break
+    else
+      echo "Invalid selection, try again."
+    fi
+  done
+
+  # ── リポジトリ作成＆push
+  gh repo create "${selected}/${name}" \
+    --description "${description}" \
+    --private \
+    --confirm
+
+  git remote add origin "https://github.com/${selected}/${name}.git"
+  git push -u origin HEAD:main
 }
 
 # lint as filetype
