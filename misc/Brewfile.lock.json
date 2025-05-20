@@ -6765,12 +6765,6 @@
           "full_name": "microsoft-remote-desktop"
         }
       },
-      "notion": {
-        "version": "4.0.0",
-        "options": {
-          "full_name": "notion"
-        }
-      },
       "postman": {
         "version": "11.21.0",
         "options": {

@@ -175,6 +175,7 @@ cask "docker"
 cask "dotnet-sdk"
 cask "drawio"
 cask "dropbox"
+cask "figma@beta"
 cask "fork"
 cask "gimp"
 cask "google-chrome"
@@ -186,13 +187,13 @@ cask "intellij-idea"
 cask "iterm2"
 cask "karabiner-elements"
 cask "keycastr"
+cask "mamp"
 cask "microsoft-edge"
 cask "microsoft-remote-desktop"
 cask "mono-mdk-for-visual-studio"
-cask "notion"
+cask "obsidian"
 cask "powershell"
 cask "slack"
-cask "sourcetree"
 cask "spotify"
 cask "utm"
 cask "visual-studio-code"
@@ -203,11 +204,8 @@ mas "GIPHY CAPTURE", id: 668208984
 mas "Keynote", id: 409183694
 mas "Kindle", id: 302584613
 mas "LINE", id: 539883307
-mas "Microsoft OneNote", id: 784801555
-mas "MindNode", id: 1289197285
 mas "MOV to MP4 Converter", id: 1500825631
 mas "Numbers", id: 409203825
-mas "Okta Extension App", id: 1439967473
 mas "Prime Video", id: 545519333
 mas "Windows App", id: 1295203466
 mas "Xcode", id: 497799835
