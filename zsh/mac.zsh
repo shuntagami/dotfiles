@@ -56,16 +56,13 @@ alias ips="ifconfig -a | grep -o 'inet6\? \(addr:\)\?\s\?\(\(\([0-9]\+\.\)\{3\}[
 alias os.update='sudo softwareupdate -i -a'
 
 function say() {
-  osascript -e "say \"{$1}\""
+  osascript -e "say \"$1\""
 }
 
 # Disable Spotlight
 alias spotlight.off="sudo mdutil -a -i off"
 # Enable Spotlight
 alias spotlight.on="sudo mdutil -a -i on"
-
-# Update installed Ruby gems, Homebrew, npm, and their installed packages
-alias update='export HOMEBREW_CASK_OPTS="--no-quarantine" && cd ~/dotfiles/misc; brew update; brew bundle install --file=$HOME/dotfiles/misc/Brewfile; rm -rf Brewfile; brew bundle dump; brew cleanup; npm install npm -g; npm update -g; sudo gem update --system; sudo gem update; sudo gem cleanup; 1'
 
 # Update locate command
 alias db.update="sudo /usr/libexec/locate.updatedb"
@@ -81,7 +78,17 @@ alias wifi.hotspot="networksetup -setairportnetwork en0 pixel"
 alias wifi.starbucks="networksetup -setairportnetwork en0 at_STARBUCKS_Wi2"
 
 # aws-vault
-alias avl='(){ open -na "Google Chrome" --args --incognito --user-data-dir=$HOME/Library/Application\ Support/Google/Chrome/aws-vault/$@ $(aws-vault login $@ --stdout) }'
+function avl() {
+  local profile="$1"
+  if [ -z "$profile" ]; then
+    echo "Usage: avl <profile>"
+    return 1
+  fi
+  local url=$(aws-vault login "$profile" --stdout)
+  if [ $? -eq 0 ]; then
+    open -na "Google Chrome" --args --incognito --user-data-dir="$HOME/Library/Application Support/Google/Chrome/aws-vault/$profile" "$url"
+  fi
+}
 
 # Display Manager
 ## Mirror
@@ -101,3 +108,31 @@ alias typocheck="git diff HEAD..$(git symbolic-ref refs/remotes/origin/HEAD | se
 
 # For Kindle, Extracts and copies the first line of clipboard content without a trailing newline
 alias cl1='pbpaste | head -n 1 | while IFS= read -r line; do printf "%s" "$line"; done | pbcopy'
+
+update-brew-env() {
+  MODE=$1 # 引数: from-brewfile or from-system
+
+  export HOMEBREW_CASK_OPTS="--no-quarantine"
+  cd ~/dotfiles/misc
+  brew update
+
+  if [[ "$MODE" == "from-brewfile" ]]; then
+    brew bundle cleanup --force --file=$HOME/dotfiles/misc/Brewfile
+    brew bundle install --file=$HOME/dotfiles/misc/Brewfile
+  elif [[ "$MODE" == "from-system" ]]; then
+    brew bundle dump --force --file=$HOME/dotfiles/misc/Brewfile
+  else
+    echo "Usage: update-brew-env [from-brewfile|from-system]"
+    return 1
+  fi
+
+  brew cleanup
+  # npm install -g npm
+  # npm update -g
+  # sudo gem update --system
+  # sudo gem update
+  # sudo gem cleanup
+}
+
+alias update-from-brewfile='update-brew-env from-brewfile'
+alias update-from-system='update-brew-env from-system'
