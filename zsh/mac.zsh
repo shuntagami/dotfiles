@@ -43,7 +43,7 @@ function pb() {
   if [ -t 0 ]; then
     cat $1 | pbcopy
   else
-    pbcopy < /dev/stdin
+    pbcopy </dev/stdin
   fi
 }
 
