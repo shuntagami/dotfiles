@@ -16,10 +16,11 @@
     "source.fixAll": "explicit"
   },
   "editor.suggestSelection": "first",
-  "editor.formatOnPaste": false,
-  "editor.formatOnType": false,
+  "editor.formatOnPaste": true,
+  "editor.formatOnType": true,
   "editor.minimap.enabled": false,
   "prettier.proseWrap": "preserve",
+  "workbench.colorTheme": "Quiet Light",
   "workbench.startupEditor": "newUntitledFile",
   "workbench.editor.wrapTabs": true,
   "workbench.sideBar.location": "left",
