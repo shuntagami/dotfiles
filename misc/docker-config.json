@@ -1,5 +1,6 @@
 {
 	"auths": {
+		"300423309246.dkr.ecr.ap-northeast-1.amazonaws.com": {},
 		"acrchainlitapp.azurecr.io": {}
 	},
 	"credsStore": "desktop",
