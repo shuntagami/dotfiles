@@ -1,0 +1,28 @@
+#!/usr/bin/env pwsh
+
+param (
+    [Parameter(Mandatory=$true)]
+    [double]$inr
+)
+
+# Function to get the latest INR to JPY exchange rate
+function Get-InrToJpyRate {
+    $apiUrl = "https://api.exchangerate-api.com/v4/latest/INR"
+    $response = Invoke-RestMethod -Uri $apiUrl
+    return $response.rates.JPY
+}
+
+# Function to convert INR to JPY
+function Convert-InrToJpy {
+    param (
+        [double]$inrAmount
+    )
+
+    $rate = Get-InrToJpyRate
+    $jpyAmount = $inrAmount * $rate
+    return [math]::Round($jpyAmount, 2)
+}
+
+$jpy = Convert-InrToJpy -inrAmount $inr
+Write-Output "$inr INR is approximately $jpy JPY."
+

@@ -1,0 +1,28 @@
+#!/usr/bin/env pwsh
+
+param (
+    [Parameter(Mandatory=$true)]
+    [double]$eur
+)
+
+# Function to get the latest EUR to JPY exchange rate
+function Get-EurToJpyRate {
+    $apiUrl = "https://api.exchangerate-api.com/v4/latest/EUR"
+    $response = Invoke-RestMethod -Uri $apiUrl
+    return $response.rates.JPY
+}
+
+# Function to convert EUR to JPY
+function Convert-EurToJpy {
+    param (
+        [double]$eurAmount
+    )
+
+    $rate = Get-EurToJpyRate
+    $jpyAmount = $eurAmount * $rate
+    return [math]::Round($jpyAmount, 2)
+}
+
+$jpy = Convert-EurToJpy -eurAmount $eur
+Write-Output "$eur EUR is approximately $jpy JPY."
+
