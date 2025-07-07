@@ -1,0 +1,112 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+#
+# --------------------------------------------
+# 概要:
+#   指定した Markdown/テキストファイルを下記ルールで整形し、
+#   **元ファイルを上書き保存** (一回目だけ差分が出る) します。
+#   以後同じファイルに対し何度実行しても差分が出ない **idempotent** 仕様。
+#
+#   1. ◎で始まる行 → **..** で太字化し、項目末に空行 1 行を追加
+#   2. 通常段落は文末の「。」, "!", "！" で必ず改行し、行末に
+#      ゼロ幅スペース + 半角スペース 2 つ (以下 LINE_BREAK) を付与
+#   3. Markdown が自動的に改行扱いする行 (見出し・リスト等) と、
+#      すでに LINE_BREAK が付与されている行は変更しない
+# --------------------------------------------
+
+ZERO_WIDTH_SPACE   = "\u200B"
+LINE_BREAK         = "#{ZERO_WIDTH_SPACE}  "           # => "\u200B␣␣"
+LINE_BREAK_STRIPPED = LINE_BREAK.rstrip                # "\u200B"
+SENTENCE_ENDS      = ["。", "!", "！"].freeze
+
+AUTO_BREAK_PATTERNS = [
+  /^\s*$/,               # 空行
+  /^\s*#/,               # 見出し
+  /^\s*[-+*]\s+/,       # 箇条書き
+  /^\s*\d+\.\s+/,      # 番号付きリスト
+  /^\s*>/,               # 引用
+  /^\s*```/              # コードフェンス
+].freeze
+
+# ------------------------------------------------
+# 判定系ヘルパ
+# ------------------------------------------------
+
+def auto_break_line?(line)
+  AUTO_BREAK_PATTERNS.any? { |re| re.match?(line) }
+end
+
+
+def already_formatted?(line)
+  line.end_with?(LINE_BREAK)
+end
+
+# ------------------------------------------------
+# フォーマッタ本体 (idempotent)
+# ------------------------------------------------
+
+def format_text(lines)
+  out = []
+  lines.each_with_index do |raw, idx|
+    # 1) 既に整形済みならそのまま出力
+    if already_formatted?(raw)
+      out << raw
+      next
+    end
+
+    # 2) 空行 / 自動改行行はそのまま保持
+    line = raw.dup.rstrip
+    if auto_break_line?(line)
+      out << line
+      next
+    end
+
+    # 3) ◎ セクションタイトル
+    if line.start_with?("◎")
+      out << "**#{line}**#{LINE_BREAK}"
+      # 次行が別のセクションなら空行を追加 (未整形のケースのみ)
+      if lines[idx + 1]&.start_with?("◎")
+        out << ""
+      end
+      next
+    end
+
+    # 4) 通常段落 → 文単位に分割し LINE_BREAK 付与
+    buffer = String.new
+    line.each_char do |ch|
+      buffer << ch
+      if SENTENCE_ENDS.include?(ch)
+        out << "#{buffer.strip}#{LINE_BREAK}"
+        buffer = String.new
+      end
+    end
+    out << "#{buffer.strip}#{LINE_BREAK}" unless buffer.strip.empty?
+  end
+
+  out.join("\n")
+end
+
+# ------------------------------------------------
+# CLI / main
+# ------------------------------------------------
+
+def main
+  unless ARGV.size == 1
+    warn "Usage: ruby #{File.basename(__FILE__)} INPUT_FILE"
+    exit 1
+  end
+
+  path = ARGV.first
+  unless File.exist?(path)
+    warn "File not found: #{path}"
+    exit 1
+  end
+
+  original_lines = File.readlines(path, chomp: true, encoding: "UTF-8")
+  formatted_text  = format_text(original_lines)
+
+  File.write(path, formatted_text, encoding: "UTF-8")
+  puts "Formatted (idempotent) → #{path}"
+end
+
+main if $PROGRAM_NAME == __FILE__
