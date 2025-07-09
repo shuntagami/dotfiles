@@ -20,6 +20,7 @@ ZERO_WIDTH_SPACE    = "\u200B"
 LINE_BREAK          = "#{ZERO_WIDTH_SPACE}  "           # => "\u200B␣␣"
 LINE_BREAK_STRIPPED = LINE_BREAK.rstrip                 # "\u200B"
 
+SECTION_HEADER_RE   = %r{\A\s*(\*\*)?◎}.freeze
 SENTENCE_ENDS   = ["。", "!", "！"].freeze
 OPENING_QUOTES  = ["「", "『"].freeze
 CLOSING_QUOTES  = ["」", "』"].freeze
@@ -67,8 +68,12 @@ def format_text(lines)
     end
 
     # 3) ◎ セクションタイトル
-    if line.start_with?("◎")
-      out << "**#{line}**#{LINE_BREAK}"
+    if line.match?(SECTION_HEADER_RE)
+      # まだ太字が付いていなければ付与
+      line = "**#{line}**" unless line.start_with?("**")
+      # 改行コードを保証
+      line << LINE_BREAK unless already_formatted?(line)
+      out << line
       # 次行が別のセクションなら空行を追加 (未整形のケースのみ)
       if lines[idx + 1]&.start_with?("◎")
         out << ""
