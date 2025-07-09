@@ -12,20 +12,25 @@
 #      ゼロ幅スペース + 半角スペース 2 つ (以下 LINE_BREAK) を付与
 #   3. Markdown が自動的に改行扱いする行 (見出し・リスト等) と、
 #      すでに LINE_BREAK が付与されている行は変更しない
+#   4. 引用符（「〜」や『〜』）内は改行せず、閉じ括弧までを 1 行として扱う
+#      （例: 「えー。おもろ。」 は 1 行）
 # --------------------------------------------
 
-ZERO_WIDTH_SPACE   = "\u200B"
-LINE_BREAK         = "#{ZERO_WIDTH_SPACE}  "           # => "\u200B␣␣"
-LINE_BREAK_STRIPPED = LINE_BREAK.rstrip                # "\u200B"
-SENTENCE_ENDS      = ["。", "!", "！"].freeze
+ZERO_WIDTH_SPACE    = "\u200B"
+LINE_BREAK          = "#{ZERO_WIDTH_SPACE}  "           # => "\u200B␣␣"
+LINE_BREAK_STRIPPED = LINE_BREAK.rstrip                 # "\u200B"
+
+SENTENCE_ENDS   = ["。", "!", "！"].freeze
+OPENING_QUOTES  = ["「", "『"].freeze
+CLOSING_QUOTES  = ["」", "』"].freeze
 
 AUTO_BREAK_PATTERNS = [
-  /^\s*$/,               # 空行
-  /^\s*#/,               # 見出し
-  /^\s*[-+*]\s+/,       # 箇条書き
-  /^\s*\d+\.\s+/,      # 番号付きリスト
-  /^\s*>/,               # 引用
-  /^\s*```/              # コードフェンス
+  /^\s*$/,                # 空行
+  /^\s*#/,                # 見出し
+  /^\s*[-+*]\s+/,         # 箇条書き
+  /^\s*\d+\.\s+/,         # 番号付きリスト
+  /^\s*>/,                # 引用
+  /^\s*```/               # コードフェンス
 ].freeze
 
 # ------------------------------------------------
@@ -35,7 +40,6 @@ AUTO_BREAK_PATTERNS = [
 def auto_break_line?(line)
   AUTO_BREAK_PATTERNS.any? { |re| re.match?(line) }
 end
-
 
 def already_formatted?(line)
   line.end_with?(LINE_BREAK)
@@ -47,6 +51,7 @@ end
 
 def format_text(lines)
   out = []
+
   lines.each_with_index do |raw, idx|
     # 1) 既に整形済みならそのまま出力
     if already_formatted?(raw)
@@ -72,14 +77,43 @@ def format_text(lines)
     end
 
     # 4) 通常段落 → 文単位に分割し LINE_BREAK 付与
-    buffer = String.new
-    line.each_char do |ch|
+    buffer   = +""
+    in_quote = false
+    i        = 0
+
+    while i < line.length
+      ch = line[i]
       buffer << ch
-      if SENTENCE_ENDS.include?(ch)
+
+      # --------------------------------------------------------
+      #   引用符の開閉を検出
+      # --------------------------------------------------------
+      if OPENING_QUOTES.include?(ch)
+        in_quote = true
+
+      elsif in_quote && CLOSING_QUOTES.include?(ch)
+        in_quote = false
+        # 引用全体を 1 文として flush
         out << "#{buffer.strip}#{LINE_BREAK}"
-        buffer = String.new
+        buffer.clear
+
+      # --------------------------------------------------------
+      #   句点・感嘆符で改行（※引用内は除外）
+      # --------------------------------------------------------
+      elsif !in_quote && SENTENCE_ENDS.include?(ch)
+        # 句読点直後に閉じ括弧が続くならまとめて飲み込む
+        if (i + 1) < line.length && CLOSING_QUOTES.include?(line[i + 1])
+          i += 1
+          buffer << line[i]
+        end
+
+        out << "#{buffer.strip}#{LINE_BREAK}"
+        buffer.clear
       end
+
+      i += 1
     end
+
     out << "#{buffer.strip}#{LINE_BREAK}" unless buffer.strip.empty?
   end
 
@@ -103,7 +137,7 @@ def main
   end
 
   original_lines = File.readlines(path, chomp: true, encoding: "UTF-8")
-  formatted_text  = format_text(original_lines)
+  formatted_text = format_text(original_lines)
 
   File.write(path, formatted_text, encoding: "UTF-8")
   puts "Formatted (idempotent) → #{path}"
