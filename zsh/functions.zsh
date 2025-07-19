@@ -1,9 +1,4 @@
-#!/usr/bin/env zsh
-
-# Source shared utilities if available
-if [[ -f "$HOME/dotfiles/scripts/lib/utils.sh" ]]; then
-  source "$HOME/dotfiles/scripts/lib/utils.sh"
-fi
+#!/bin/zsh
 
 function addToPath {
   case ":$PATH:" in
@@ -123,7 +118,9 @@ function gz() {
 	printf "gzip: %d bytes (%2.2f%%)\n" "$gzipsize" "$ratio";
 }
 
-# Note: has() function is now provided by shared utils.sh
+has () {
+  type "$1" > /dev/null 2>&1
+}
 
 init-repo() {
   # ── Git 初期化・コミット
