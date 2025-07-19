@@ -1,8 +1,15 @@
+#!/usr/bin/env zsh
+
 ## (Ubuntu)
 
-# Shortcuts
-alias d="cd ~/dotfiles"
-alias p="cd ~/projects"
+# Load configuration
+if [[ -f "$HOME/dotfiles/config/paths.conf" ]]; then
+  source "$HOME/dotfiles/config/paths.conf"
+fi
+
+# Shortcuts (using configured paths)
+alias d="cd ${alias_dot}"
+alias p="cd ${alias_p}"
 alias g="git"
 alias bat="batcat"
 
