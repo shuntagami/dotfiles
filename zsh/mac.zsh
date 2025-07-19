@@ -1,13 +1,22 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
 
 ## (Mac)
 
-# Shortcuts
-alias d="cd ~/dotfiles"
-alias dls="cd ~/Downloads"
-alias dt="cd ~/Desktop"
-alias p="cd ~/projects"
-alias 88labs="cd ~/projects/88labs"
+# Load configuration
+if [[ -f "$HOME/dotfiles/config/dotfiles.conf" ]]; then
+  source "$HOME/dotfiles/config/dotfiles.conf"
+fi
+
+if [[ -f "$HOME/dotfiles/config/paths.conf" ]]; then
+  source "$HOME/dotfiles/config/paths.conf"
+fi
+
+# Shortcuts (using configured paths)
+alias d="cd ${alias_dot}"
+alias dls="cd ${alias_downloads}"
+alias dt="cd ${alias_d}"
+alias p="cd ${alias_p}"
+alias 88labs="cd ${alias_p}/88labs"
 alias g="git"
 alias icloud="cd ~/Library/Mobile\ Documents/com~apple~CloudDocs"
 alias python="python3"
@@ -68,14 +77,14 @@ alias spotlight.on="sudo mdutil -a -i on"
 alias db.update="sudo /usr/libexec/locate.updatedb"
 
 # VPN
-alias vpn.connect="networksetup -connectpppoeservice 'ANDPAD-VPN (L2TP)'"
-alias vpn.disconnect="networksetup -disconnectpppoeservice 'ANDPAD-VPN (L2TP)'"
+alias vpn.connect="networksetup -connectpppoeservice '${VPN_SERVICE_NAME}'"
+alias vpn.disconnect="networksetup -disconnectpppoeservice '${VPN_SERVICE_NAME}'"
 
 # Wifi
 alias wifi.on="networksetup -setairportpower en0 on"
 alias wifi.off="networksetup -setairportpower en0 off"
-alias wifi.hotspot="networksetup -setairportnetwork en0 pixel"
-alias wifi.starbucks="networksetup -setairportnetwork en0 at_STARBUCKS_Wi2"
+alias wifi.home="networksetup -setairportnetwork en0 '${WIFI_NETWORK_HOME}'"
+alias wifi.office="networksetup -setairportnetwork en0 '${WIFI_NETWORK_OFFICE}'"
 
 # aws-vault
 function avl() {
@@ -86,7 +95,7 @@ function avl() {
   fi
   local url=$(aws-vault login "$profile" --stdout)
   if [ $? -eq 0 ]; then
-    open -na "Google Chrome" --args --incognito --user-data-dir="$HOME/Library/Application Support/Google/Chrome/aws-vault/$profile" "$url"
+    open -na "Google Chrome" --args --incognito --user-data-dir="${alias_library}/Application Support/Google/Chrome/aws-vault/$profile" "$url"
   fi
 }
 
@@ -112,15 +121,15 @@ alias cl1='pbpaste | head -n 1 | while IFS= read -r line; do printf "%s" "$line"
 update-brew-env() {
   MODE=$1 # 引数: from-brewfile or from-system
 
-  export HOMEBREW_CASK_OPTS="--no-quarantine"
-  cd ~/dotfiles/misc
+  export HOMEBREW_CASK_OPTS="${HOMEBREW_CASK_OPTS}"
+  cd "${alias_dot}/misc"
   brew update
 
   if [[ "$MODE" == "from-brewfile" ]]; then
-    brew bundle cleanup --force --file=$HOME/dotfiles/misc/Brewfile
-    brew bundle install --file=$HOME/dotfiles/misc/Brewfile
+    brew bundle cleanup --force --file="${alias_dot}/misc/Brewfile"
+    brew bundle install --file="${alias_dot}/misc/Brewfile"
   elif [[ "$MODE" == "from-system" ]]; then
-    brew bundle dump --force --file=$HOME/dotfiles/misc/Brewfile
+    brew bundle dump --force --file="${alias_dot}/misc/Brewfile"
   else
     echo "Usage: update-brew-env [from-brewfile|from-system]"
     return 1

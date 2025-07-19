@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# Load configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../config/dotfiles.conf"
+
 set -eux
 set +e
 
@@ -297,8 +301,8 @@ defaults write com.apple.finder FXInfoPanesExpanded -dict \
 # Enable highlight hover effect for the grid view of a stack (Dock)
 defaults write com.apple.dock mouse-over-hilite-stack -bool true
 
-# Set the icon size of Dock items to 24 pixels
-defaults write com.apple.dock "tilesize" -int "24"
+# Set the icon size of Dock items
+defaults write com.apple.dock "tilesize" -int "${MACOS_DOCK_TILE_SIZE}"
 
 # Change minimize/maximize window effect
 defaults write com.apple.dock mineffect -string "scale"
@@ -494,8 +498,8 @@ defaults write com.google.Chrome PMPrintingExpandedStateForPrint2 -bool true
 defaults write com.google.Chrome.canary PMPrintingExpandedStateForPrint2 -bool true
 
 # computer name
-sudo scutil --set ComputerName "Shun-Tagami-MacBook"
-sudo scutil --set LocalHostName "Shun-Tagami-MacBook"
+sudo scutil --set ComputerName "${MACOS_COMPUTER_NAME}"
+sudo scutil --set LocalHostName "${MACOS_COMPUTER_NAME}"
 
 ###############################################################################
 # Kill affected applications                                                  #
