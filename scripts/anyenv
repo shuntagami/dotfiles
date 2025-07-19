@@ -1,46 +1,71 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-set -eux
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/lib/utils.sh"
 
-DOTFILES=~/dotfiles
-DEST=$DOTFILES/pkg/.anyenv
+DEST="${DOTFILES_ROOT}/pkg/.anyenv"
 
 # change anyenv root to DEST
-export ANYENV_ROOT=$DEST
+export ANYENV_ROOT="$DEST"
 
-NODENV_ROOT=$DEST/envs/nodenv
-RBENV_ROOT=$DEST/envs/rbenv
-
-has () {
-  type "$1" > /dev/null 2>&1
-}
+NODENV_ROOT="$DEST/envs/nodenv"
+RBENV_ROOT="$DEST/envs/rbenv"
 
 install-anyenv() {
+  log_info "Installing anyenv and language environments..."
+  
   # anyenv
-  if ! has "${DEST}"/bin/anyenv; then
-    rm -rf $DEST
-    git clone https://github.com/anyenv/anyenv "${DEST}" && "${DEST}"/bin/anyenv install --init
+  if ! has "${DEST}/bin/anyenv"; then
+    log_info "Installing anyenv..."
+    rm -rf "$DEST"
+    ensure_dir "$(dirname "$DEST")"
+    retry 3 git clone https://github.com/anyenv/anyenv "${DEST}" || die "Failed to clone anyenv"
+    "${DEST}/bin/anyenv" install --init || die "Failed to initialize anyenv"
+    log_success "anyenv installed successfully"
+  else
+    log_info "anyenv is already installed"
   fi
 
   # anyenv-update
-  if ! has "${DEST}"/plugins/anyenv-update; then
-    [ ! -d "${DEST}"/plugins/anyenv-update ] && git clone https://github.com/znz/anyenv-update.git "${DEST}"/plugins/anyenv-update
+  local update_plugin="${DEST}/plugins/anyenv-update"
+  if [[ ! -d "$update_plugin" ]]; then
+    log_info "Installing anyenv-update plugin..."
+    ensure_dir "${DEST}/plugins"
+    retry 3 git clone https://github.com/znz/anyenv-update.git "$update_plugin" || die "Failed to install anyenv-update"
+    log_success "anyenv-update plugin installed"
   fi
 
   # nodenv
-  if ! has "${NODENV_ROOT}"/bin/nodenv; then
-    "${DEST}"/bin/anyenv install nodenv
+  if ! has "${NODENV_ROOT}/bin/nodenv"; then
+    log_info "Installing nodenv..."
+    "${DEST}/bin/anyenv" install nodenv || die "Failed to install nodenv"
 
     # nodenv-default-packages
-    [ ! -d "${NODENV_ROOT}"/plugins/nodenv-default-packages ] && git clone -q https://github.com/nodenv/nodenv-default-packages.git "${NODENV_ROOT}"/plugins/nodenv-default-packages
-    [ ! -e "${NODENV_ROOT}"/default-packages ] && ln -sf "${DOTFILES}"/misc/default-packages "${NODENV_ROOT}"/.
+    local nodenv_packages_plugin="${NODENV_ROOT}/plugins/nodenv-default-packages"
+    if [[ ! -d "$nodenv_packages_plugin" ]]; then
+      ensure_dir "${NODENV_ROOT}/plugins"
+      retry 3 git clone https://github.com/nodenv/nodenv-default-packages.git "$nodenv_packages_plugin" || die "Failed to install nodenv-default-packages"
+    fi
+    
+    safe_symlink "${DOTFILES_ROOT}/misc/default-packages" "${NODENV_ROOT}/default-packages"
+    log_success "nodenv installed and configured"
   fi
 
-  if ! has "${RBENV_ROOT}"/bin/rbenv; then
-    "${DEST}"/bin/anyenv install rbenv
+  # rbenv
+  if ! has "${RBENV_ROOT}/bin/rbenv"; then
+    log_info "Installing rbenv..."
+    "${DEST}/bin/anyenv" install rbenv || die "Failed to install rbenv"
 
     # rbenv-default-gems
-    [ ! -d "${RBENV_ROOT}"/plugins/rbenv-default-gems ] && git clone -q https://github.com/rbenv/rbenv-default-gems.git "${RBENV_ROOT}"/plugins/rbenv-default-gems
-    [ ! -e "${RBENV_ROOT}"/default-gems ] && ln -sf "${DOTFILES}"/misc/default-gems "${RBENV_ROOT}"/.
+    local rbenv_gems_plugin="${RBENV_ROOT}/plugins/rbenv-default-gems"
+    if [[ ! -d "$rbenv_gems_plugin" ]]; then
+      ensure_dir "${RBENV_ROOT}/plugins"
+      retry 3 git clone https://github.com/rbenv/rbenv-default-gems.git "$rbenv_gems_plugin" || die "Failed to install rbenv-default-gems"
+    fi
+    
+    safe_symlink "${DOTFILES_ROOT}/misc/default-gems" "${RBENV_ROOT}/default-gems"
+    log_success "rbenv installed and configured"
   fi
+  
+  log_success "anyenv installation completed!"
 }
