@@ -139,3 +139,7 @@ alias update-from-system='update-brew-env from-system'
 
 alias h1down='sed -i "" -E -e "s/^# (.*)$/\\1/" -e "s/^#(#+) /\\1 /"'
 alias nobold='sed -i "" -E '\''s/\*\*([^*]+)\*\*/\1/g'\'''
+noboldh() {
+  sed -i "" -E '/^[[:space:]]*#/ s/\*\*([^*]+)\*\*/\1/g' "$@"
+}
+alias trims="sed -E -i '' 's/[[:space:]　]+$//'"
