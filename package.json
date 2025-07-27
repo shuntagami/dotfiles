@@ -4,6 +4,7 @@
     "wallpaper": "./scripts/setWallpaper.mjs"
   },
   "dependencies": {
+    "sharp": "^0.34.3",
     "wallpaper": "^6.1.1"
   }
 }
