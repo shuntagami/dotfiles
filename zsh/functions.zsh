@@ -354,3 +354,16 @@ video-to-mp3() {
     echo "変換失敗"
   fi
 }
+
+pdf2img() {
+  local input="$1"
+  if [[ -z "$input" ]]; then
+    echo "Usage: pdf2img <file.pdf>"
+    return 1
+  fi
+
+  local base="${input:t:r}" # ファイル名から拡張子を除いた部分
+  mkdir -p "$base"
+  pdftoppm -png "$input" "$base/$base"
+}
+
