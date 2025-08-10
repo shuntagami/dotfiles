@@ -7,3 +7,5 @@ prettier
 npm-check-updates
 md-to-pdf
 @anthropic-ai/claude-code
+pnpm
+vercel
