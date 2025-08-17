@@ -9,3 +9,4 @@ md-to-pdf
 @anthropic-ai/claude-code
 pnpm
 vercel
+neonctl
