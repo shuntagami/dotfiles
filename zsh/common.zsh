@@ -70,3 +70,5 @@ git-grep-count() {
   git grep -c "$1" | awk -F':' '{sum += $2} END {print sum}'
 }
 alias ggc="git-grep-count"
+
+alias cc="claude"
