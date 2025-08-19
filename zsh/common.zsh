@@ -73,56 +73,208 @@ alias ggc="git-grep-count"
 
 alias cc="claude"
 
-# ~/.zshrc に追記（または置き換え）
+# --- ffmpeg 区切りカット用 zsh 関数 ---
+# 使い方:
+#   cut <input> start..end     # 指定区間を抽出（_cut）
+#   cut <input> start..        # start 以降を抽出（_after）
+#   cut <input> ..end          # 先頭〜end を抽出（_before）
+#   cut <input> start~~end     # 指定区間を削除し前後を結合（_removed）
+#
+# 仕様:
+# - mp3/mp4 は -c copy（高速）
+# - wav は -c:a pcm_s16le で安全に再エンコード
+# - それ以外の拡張子は基本 -c copy を試行（失敗時はエラーメッセージ）
+# - 出力ファイル名は元の拡張子を保持し、ベース名に _cut/_after/_before/_removed を付与
+# - 一時ファイルは mktemp -d で作成し、処理後に自動削除
+# - zsh の glob 展開を抑止（呼び出し時：alias、関数内：NO_GLOB）
+#
+# 注意:
+# - 同名の POSIX `cut` コマンドと名前が衝突します。必要なら `\cut` で元コマンドを呼べます。
+
 cut() {
-  if [[ "$1" == "-h" || -z "$2" ]]; then
-    echo "Usage:"
-    echo "  cut <input> start..end   # start〜end"
-    echo "  cut <input> start..      # start〜最後まで"
-    echo "  cut <input> ..end        # 最初からendまで"
-    echo
-    echo "Examples:"
-    echo "  cut video.mp4 00:10:00..00:20:00"
-    echo "  cut video.mp4 00:10:00.."
-    echo "  cut video.mp4 ..00:20:00"
-    return 0
+  emulate -L zsh
+  setopt LOCAL_OPTIONS NO_GLOB
+
+  # ---- ヘルパ（エラー出力） ----
+  _err() { print -u2 -- "$@"; }
+
+  # ---- 依存確認 ----
+  if ! command -v ffmpeg >/dev/null 2>&1; then
+    _err "エラー: ffmpeg が見つかりません。インストール後に再実行してください。"
+    return 127
+  fi
+
+  # ---- 引数チェック ----
+  if (( $# != 2 )); then
+    _err "使い方: cut <input> <range>"
+    _err "  例) cut movie.mp4 00:30..01:45"
+    _err "      cut audio.wav 01:00.."
+    _err "      cut talk.mp3 ..05:00"
+    _err "      cut clip.mp4 00:30:00~~01:30:00"
+    return 2
   fi
 
   local input="$1"
-  local range="$2"
+  local raw_range="$2"
 
-  # 拡張子とベース名
-  local base="${input%.*}"
-  local ext="${input##*.}"
+  if [[ ! -f "$input" ]]; then
+    _err "エラー: 入力ファイルが見つかりません: $input"
+    return 2
+  fi
 
-  # 前後の空白を除去
-  range="${range## }"
-  range="${range%% }"
+  # パス要素（zsh 独自の修飾子を使用）
+  local dir="${input:h}"
+  local stem="${input:t:r}"
+  local ext="${input:e:l}"
 
-  local start=""
-  local end=""
-  local output=""
+  if [[ -z "$ext" ]]; then
+    _err "エラー: 入力ファイルに拡張子がありません。"
+    return 2
+  fi
 
-  case "$range" in
-    \.\.*)                     # ..end
-      end="${range#..}"
-      output="${base}_before.${ext}"
-      ffmpeg -i "$input" -to "$end" -c copy "$output"
+  # ---- range パース（空白除去してから判定）----
+  local range="${raw_range//[[:space:]]/}"
+  local start="" end="" tag=""
+  if [[ "$range" == *"~~"* ]]; then
+    # 削除＆結合
+    start="${range%%~~*}"
+    end="${range##*~~}"
+    tag="_removed"
+    if [[ -z "$start" || -z "$end" ]]; then
+      _err "エラー: 'start~~end' 形式は start と end の両方が必要です。例: 00:30:00~~01:30:00"
+      return 2
+    fi
+  elif [[ "$range" == *".."* ]]; then
+    start="${range%%..*}"
+    end="${range##*..}"
+    if [[ -n "$start" && -n "$end" ]]; then
+      tag="_cut"
+    elif [[ -n "$start" && -z "$end" ]]; then
+      tag="_after"
+    elif [[ -z "$start" && -n "$end" ]]; then
+      tag="_before"
+    else
+      _err "エラー: '..' の前後が空です。例: 00:10.., ..05:00, 00:10..00:20"
+      return 2
+    fi
+  else
+    _err "エラー: 範囲指定は '..' または '~~' を含む必要があります。"
+    return 2
+  fi
+
+  # ---- 出力パス ----
+  local out="${dir}/${stem}${tag}.${ext}"
+
+  # ---- 一時ディレクトリ & クリーンアップ ----
+  local tmpdir
+  if ! tmpdir="$(mktemp -d)"; then
+    _err "エラー: 一時ディレクトリの作成に失敗しました。"
+    return 1
+  fi
+  # RETURN で関数終了時にもクリーンアップ
+  trap 'rm -rf -- "$tmpdir"' INT TERM EXIT RETURN
+
+  # ---- ストリーム情報（動画有無 判定は任意）----
+  local has_video=0
+  if command -v ffprobe >/dev/null 2>&1; then
+    local vkind
+    vkind="$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_type -of csv=p=0 -- "$input" 2>/dev/null)"
+    [[ "$vkind" == "video" ]] && has_video=1
+  fi
+
+  # ---- コーデック方針 ----
+  #   wav       : 常に再エンコード（pcm_s16le）
+  #   mp3 / mp4 : -c copy（高速）
+  #   その他    : まず -c copy を試行（同一ファイル由来なら基本OK）
+  local -a seg_codecs concat_codecs
+  case "$ext" in
+    wav)
+      seg_codecs=(-c:a pcm_s16le)
+      concat_codecs=(-c:a pcm_s16le)
       ;;
-    *\.\.)                     # start..
-      start="${range%..}"
-      output="${base}_after.${ext}"
-      ffmpeg -i "$input" -ss "$start" -c copy "$output"
+    mp3)
+      seg_codecs=(-c copy)
+      concat_codecs=(-c copy)
       ;;
-    *\.\.*)                    # start..end
-      start="${range%%..*}"
-      end="${range#*..}"
-      output="${base}_cut.${ext}"
-      ffmpeg -i "$input" -ss "$start" -to "$end" -c copy "$output"
+    mp4)
+      seg_codecs=(-c copy)
+      concat_codecs=(-c copy -movflags +faststart)
       ;;
     *)
-      echo "Error: 範囲は start..end / start.. / ..end の形式で指定してください。"
-      return 1
+      seg_codecs=(-c copy)
+      concat_codecs=(-c copy)
       ;;
   esac
+
+  # ---- 実処理 ----
+  # ffmpeg は -loglevel error で静かに、失敗時にわかりやすく返す
+  local ff() { ffmpeg -hide_banner -y -loglevel error "$@"; }
+
+  case "$tag" in
+    _cut)
+      # start..end 抽出
+      # 精度重視のため -i の後に -ss/-to を付与
+      if ! ff -i "$input" -ss "$start" -to "$end" "${seg_codecs[@]}" "$out"; then
+        _err "エラー: 抽出に失敗しました（$start..$end）。入力と範囲を確認してください。"
+        return 1
+      fi
+      ;;
+
+    _before)
+      # ..end 抽出
+      if ! ff -i "$input" -to "$end" "${seg_codecs[@]}" "$out"; then
+        _err "エラー: 抽出に失敗しました（..$end）。"
+        return 1
+      fi
+      ;;
+
+    _after)
+      # start.. 抽出
+      if ! ff -i "$input" -ss "$start" "${seg_codecs[@]}" "$out"; then
+        _err "エラー: 抽出に失敗しました（$start..）。"
+        return 1
+      fi
+      ;;
+
+    _removed)
+      # start~~end を削除し、前後を結合
+      local seg1="${tmpdir}/part1.${ext}"
+      local seg2="${tmpdir}/part2.${ext}"
+
+      # 先頭〜start
+      if ! ff -i "$input" -to "$start" "${seg_codecs[@]}" "$seg1"; then
+        _err "エラー: 前半セグメントの作成に失敗しました（..$start）。"
+        return 1
+      fi
+      # end〜末尾
+      if ! ff -i "$input" -ss "$end" "${seg_codecs[@]}" "$seg2"; then
+        _err "エラー: 後半セグメントの作成に失敗しました（$end..）。"
+        return 1
+      fi
+
+      if [[ "$ext" == "wav" ]]; then
+        # WAV は demuxer concat の互換性問題を避け、フィルタで連結（再エンコード）
+        if ! ff -i "$seg1" -i "$seg2" -filter_complex "[0:a][1:a]concat=n=2:v=0:a=1" "${concat_codecs[@]}" "$out"; then
+          _err "エラー: WAV の結合に失敗しました。"
+          return 1
+        fi
+      else
+        # demuxer concat（同一ファイル由来なのでパラメータ一致）
+        local list="${tmpdir}/list.txt"
+        printf "file '%s'\nfile '%s'\n" "$seg1" "$seg2" >| "$list"
+        if ! ff -f concat -safe 0 -i "$list" "${concat_codecs[@]}" "$out"; then
+          _err "エラー: 結合に失敗しました（concat demuxer）。"
+          _err "ヒント: コンテナ互換性の問題の可能性があります。別の拡張子や再エンコードでの出力を検討してください。"
+          return 1
+        fi
+      fi
+      ;;
+  esac
+
+  print -P "%F{green}完了:%f ${out}"
 }
+
+# 呼び出し時点での glob 展開を抑止するため、エイリアスで noglob を付与
+# （関数内でも NO_GLOB を設定して二重で安全対策）
+alias cut='noglob cut'
+
