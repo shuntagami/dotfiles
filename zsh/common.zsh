@@ -72,3 +72,57 @@ git-grep-count() {
 alias ggc="git-grep-count"
 
 alias cc="claude"
+
+# ~/.zshrc に追記（または置き換え）
+cut() {
+  if [[ "$1" == "-h" || -z "$2" ]]; then
+    echo "Usage:"
+    echo "  cut <input> start..end   # start〜end"
+    echo "  cut <input> start..      # start〜最後まで"
+    echo "  cut <input> ..end        # 最初からendまで"
+    echo
+    echo "Examples:"
+    echo "  cut video.mp4 00:10:00..00:20:00"
+    echo "  cut video.mp4 00:10:00.."
+    echo "  cut video.mp4 ..00:20:00"
+    return 0
+  fi
+
+  local input="$1"
+  local range="$2"
+
+  # 拡張子とベース名
+  local base="${input%.*}"
+  local ext="${input##*.}"
+
+  # 前後の空白を除去
+  range="${range## }"
+  range="${range%% }"
+
+  local start=""
+  local end=""
+  local output=""
+
+  case "$range" in
+    \.\.*)                     # ..end
+      end="${range#..}"
+      output="${base}_before.${ext}"
+      ffmpeg -i "$input" -to "$end" -c copy "$output"
+      ;;
+    *\.\.)                     # start..
+      start="${range%..}"
+      output="${base}_after.${ext}"
+      ffmpeg -i "$input" -ss "$start" -c copy "$output"
+      ;;
+    *\.\.*)                    # start..end
+      start="${range%%..*}"
+      end="${range#*..}"
+      output="${base}_cut.${ext}"
+      ffmpeg -i "$input" -ss "$start" -to "$end" -c copy "$output"
+      ;;
+    *)
+      echo "Error: 範囲は start..end / start.. / ..end の形式で指定してください。"
+      return 1
+      ;;
+  esac
+}
