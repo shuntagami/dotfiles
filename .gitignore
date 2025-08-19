@@ -7,3 +7,7 @@ __pycache__/
 private.ahk
 claude_desktop_config.json
 .zshenv
+
+# Local configuration files (keep personal settings private)
+config/*.local.conf
+config/local/
