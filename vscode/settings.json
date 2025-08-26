@@ -188,5 +188,6 @@
   "git.openRepositoryInParentFolders": "always",
   "[ignore]": {
     "editor.defaultFormatter": "foxundermoon.shell-format"
-  }
+  },
+  "docker.extension.enableComposeLanguageServer": false
 }
