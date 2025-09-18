@@ -1,13 +1,11 @@
 #!/usr/bin/env ruby
 
-########################################
-# HELP
-########################################
-HELP=<<EOS
-display os version
+HELP = <<~EOS
+  display os version
 
-$ os
-Ubuntu 17.04 zesty
+  $ os
+  Ubuntu 17.04 zesty
+  macOS 26.0 Tahoe
 EOS
 
 if ARGV[0] == "-h"
@@ -15,45 +13,82 @@ if ARGV[0] == "-h"
   exit 0
 end
 
+uname = `uname`.strip
 
 ########################################
-# Main
+# Linux
 ########################################
-if `uname` =~ /Linux/
-  lsb_release = File.open("/etc/lsb-release")
-                    .read
-                    .split("\n")
-                    .reject{|e| e.start_with?("#") }
-                    .map{|e| e.split("=")}
-                    .flatten
-  release = Hash[*lsb_release]
+if uname =~ /Linux/
+  path = if File.exist?("/etc/lsb-release")
+           "/etc/lsb-release"
+         elsif File.exist?("/etc/os-release")
+           "/etc/os-release"
+         end
 
-  productName = release['DISTRIB_ID']
-  version     = release['DISTRIB_RELEASE']
-  osName      = release['DISTRIB_CODENAME']
-  puts "#{productName} #{version} #{osName}"
+  if path
+    kv = File.read(path)
+             .lines
+             .reject { |e| e.start_with?("#") }
+             .map { |e| e.strip }
+             .reject(&:empty?)
+             .map { |e| e.split("=", 2) }
+             .to_h
+
+    # 値の両端の引用符を外す
+    kv.transform_values! { |v| v&.gsub(/\A"|"\z/, "") }
+
+    product = kv["DISTRIB_ID"]     || kv["NAME"]     || "Linux"
+    version = kv["DISTRIB_RELEASE"]|| kv["VERSION_ID"] || ""
+    codename= kv["DISTRIB_CODENAME"] || kv["VERSION_CODENAME"] || ""
+    codename = codename.empty? ? "" : " #{codename}"
+    puts "#{product} #{version}#{codename}"
+  else
+    puts "Linux"
+  end
   exit 0
 end
 
-if `uname` =~ /Darwin/
-  # https://support.apple.com/en-us/HT201260
-  productName = `sw_vers -productName`.sub("\n", "")
-  version     = `sw_vers -productVersion`.sub("\n", "")
-  osName      = case version.split(".")[0..1].join(".")
-                when ->v{ v.start_with?("15.") } then "Sequoia"
-                when ->v{ v.start_with?("14.") } then "Sonoma"
-                when ->v{ v.start_with?("13.") } then "Ventura"
-                when ->v{ v.start_with?("12.") } then "Monterey"
-                when ->v{ v.start_with?("11.") } then "Big Sur"
-                when "10.15" then "Catalina"
-                when "10.14" then "Mojave"
-                when "10.13" then "High Sierra"
-                when "10.12" then "Sierra"
-                when "10.11" then "El Capitan"
-                when "10.10" then "Yosemite"
-                else "Unknown"
-                end
+########################################
+# macOS
+########################################
+if uname =~ /Darwin/
+  product_name = `sw_vers -productName`.strip       # "macOS"
+  version_str  = `sw_vers -productVersion`.strip    # 例: "26.0.1", "15.1", "11.7.10"
 
-  puts "#{productName} #{version} #{osName}"
+  # major/minor/patch を整数で取得（欠けたら 0 扱い）
+  parts = version_str.split(".").map!(&:to_i)
+  major, minor, patch = (parts + [0,0,0])[0,3]
+
+  # 11 以降は major で判定、10 系は minor で判定
+  macos_name =
+    if major >= 26
+      "Tahoe"
+    elsif major == 15
+      "Sequoia"
+    elsif major == 14
+      "Sonoma"
+    elsif major == 13
+      "Ventura"
+    elsif major == 12
+      "Monterey"
+    elsif major == 11
+      "Big Sur"
+    elsif major == 10
+      case minor
+      when 15 then "Catalina"
+      when 14 then "Mojave"
+      when 13 then "High Sierra"
+      when 12 then "Sierra"
+      when 11 then "El Capitan"
+      when 10 then "Yosemite"
+      else         "Unknown"
+      end
+    else
+      "Unknown"
+    end
+
+  puts "#{product_name} #{version_str} #{macos_name}"
   exit 0
 end
+
+puts "Unknown OS"
