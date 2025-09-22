@@ -346,6 +346,39 @@ video-to-mp3() {
   fi
 }
 
+mov-to-mp4() {
+  if [[ $# -eq 0 ]]; then
+    echo "使用方法: mov-to-mp4 <MOVファイル> [出力MP4]"
+    return 1
+  fi
+
+  local input_file="$1"
+  local output_file
+
+  if [[ -n "$2" ]]; then
+    output_file="$2"
+  else
+    output_file="${input_file%.*}.mp4"
+  fi
+
+  if [[ ! -f "$input_file" ]]; then
+    echo "エラー: ファイル '$input_file' が見つかりません。"
+    return 1
+  fi
+
+  echo "変換中: $input_file → $output_file"
+  ffmpeg -i "$input_file" \
+    -c:v libx264 -crf 28 -preset slow -pix_fmt yuv420p \
+    -c:a aac -b:a 128k -ac 2 -movflags +faststart \
+    "$output_file"
+
+  if [[ $? -eq 0 ]]; then
+    echo "変換完了: $output_file"
+  else
+    echo "変換失敗"
+  fi
+}
+
 pdf2img() {
   local input="$1"
   if [[ -z "$input" ]]; then
@@ -357,4 +390,3 @@ pdf2img() {
   mkdir -p "$base"
   pdftoppm -png "$input" "$base/$base"
 }
-
