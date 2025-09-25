@@ -6,7 +6,7 @@
   "editor.fontSize": 15,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.find.globalFindClipboard": true,
-  "editor.formatOnSave": false,
+  "editor.formatOnSave": true,
   "editor.quickSuggestions": {
     "comments": "off",
     "strings": "off",
@@ -16,10 +16,9 @@
     "source.fixAll": "explicit"
   },
   "editor.suggestSelection": "first",
-  "editor.formatOnPaste": false,
-  "editor.formatOnType": false,
+  "editor.formatOnPaste": true,
+  "editor.formatOnType": true,
   "editor.minimap.enabled": false,
-  "prettier.proseWrap": "preserve",
   "workbench.colorTheme": "Quiet Light",
   "workbench.startupEditor": "newUntitledFile",
   "workbench.editor.wrapTabs": true,
@@ -72,6 +71,8 @@
   "[c]": {
     "editor.defaultFormatter": "xaver.clang-format"
   },
+  "prettier.prettierPath": "~/dotfiles/pkg/.anyenv/envs/nodenv/versions/24.6.0/lib/node_modules/prettier",
+  "prettier.proseWrap": "preserve",
   "[markdown]": {
     "editor.quickSuggestions": {
       "comments": "on",
