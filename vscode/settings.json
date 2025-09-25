@@ -74,6 +74,7 @@
   "prettier.resolveGlobalModules": true,
   "prettier.proseWrap": "preserve",
   "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.quickSuggestions": {
       "comments": "on",
       "strings": "on",
