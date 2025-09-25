@@ -71,7 +71,7 @@
   "[c]": {
     "editor.defaultFormatter": "xaver.clang-format"
   },
-  "prettier.resolveGlobalModules": true,
+  "prettier.prettierPath": "~/dotfiles/pkg/.anyenv/envs/nodenv/versions/24.6.0/lib/node_modules/prettier",
   "prettier.proseWrap": "preserve",
   "[markdown]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
