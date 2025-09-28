@@ -16,8 +16,8 @@
     "source.fixAll": "explicit"
   },
   "editor.suggestSelection": "first",
-  "editor.formatOnPaste": false,
-  "editor.formatOnType": false,
+  "editor.formatOnPaste": true,
+  "editor.formatOnType": true,
   "editor.minimap.enabled": false,
   "workbench.colorTheme": "Quiet Light",
   "workbench.startupEditor": "newUntitledFile",
@@ -71,8 +71,10 @@
   "[c]": {
     "editor.defaultFormatter": "xaver.clang-format"
   },
-  "prettier.prettierPath": "~/dotfiles/pkg/.anyenv/envs/nodenv/versions/24.6.0/lib/node_modules/prettier",
+  "prettier.prettierPath": "~/dotfiles/pkg/.anyenv/envs/nodenv/versions/24.9.0/lib/node_modules/prettier",
   "prettier.proseWrap": "preserve",
+  "prettier.singleQuote": true,
+  "prettier.jsxSingleQuote": true,
   "[markdown]": {
     "files.trimTrailingWhitespace": false,
     "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -191,5 +193,14 @@
   "[ignore]": {
     "editor.defaultFormatter": "foxundermoon.shell-format"
   },
-  "docker.extension.enableComposeLanguageServer": false
+  "docker.extension.enableComposeLanguageServer": false,
+  "[dockercompose]": {
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2,
+    "editor.autoIndent": "advanced",
+    "editor.defaultFormatter": "redhat.vscode-yaml"
+  },
+  "[github-actions-workflow]": {
+    "editor.defaultFormatter": "redhat.vscode-yaml"
+  }
 }
