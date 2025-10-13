@@ -10,7 +10,6 @@ alias p="cd ~/projects"
 alias 88labs="cd ~/projects/88labs"
 alias g="git"
 alias icloud="cd ~/Library/Mobile\ Documents/com~apple~CloudDocs"
-alias python="python3"
 # alias code="cursor"
 
 # homebrew
