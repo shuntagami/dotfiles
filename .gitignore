@@ -6,4 +6,3 @@ pkg/*
 __pycache__/
 private.ahk
 claude_desktop_config.json
-.zshenv
