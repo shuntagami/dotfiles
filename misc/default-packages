@@ -7,6 +7,8 @@ prettier
 npm-check-updates
 md-to-pdf
 @anthropic-ai/claude-code
+@openai/codex
+@google/gemini-cli
 pnpm
 vercel
 neonctl
