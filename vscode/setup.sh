@@ -45,4 +45,25 @@ else
       ln -sf "${DOTFILES}/vscode/${file}" "${editor_dir}/"
     done
   done
+
+  # Cursor の mcp.json のシンボリックリンクを作成（macOS/Linux環境のみ）
+  if [[ `uname` == "Darwin" ]] || ([[ `uname` == "Linux" ]] && [[ -z "${WSL_DISTRO_NAME}" ]]); then
+    CURSOR_MCP_DIR=$HOME/.cursor
+    mkdir -p "$CURSOR_MCP_DIR"
+    CURSOR_MCP_FILE="${CURSOR_MCP_DIR}/mcp.json"
+
+    if [[ -e "$CURSOR_MCP_FILE" ]] && [[ ! -L "$CURSOR_MCP_FILE" ]]; then
+      echo "Warning: ${CURSOR_MCP_FILE} already exists and is not a symlink."
+      read -p "Do you want to replace it with a symlink? (y/N): " -n 1 -r
+      echo
+      if [[ $REPLY =~ ^[Yy]$ ]]; then
+        rm "$CURSOR_MCP_FILE"
+        ln -sf "${DOTFILES}/vscode/mcp.json" "$CURSOR_MCP_FILE"
+      else
+        echo "Skipping mcp.json symlink creation."
+      fi
+    else
+      ln -sf "${DOTFILES}/vscode/mcp.json" "$CURSOR_MCP_FILE"
+    fi
+  fi
 fi

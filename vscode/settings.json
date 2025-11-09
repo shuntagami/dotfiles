@@ -203,5 +203,6 @@
   "[github-actions-workflow]": {
     "editor.defaultFormatter": "redhat.vscode-yaml"
   },
-  "claude-code.selectedModel": "default"
+  "claude-code.selectedModel": "default",
+  "cursor.composer.shouldChimeAfterChatFinishes": true
 }

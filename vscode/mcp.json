@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "Figma": {
+      "url": "https://mcp.figma.com/mcp",
+      "headers": {}
+    }
+  },
+  "next-devtools": {
+    "command": "npx",
+    "args": ["-y", "next-devtools-mcp@latest"]
+  }
+}
