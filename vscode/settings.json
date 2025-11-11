@@ -68,9 +68,6 @@
   "[makefile]": {
     "editor.insertSpaces": false
   },
-  "[c]": {
-    "editor.defaultFormatter": "xaver.clang-format"
-  },
   "prettier.prettierPath": "~/dotfiles/pkg/.anyenv/envs/nodenv/versions/24.9.0/lib/node_modules/prettier",
   "prettier.proseWrap": "preserve",
   "prettier.singleQuote": true,
@@ -148,36 +145,6 @@
     "path": "/opt/homebrew/bin/protoc",
     "options": ["--proto_path=proto"]
   },
-  "[java]": {
-    "editor.defaultFormatter": "redhat.java"
-  },
-  "java.jdt.ls.java.home": "/opt/homebrew/opt/openjdk@19/libexec/openjdk.jdk/Contents/Home",
-  "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
-  "java.format.settings.profile": "GoogleStyle",
-  "ocaml.server.extraEnv": {
-    "OCAMLLSP_SEMANTIC_HIGHLIGHTING": "full"
-  },
-  "ocaml.server.args": ["--fallback-read-dot-merlin"],
-  "explorer.autoReveal": false,
-  "launch": {
-    "version": "0.2.0",
-    "configurations": [
-      {
-        "name": "Debug Jest Tests",
-        "type": "node",
-        "request": "launch",
-        "runtimeArgs": [
-          "--inspect-brk",
-          "${workspaceRoot}/node_modules/.bin/jest",
-          "--runInBand"
-        ],
-        "console": "integratedTerminal",
-        "internalConsoleOptions": "neverOpen"
-      }
-    ]
-  },
-  "redhat.telemetry.enabled": true,
-  "lldb.library": "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/LLDB",
   "makefile.configureOnOpen": true,
   "cursor.cpp.disabledLanguages": [],
   "[dockerfile]": {
