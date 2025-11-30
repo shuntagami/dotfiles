@@ -390,3 +390,17 @@ pdf2img() {
   mkdir -p "$base"
   pdftoppm -png "$input" "$base/$base"
 }
+
+# JSONの文字列抽出（引数があればファイル、なければクリップボード）
+function jread() {
+  if [ -p /dev/stdin ]; then
+    # パイプ入力がある場合 (echo "{}" | jread)
+    cat - | jq -r '.. | select(type == "string")'
+  elif [ -z "$1" ]; then
+    # 引数がない場合 (クリップボード)
+    pbpaste | jq -r '.. | select(type == "string")'
+  else
+    # 引数がある場合 (ファイル読み込み)
+    cat "$1" | jq -r '.. | select(type == "string")'
+  fi
+}
