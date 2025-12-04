@@ -1,11 +1,4 @@
 {
   "mcpServers": {
-    "google-calendar": {
-      "command": "/Users/shun.tagami/dotfiles/pkg/.anyenv/envs/nodenv/shims/node",
-      "args": ["/Users/shun.tagami/projects/google-calendar-mcp/build/index.js"],
-      "env": {
-        "GOOGLE_OAUTH_CREDENTIALS": "/Users/shun.tagami/dotfiles/misc/gcp-oauth.keys.json"
-      }
-    }
   }
 }
