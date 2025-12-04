@@ -6,7 +6,7 @@
 	email = shuntagami23@gmail.com
 
 [core]
-	editor = vim -c \"set fenc=utf-8\"
+	editor = vim
 	excludesfile = ~/.gitignore_global
 
 	# Treat spaces before tabs and all kinds of trailing whitespace as an error.
@@ -15,15 +15,17 @@
 	whitespace = space-before-tab,-indent-with-non-tab,trailing-space
 
 [alias]
+	# Pretty graph log
 	tree = log --graph --pretty=format:'%x09%C(auto) %h %Cgreen %ar %Creset%x09by"%C(cyan ul)%an%Creset" %x09%C(auto)%s %d'
 
-	# View the current working tree status using the short format.
+	# Short status
 	s = status -s
 
 	# Show the diff between the latest commit and the current state.
 	d = !"git diff-index --quiet HEAD -- || clear; git --no-pager diff --patch-with-stat"
 	dn = !"git diffn"
 
+	# Diff staged
 	dc = !"git diff --cached"
 
 	# Switch to a branch, creating it if necessary.
@@ -60,7 +62,22 @@
 
 	# Remove branches that have already been merged with main.
 	# a.k.a. ‘delete merged’
-	dm = "!git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
+  dm = "!f() { \
+    echo '[dm] fetch + prune...'; \
+    git fetch -p; \
+    \
+    echo '[dm] deleting branches merged into default branch...'; \
+    git branch --merged | grep -v '\\*' | while read b; do \
+      [ -n \"$b\" ] && echo \"  delete $b\" && git branch -d \"$b\"; \
+    done; \
+    \
+    echo '[dm] deleting branches whose upstream is gone...'; \
+    git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads \
+      | awk '$2==\"[gone]\" {print $1}' \
+      | while read b; do \
+          [ -n \"$b\" ] && echo \"  delete $b (gone upstream)\" && git branch -D \"$b\"; \
+        done; \
+  }; f"
 
 	# List contributors with number of commits.
 	contributors = shortlog --summary --numbered
@@ -71,11 +88,23 @@
 	# Amend the currently staged files to the latest commit.
 	amend = commit --amend --reuse-message=HEAD
 
+	# Safer force push
 	push-f = push --force-with-lease
 
 	find-merge = "!sh -c 'commit=$0 && branch=${1:-HEAD} && (git rev-list $commit..$branch --ancestry-path | cat -n; git rev-list $commit..$branch --first-parent | cat -n) | sort -k2 -s | uniq -f1 -d | sort -n | tail -1 | cut -f2'"
 
 	show-merge = "!sh -c 'merge=$(git find-merge $0 $1) && [ -n \"$merge\" ] && git show $merge'"
+
+	# ===== Unified worktree entrypoint =====
+	# git w <branch> : ../repo-<branch> に worktree 作成 or 既存案内
+	# git w <number> : PR #<number> 用に ../repo-pr-<number> を作成 or 既存案内
+	w = "!f() { arg=\"$1\"; repo=$(basename \"$(pwd)\"); if [ -z \"$arg\" ]; then echo 'usage: git w <branch-or-pr-number>'; exit 1; fi; if printf '%s' \"$arg\" | grep -Eq '^[0-9]+$'; then pr=\"$arg\"; branch=$(gh pr view \"$pr\" --json headRefName -q .headRefName 2>/dev/null); if [ -z \"$branch\" ]; then echo \"[git w] Error: cannot fetch PR #$pr\"; exit 1; fi; workdir=\"../$repo-pr-$pr\"; localbranch=\"pr-$pr\"; if [ -d \"$workdir\" ]; then echo \"[git w] worktree already exists:\"; echo \"  cd $workdir\"; exit 0; fi; echo \"[git w] creating PR worktree for #$pr (branch: $branch)...\"; git fetch origin \"$branch\":\"$localbranch\" --update-head-ok; git worktree add \"$workdir\" \"$localbranch\"; echo \"  cd $workdir\"; exit 0; fi; branch=\"$arg\"; workdir=\"../$repo-$branch\"; if [ -d \"$workdir\" ]; then echo \"[git w] worktree already exists:\"; echo \"  cd $workdir\"; exit 0; fi; default_branch=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'); if ! git rev-parse --verify \"$branch\" >/dev/null 2>&1; then git branch \"$branch\" \"origin/$default_branch\"; fi; echo \"[git w] creating worktree for branch '$branch'...\"; git worktree add \"$workdir\" \"$branch\"; echo \"  cd $workdir\"; }; f"
+
+	# List worktrees in a compact table
+	wl = "!f() { echo 'PATH\\tBRANCH\\tHEAD'; git worktree list --porcelain | awk '/^worktree/ {path=$2} /^branch/ {gsub(\"refs/heads/\", \"\", $2); branch=$2} /^HEAD/ {head=$2} /^$/ {printf \"%s\\t%s\\t%s\\n\", path, branch, head}'; }; f"
+
+	# Delete worktree + local branch (PR number or branch name)
+	wd = "!f() { arg=\"$1\"; repo=$(basename \"$(pwd)\"); if [ -z \"$arg\" ]; then echo 'usage: git wd <branch-or-pr-number>'; exit 1; fi; if printf '%s' \"$arg\" | grep -Eq '^[0-9]+$'; then pr=\"$arg\"; branch=\"pr-$pr\"; workdir=\"../$repo-pr-$pr\"; else branch=\"$arg\"; workdir=\"../$repo-$branch\"; fi; if [ ! -d \"$workdir\" ]; then echo \"[git wd] no such worktree dir: $workdir\"; exit 1; fi; echo \"[git wd] removing worktree: $workdir\"; git worktree remove \"$workdir\" || exit 1; if git rev-parse --verify \"$branch\" >/dev/null 2>&1; then echo \"[git wd] deleting branch '$branch'\"; git branch -D \"$branch\"; else echo \"[git wd] branch '$branch' not found (maybe already deleted)\"; fi; }; f"
 
 [apply]
 	# Detect whitespace errors when applying a patch.
@@ -145,9 +174,11 @@
 
 # [credential]
 # 	helper = /mnt/c/Program\\ Files/Git/mingw64/bin/git-credential-manager.exe
+
 [credential "https://github.com"]
-	helper = 
+	helper =
 	helper = !/opt/homebrew/bin/gh auth git-credential
+
 [credential "https://gist.github.com"]
-	helper = 
+	helper =
 	helper = !/opt/homebrew/bin/gh auth git-credential
