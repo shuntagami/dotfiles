@@ -6,7 +6,7 @@
   "editor.fontSize": 15,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.find.globalFindClipboard": true,
-  "editor.formatOnSave": true,
+  "editor.formatOnSave": false,
   "editor.quickSuggestions": {
     "comments": "off",
     "strings": "off",
@@ -16,8 +16,8 @@
     "source.fixAll": "explicit"
   },
   "editor.suggestSelection": "first",
-  "editor.formatOnPaste": true,
-  "editor.formatOnType": true,
+  "editor.formatOnPaste": false,
+  "editor.formatOnType": false,
   "editor.minimap.enabled": false,
   "workbench.colorTheme": "Quiet Light",
   "workbench.startupEditor": "newUntitledFile",
@@ -173,6 +173,7 @@
   "cursor.composer.shouldChimeAfterChatFinishes": true,
   "gitlens.ai.model": "gitkraken",
   "gitlens.ai.gitkraken.model": "gemini:gemini-2.0-flash",
-  "claudeCode.selectedModel": "opus",
-  "claudeCode.preferredLocation": "panel"
+  "claudeCode.selectedModel": "claude-opus-4-5-20251101",
+  "claudeCode.preferredLocation": "panel",
+  "editor.accessibilitySupport": "on"
 }
