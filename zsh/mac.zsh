@@ -45,6 +45,14 @@ function pb() {
   fi
 }
 
+uncode() {
+  pbpaste \
+  | sed 's/^```.*$//g' \
+  | sed 's/^    //g' \
+  | sed 's/^`//g; s/`$//g' \
+  | pbcopy
+}
+
 # IP addresses
 alias ip="dig +short myip.opendns.com @resolver1.opendns.com"
 alias localip="ipconfig getifaddr en0"
