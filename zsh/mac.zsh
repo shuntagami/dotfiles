@@ -53,6 +53,25 @@ uncode() {
   | pbcopy
 }
 
+mdclean() {
+  pbpaste \
+  | sed '/^---$/d' \
+  | sed '/^___$/d' \
+  | sed '/^\*\*\*$/d' \
+  | pbcopy
+}
+
+mdclean_all() {
+  pbpaste \
+  | sed 's/^```.*$//g' \
+  | sed 's/^    //g' \
+  | sed 's/^`//g; s/`$//g' \
+  | sed '/^---$/d' \
+  | sed '/^___$/d' \
+  | sed '/^\*\*\*$/d' \
+  | pbcopy
+}
+
 # IP addresses
 alias ip="dig +short myip.opendns.com @resolver1.opendns.com"
 alias localip="ipconfig getifaddr en0"
