@@ -123,6 +123,7 @@ alias mirror.off='~/dotfiles/scripts/display_manager.py mirror disable'
 ## Res
 alias res.max='~/dotfiles/scripts/display_manager.py res highest main'
 alias res.default='~/dotfiles/scripts/display_manager.py res default all'
+alias res.40='~/dotfiles/scripts/display_manager.py res 3840 1620'
 alias res.31='~/dotfiles/scripts/display_manager.py res 3360 1890'
 alias res.27='~/dotfiles/scripts/display_manager.py res 3008 1692'
 alias res.qhd='~/dotfiles/scripts/display_manager.py res 2560 1440'
