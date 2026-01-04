@@ -51,6 +51,7 @@ fi
 # あなたの既存エントリを維持
 if [[ "$OSTYPE" == darwin* ]]; then
   path=(
+    ~/.antigravity/antigravity/bin
     /opt/homebrew/opt/imagemagick@6/bin
     /Applications/Visual\ Studio\ Code.app/Contents/Resources/app/bin
     ~/Library/Android/sdk/platform-tools
