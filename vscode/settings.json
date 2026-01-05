@@ -1,4 +1,7 @@
 {
+  // ===================
+  // Editor
+  // ===================
   "editor.tabSize": 2,
   "editor.guides.bracketPairs": true,
   "editor.cursorStyle": "block",
@@ -7,6 +10,8 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.find.globalFindClipboard": true,
   "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.formatOnType": true,
   "editor.quickSuggestions": {
     "comments": "off",
     "strings": "off",
@@ -16,9 +21,12 @@
     "source.fixAll": "explicit"
   },
   "editor.suggestSelection": "first",
-  "editor.formatOnPaste": true,
-  "editor.formatOnType": true,
   "editor.minimap.enabled": false,
+  "editor.accessibilitySupport": "on",
+
+  // ===================
+  // Workbench
+  // ===================
   "workbench.colorTheme": "Quiet Light",
   "workbench.startupEditor": "newUntitledFile",
   "workbench.editor.wrapTabs": true,
@@ -30,13 +38,33 @@
     "statusBar.foreground": "#444444",
     "statusBar.debuggingForeground": "#444444"
   },
+  // ===================
+  // Window
+  // ===================
   "window.clickThroughInactive": false,
   "window.title": "${activeEditorMedium}${separator}${rootName}",
+
+  // ===================
+  // Files
+  // ===================
   "files.autoSave": "onFocusChange",
   "files.insertFinalNewline": true,
   "files.trimFinalNewlines": true,
   "files.trimTrailingWhitespace": true,
+
+  // ===================
+  // Breadcrumbs
+  // ===================
   "breadcrumbs.enabled": true,
+
+  // ===================
+  // Git
+  // ===================
+  "git.openRepositoryInParentFolders": "always",
+
+  // ===================
+  // Vim
+  // ===================
   "vim.statusBarColorControl": false,
   "vim.statusBarColors.normal": ["#8ac6f2", "#444444"],
   "vim.statusBarColors.insert": ["#95e454", "#444444"],
@@ -64,14 +92,21 @@
     "<C-p>": false,
     "<C-b>": false
   },
-  "C_Cpp.clang_format_style": "Google",
-  "[makefile]": {
-    "editor.insertSpaces": false
-  },
+  // ===================
+  // Prettier / JavaScript / TypeScript
+  // ===================
   "prettier.prettierPath": "~/dotfiles/pkg/.anyenv/envs/nodenv/versions/24.9.0/lib/node_modules/prettier",
   "prettier.proseWrap": "preserve",
   "prettier.singleQuote": true,
   "prettier.jsxSingleQuote": true,
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  // ===================
+  // Language Overrides
+  // ===================
+  "[makefile]": {
+    "editor.insertSpaces": false
+  },
   "[markdown]": {
     "files.trimTrailingWhitespace": false,
     "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -84,96 +119,19 @@
   "[yaml]": {
     "editor.formatOnSave": false
   },
-  "yaml.customTags": [
-    "!Base64 scalar",
-    "!Cidr scalar",
-    "!And sequence",
-    "!Equals sequence",
-    "!If sequence",
-    "!Not sequence",
-    "!Or sequence",
-    "!Condition scalar",
-    "!FindInMap sequence",
-    "!GetAtt scalar",
-    "!GetAtt sequence",
-    "!GetAZs scalar",
-    "!ImportValue scalar",
-    "!Join sequence",
-    "!Select sequence",
-    "!Split sequence",
-    "!Sub scalar",
-    "!Transform mapping",
-    "!Ref scalar"
-  ],
-  "[terraform]": {
-    "editor.defaultFormatter": "hashicorp.terraform",
-    "editor.codeActionsOnSave": {
-      "source.formatAll.terraform": "explicit"
-    }
-  },
-  "[terraform-vars]": {
-    "editor.defaultFormatter": "hashicorp.terraform",
-    "editor.codeActionsOnSave": {
-      "source.formatAll.terraform": "explicit"
-    }
-  },
-  "ruby.format": "rubocop",
-  "ruby.useLanguageServer": true,
-  "ruby.intellisense": "rubyLocate",
-  "ruby.lint": {
-    "rubocop": true,
-    "rails": true
-  },
-  "ruby.rubocop.useBundler": true,
-  "ruby.useBundler": true,
-  "ruby.pathToBundler": "$HOME/dotfiles/pkg/.anyenv/envs/rbenv/shims/",
-  "ruby.rubocop.executePath": "",
-  "ruby.rubocop.onSave": true,
-  "ruby.codeCompletion": "rcodetools",
-  "[go]": {
-    "editor.defaultFormatter": "golang.go"
-  },
-  "go.toolsManagement.autoUpdate": true,
-  "go.toolsEnvVars": {
-    "GOFLAGS": "-tags=test"
-  },
-  "go.lintTool": "golangci-lint",
-  "go.lintFlags": ["--fast"],
-  "javascript.updateImportsOnFileMove.enabled": "always",
-  "typescript.updateImportsOnFileMove.enabled": "always",
-  "protoc": {
-    "path": "/opt/homebrew/bin/protoc",
-    "options": ["--proto_path=proto"]
-  },
-  "makefile.configureOnOpen": true,
+  // ===================
+  // Cursor
+  // ===================
   "cursor.cpp.disabledLanguages": [],
-  "[dockerfile]": {
-    "editor.defaultFormatter": "ms-azuretools.vscode-docker"
-  },
-  "[shellscript]": {
-    "editor.defaultFormatter": "foxundermoon.shell-format"
-  },
-  "[dotenv]": {
-    "editor.defaultFormatter": "foxundermoon.shell-format"
-  },
-  "git.openRepositoryInParentFolders": "always",
-  "[ignore]": {
-    "editor.defaultFormatter": "foxundermoon.shell-format"
-  },
-  "docker.extension.enableComposeLanguageServer": false,
-  "[dockercompose]": {
-    "editor.insertSpaces": true,
-    "editor.tabSize": 2,
-    "editor.autoIndent": "advanced",
-    "editor.defaultFormatter": "redhat.vscode-yaml"
-  },
-  "[github-actions-workflow]": {
-    "editor.defaultFormatter": "redhat.vscode-yaml"
-  },
   "cursor.composer.shouldChimeAfterChatFinishes": true,
+  // ===================
+  // GitLens
+  // ===================
   "gitlens.ai.model": "gitkraken",
   "gitlens.ai.gitkraken.model": "gemini:gemini-2.0-flash",
+  // ===================
+  // Claude Code
+  // ===================
   "claudeCode.selectedModel": "claude-opus-4-5-20251101",
-  "claudeCode.preferredLocation": "panel",
-  "editor.accessibilitySupport": "on"
+  "claudeCode.preferredLocation": "panel"
 }
