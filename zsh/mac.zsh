@@ -135,6 +135,44 @@ alias typocheck="git diff HEAD..$(git symbolic-ref refs/remotes/origin/HEAD | se
 # For Kindle, Extracts and copies the first line of clipboard content without a trailing newline
 alias cl1='pbpaste | head -n 1 | while IFS= read -r line; do printf "%s" "$line"; done | pbcopy'
 
+# Cursor 拡張機能の同期（Brewfile の vscode 行を参照）
+_sync_cursor_extensions() {
+  local mode=$1
+  local brewfile=$HOME/dotfiles/misc/Brewfile
+
+  if [[ "$mode" == "from-brewfile" ]]; then
+    # Brewfile を正として Cursor に適用
+    echo "Syncing Cursor extensions from Brewfile..."
+
+    # Brewfile にある拡張機能をインストール
+    grep "^vscode " "$brewfile" | sed 's/vscode "\(.*\)"/\1/' | while read ext; do
+      cursor --install-extension "$ext" --force 2>/dev/null
+    done
+
+    # Brewfile にない拡張機能を削除
+    cursor --list-extensions 2>/dev/null | while read ext; do
+      if ! grep -q "vscode \"$ext\"" "$brewfile"; then
+        echo "Uninstalling from Cursor: $ext"
+        cursor --uninstall-extension "$ext" 2>/dev/null
+      fi
+    done
+  elif [[ "$mode" == "from-system" ]]; then
+    # VSCode の状態を Cursor にも反映
+    echo "Syncing Cursor extensions from VSCode..."
+    code --list-extensions | while read ext; do
+      cursor --install-extension "$ext" --force 2>/dev/null
+    done
+
+    # VSCode にない拡張機能を Cursor から削除
+    cursor --list-extensions 2>/dev/null | while read ext; do
+      if ! code --list-extensions | grep -qx "$ext"; then
+        echo "Uninstalling from Cursor: $ext"
+        cursor --uninstall-extension "$ext" 2>/dev/null
+      fi
+    done
+  fi
+}
+
 update-brew-env() {
   MODE=$1 # 引数: from-brewfile or from-system
 
@@ -143,21 +181,27 @@ update-brew-env() {
   brew update
 
   if [[ "$MODE" == "from-brewfile" ]]; then
+    # Brewfile を正として同期（不要なものを削除 → インストール → lock 更新）
     brew bundle cleanup --force --file=$HOME/dotfiles/misc/Brewfile
     brew bundle install --file=$HOME/dotfiles/misc/Brewfile
+    # Cursor も同期
+    _sync_cursor_extensions from-brewfile
   elif [[ "$MODE" == "from-system" ]]; then
+    # システムを正として同期（Brewfile 更新 → lock 更新）
     brew bundle dump --force --file=$HOME/dotfiles/misc/Brewfile
+    brew bundle install --file=$HOME/dotfiles/misc/Brewfile
+    # Cursor も同期
+    _sync_cursor_extensions from-system
   else
     echo "Usage: update-brew-env [from-brewfile|from-system]"
     return 1
   fi
 
   brew cleanup
-  # npm install -g npm
-  # npm update -g
-  # sudo gem update --system
-  # sudo gem update
-  # sudo gem cleanup
+
+  # npm グローバルパッケージの更新
+  npm install -g npm
+  npm update -g
 }
 
 alias update-from-brewfile='update-brew-env from-brewfile'

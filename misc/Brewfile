@@ -189,6 +189,7 @@ mas "MOV to MP4 Converter", id: 1500825631
 mas "Numbers", id: 409203825
 mas "Prime Video", id: 545519333
 mas "広辞苑 第七版", id: 1327237002
+vscode "anthropic.claude-code"
 vscode "bierner.markdown-mermaid"
 vscode "dbaeumer.vscode-eslint"
 vscode "docker.docker"
@@ -197,9 +198,8 @@ vscode "editorconfig.editorconfig"
 vscode "esbenp.prettier-vscode"
 vscode "formulahendry.auto-close-tag"
 vscode "formulahendry.auto-complete-tag"
-vscode "foxundermoon.shell-format"
 vscode "gera2ld.markmap-vscode"
-vscode "kaiwood.endwise"
+vscode "openai.chatgpt"
 vscode "redhat.vscode-yaml"
 vscode "shd101wyy.markdown-preview-enhanced"
 vscode "simonsiefke.svg-preview"
