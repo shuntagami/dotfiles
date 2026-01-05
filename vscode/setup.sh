@@ -69,21 +69,6 @@ copy_config_files() {
   done
 }
 
-# 拡張機能のインストール（WSL環境用）
-install_extensions() {
-  local extensions_file="${DOTFILES}/vscode/extensions"
-
-  if [[ -f "$extensions_file" ]]; then
-    while IFS= read -r line || [[ -n "$line" ]]; do
-      [[ -z "$line" ]] && continue
-      code --install-extension "$line" --force
-    done < "$extensions_file"
-  fi
-
-  # 拡張機能リストを更新
-  code --list-extensions > "$extensions_file"
-}
-
 # 設定ファイルのシンボリックリンク作成
 create_config_symlinks() {
   local vscode_dir=$1
@@ -113,7 +98,6 @@ main() {
   # WSL環境での処理
   if is_wsl; then
     copy_config_files "$VSCODE_SETTING_DIR" "${config_files[@]}"
-    install_extensions
   else
     # その他の環境での処理
     create_config_symlinks "$VSCODE_SETTING_DIR" "$CURSOR_SETTING_DIR" "${config_files[@]}"
