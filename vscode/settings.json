@@ -6,7 +6,7 @@
   "editor.fontSize": 15,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.find.globalFindClipboard": true,
-  "editor.formatOnSave": false,
+  "editor.formatOnSave": true,
   "editor.quickSuggestions": {
     "comments": "off",
     "strings": "off",
@@ -16,8 +16,8 @@
     "source.fixAll": "explicit"
   },
   "editor.suggestSelection": "first",
-  "editor.formatOnPaste": false,
-  "editor.formatOnType": false,
+  "editor.formatOnPaste": true,
+  "editor.formatOnType": true,
   "editor.minimap.enabled": false,
   "workbench.colorTheme": "Quiet Light",
   "workbench.startupEditor": "newUntitledFile",
