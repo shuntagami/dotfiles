@@ -38,6 +38,11 @@
     "statusBar.foreground": "#444444",
     "statusBar.debuggingForeground": "#444444"
   },
+  "workbench.editor.enablePreview": false,
+  "workbench.editor.openPositioning": "last",
+  "workbench.editor.restoreViewState": true,
+  "workbench.editor.closeOnFileDelete": false,
+  "workbench.editor.pinnedTabSizing": "shrink",
   // ===================
   // Window
   // ===================
