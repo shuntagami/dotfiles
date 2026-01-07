@@ -1,0 +1,46 @@
+#!/usr/bin/env ruby
+require 'time'
+
+cities = {
+  "東京 (日本)"       => "Asia/Tokyo",
+  "ハワイ (米国)"     => "Pacific/Honolulu",
+  "ニューヨーク (米国)" => "America/New_York",
+  "ロンドン (英国)"   => "Europe/London",
+  "パリ (仏国)"       => "Europe/Paris",
+  "シンガポール"      => "Asia/Singapore",
+  "シドニー (豪州)"   => "Australia/Sydney"
+}
+
+begin
+  if ARGV[0]
+    # 入力された時間を日本時間(+09:00)として解釈し、UTCに変換しておく
+    base_time_utc = Time.parse("#{Time.now.strftime('%Y-%m-%d')} #{ARGV[0]} +0900").utc
+    puts "--- 日本時間 [#{ARGV[0]}] を各都市に変換 ---"
+  else
+    base_time_utc = Time.now.utc
+    puts "--- 世界の現在時刻 (日本との時差) ---"
+  end
+rescue ArgumentError
+  puts "エラー: 時間の形式が正しくありません (例: 15:00)"
+  exit
+end
+
+puts "%-18s | %-19s | %s" % ["都市", "現地時間", "日本との時差"]
+puts "-" * 60
+
+cities.each do |name, zone|
+  # 1. タイムゾーンを切り替える
+  ENV['TZ'] = zone
+
+  # 2. UTC時間を、その都市のローカル時間に変換して取得
+  # Time.at(utc).localtime が ENV['TZ'] を参照します
+  local_time = Time.at(base_time_utc).localtime
+
+  # 3. 日本(JST: +9時間 = 32400秒)との時差を計算
+  diff_hours = (local_time.utc_offset - 32400) / 3600.0
+  diff_str = diff_hours >= 0 ? "+#{diff_hours.to_i}h" : "#{diff_hours.to_i}h"
+
+  printf("%-17s | %s | %5s\n", name, local_time.strftime("%Y-%m-%d %H:%M"), diff_str)
+end
+
+ENV['TZ'] = nil
