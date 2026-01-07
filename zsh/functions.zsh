@@ -302,26 +302,6 @@ function generate-gif() {
     echo "GIF generated: $output_file"
 }
 
-pdfcompress() {
-  local input="$1"
-  local output="$2"
-
-  if [[ -z "$input" ]]; then
-    echo "Usage: pdfcompress input.pdf [output.pdf]"
-    return 1
-  fi
-
-  if [[ -z "$output" ]]; then
-    local basename="${input%.*}"
-    local ext="${input##*.}"
-    output="${basename}_compressed.${ext}"
-  fi
-
-  gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 \
-     -dPDFSETTINGS=/ebook -dNOPAUSE -dQUIET -dBATCH \
-     -sOutputFile="$output" "$input"
-}
-
 video-to-mp3() {
   if [[ $# -eq 0 ]]; then
     echo "使用方法: video-to-mp3 <動画ファイル>"

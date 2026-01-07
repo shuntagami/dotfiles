@@ -1,0 +1,95 @@
+#!/bin/bash
+
+show_help() {
+  echo "Usage: pdf-compress [options] <input_pdf> [output_pdf]"
+  echo ""
+  echo "Compresses a PDF file attempting to replicate Acrobat's optimization."
+  echo ""
+  echo "Options:"
+  echo "  -s, --screen     Screen-quality (72 dpi) - Aggressive size reduction"
+  echo "  -e, --ebook      Ebook-quality (150 dpi) - Balanced (Default)"
+  echo "  -p, --printer    Printer-quality (300 dpi) - High quality"
+  echo "  --flatten        Force re-distill (PDF->PS->PDF). Use if normal compression fails."
+  echo "                   (Warning: Can remove/alter links, forms, tags, structure)"
+  echo "  --grayscale      Convert to grayscale"
+  echo "  -h, --help       Show this help"
+  echo ""
+}
+
+PRESET="/ebook"
+DPI="150"
+GRAYSCALE=false
+FLATTEN=false
+
+while [[ "$1" =~ ^- ]]; do
+  case "$1" in
+    -s|--screen) PRESET="/screen"; DPI="72"; shift ;;
+    -e|--ebook)  PRESET="/ebook";  DPI="150"; shift ;;
+    -p|--printer)PRESET="/printer";DPI="300"; shift ;;
+    --flatten)   FLATTEN=true; shift ;;
+    --grayscale) GRAYSCALE=true; shift ;;
+    -h|--help)   show_help; exit 0 ;;
+    *) echo "Unknown option: $1"; show_help; exit 1 ;;
+  esac
+done
+
+if [ $# -eq 0 ]; then show_help; exit 0; fi
+
+input="$1"
+output="${2:-${input%.*}_compressed.${input##*.}}"
+
+command -v gs >/dev/null 2>&1 || { echo "Error: ghostscript not installed. (brew install ghostscript)"; exit 1; }
+command -v qpdf >/dev/null 2>&1 || { echo "Error: qpdf not installed. (brew install qpdf)"; exit 1; }
+
+echo "Processing $input -> $output"
+
+tmp_gs="${output}.gs.pdf"
+
+if [ "$FLATTEN" = true ]; then
+  command -v pdf2ps >/dev/null 2>&1 || { echo "Error: pdf2ps not found. (brew install ghostscript)"; exit 1; }
+  echo "Mode: Flatten (PDF -> PS -> PDF)"
+  tmp_ps="${output}.tmp.ps"
+  pdf2ps "$input" "$tmp_ps"
+
+  gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.5 \
+    -dPDFSETTINGS="$PRESET" \
+    -dNOPAUSE -dBATCH -dQUIET \
+    -dDetectDuplicateImages=true \
+    -dCompressFonts=true -dSubsetFonts=true \
+    -dDownsampleColorImages=true -dColorImageDownsampleType=/Bicubic -dColorImageResolution="$DPI" \
+    -dDownsampleGrayImages=true  -dGrayImageDownsampleType=/Bicubic  -dGrayImageResolution="$DPI" \
+    -dDownsampleMonoImages=true  -dMonoImageDownsampleType=/Subsample -dMonoImageResolution=300 \
+    -dJPEGQ=60 \
+    -sOutputFile="$tmp_gs" \
+    "$tmp_ps"
+
+  rm -f "$tmp_ps"
+else
+  echo "Mode: Optimize"
+  GS_OPTS=(
+    "-sDEVICE=pdfwrite"
+    "-dCompatibilityLevel=1.5"
+    "-dPDFSETTINGS=$PRESET"
+    "-dNOPAUSE" "-dBATCH" "-dQUIET"
+    "-dDetectDuplicateImages=true"
+    "-dCompressFonts=true"
+    "-dSubsetFonts=true"
+    "-dDownsampleColorImages=true" "-dColorImageDownsampleType=/Bicubic" "-dColorImageResolution=$DPI"
+    "-dDownsampleGrayImages=true"  "-dGrayImageDownsampleType=/Bicubic"  "-dGrayImageResolution=$DPI"
+    "-dDownsampleMonoImages=true"  "-dMonoImageDownsampleType=/Subsample" "-dMonoImageResolution=300"
+    "-dJPEGQ=60"
+  )
+
+  if [ "$GRAYSCALE" = true ]; then
+    GS_OPTS+=("-sColorConversionStrategy=Gray" "-dProcessColorModel=/DeviceGray")
+  fi
+
+  GS_OPTS+=("-sOutputFile=$tmp_gs" "$input")
+  gs "${GS_OPTS[@]}"
+fi
+
+# Structure compression (Acrobat-like)
+qpdf --object-streams=generate --compress-streams=y "$tmp_gs" "$output"
+rm -f "$tmp_gs"
+
+echo "Done."
