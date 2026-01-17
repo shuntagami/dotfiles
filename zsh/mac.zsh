@@ -199,9 +199,9 @@ update-brew-env() {
 
   brew cleanup
 
-  # npm グローバルパッケージの更新
+  # npm グローバルパッケージの更新（メジャーバージョン含む）
   npm install -g npm
-  npm update -g
+  npm ls -g --depth=0 --json 2>/dev/null | jq -r '.dependencies | keys[]' | xargs -I {} npm install -g {}@latest
 }
 
 alias update-from-brewfile='update-brew-env from-brewfile'
