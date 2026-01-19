@@ -169,49 +169,75 @@ init-repo() {
   git push -u origin HEAD:main
 }
 
-# lint as filetype
-function lint() {
-  if [[ $# == 0 ]]; then
-    cat <<EOF
-$ lint foo.js  # eslint
-$ lint bar.md  # textlint
-$ lint bar.txt # textlint
-EOF
-    return
+# mpr: ブランチ名を指定して、あなた名義でPRを作成（元PRのタイトル/本文をコピー）
+# 使い方:
+#   mpr <ブランチ名> [baseブランチ] [新しいブランチ名]
+# 例:
+#   mpr feat/add-univapay-webhook
+#   mpr feat/add-univapay-webhook main shun/univapay-mirror
+mpr() {
+  set -euo pipefail
+
+  # ── 入力
+  local src_branch="${1:-}"
+  local base_branch="${2:-}"
+  local new_branch="${3:-}"
+
+  if [ -z "${src_branch}" ]; then
+    echo "Usage: mpr <BRANCH_NAME> [base] [new_branch]" >&2
+    return 1
   fi
 
-  FILEPATH=$1
-  EXTNAME=${FILEPATH##*.}
+  # ── 現在のリポジトリ・デフォルトブランチ
+  local repo default_branch
+  repo="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
+  default_branch="$(gh repo view --json defaultBranchRef --jq .defaultBranchRef.name)"
 
-  if [[ $EXTNAME == "js" ]]; then
-    eslint -c $DOTFILES/misc/.eslintrc $1
-    return
+  # ── 元ブランチに紐づくPRのタイトル/本文/baseブランチ/URLを取得
+  local pr_title pr_body pr_base pr_url
+  pr_title="$(gh pr list --head "${src_branch}" --json title --jq '.[0].title // empty')"
+  pr_body="$(gh pr list --head "${src_branch}" --json body --jq '.[0].body // empty')"
+  pr_base="$(gh pr list --head "${src_branch}" --json baseRefName --jq '.[0].baseRefName // empty')"
+  pr_url="$(gh pr list --head "${src_branch}" --json url --jq '.[0].url // empty')"
+
+  # ── baseブランチ決定: 引数 > 元PRのbase > リポジトリのデフォルト
+  if [ -z "${base_branch}" ]; then
+    if [ -n "${pr_base}" ]; then
+      base_branch="${pr_base}"
+    else
+      base_branch="${default_branch}"
+    fi
   fi
 
-  if [[ $EXTNAME == "rb" ]]; then
-    rubocop -c $DOTFILES/misc/.rubocop.yml $1
-    return
+  # ── 新規ブランチ名（未指定なら末尾を採用）
+  if [ -z "${new_branch}" ]; then
+    new_branch="shun/${src_branch##*/}"
   fi
 
-  if [[ $EXTNAME == "md" || $EXTNAME == "txt" ]]; then
-    textlint -c $DOTFILES/misc/.textlintrc $1
-    return
+  # ── 取得・ブランチ作成・push
+  git fetch origin "${src_branch}" --depth=1
+  git checkout -B "${new_branch}" "origin/${src_branch}"
+  git push -u origin "${new_branch}"
+
+  # ── PR作成（元PRのタイトル/本文をコピー、なければ --fill）
+  if [ -n "${pr_title}" ]; then
+    local new_body="${pr_body}
+
+---
+Original PR: ${pr_url}"
+    gh pr create --base "${base_branch}" --head "${new_branch}" --title "${pr_title}" --body "${new_body}"
+  else
+    echo "Warning: No PR found for branch ${src_branch}, using --fill" >&2
+    gh pr create --base "${base_branch}" --head "${new_branch}" --fill
   fi
+
+  # ── 完了表示
+  echo "Created PR from ${src_branch} as ${new_branch} (base=${base_branch}) on ${repo}"
 }
 
 # Create a new directory and enter it
 function mkd() {
 	mkdir -p "$@" && cd "$_";
-}
-
-# `o` with no arguments opens the current directory, otherwise opens the given
-# location
-function o() {
-	if [ $# -eq 0 ]; then
-		open .;
-	else
-		open "$@";
-	fi;
 }
 
 alias ggrep="git grep -A 5 -B 5"
@@ -230,13 +256,6 @@ if [ ! $(uname -s) = 'Darwin' ]; then
 		alias open='xdg-open';
 	fi
 fi
-
-# Change current branch by PR number
-pr-checkout () {
-  gh pr list;
-  echo "Type the number of PR to checkout: " && read number;
-  gh pr checkout ${number};
-}
 
 # Create a .tar.gz archive, using `zopfli`, `pigz` or `gzip` for compression
 function targz() {
