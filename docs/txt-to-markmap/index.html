@@ -3,554 +3,794 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>txt-to-markmap 変換ツール</title>
+  <title>txt → markdown</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://cdn.jsdelivr.net/npm/markmap-view"></script>
+  <script src="https://cdn.jsdelivr.net/npm/markmap-lib"></script>
   <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f7f8fa;
+      --bg-tertiary: #f0f2f5;
+      --bg-card: #ffffff;
+      --text-primary: #1f2329;
+      --text-secondary: #646a73;
+      --text-tertiary: #8f959e;
+      --border: #e5e6eb;
+      --border-hover: #c9cdd4;
+      --accent: #ff6b35;
+      --accent-light: #ff8c5a;
+      --accent-bg: rgba(255, 107, 53, 0.08);
+      --link: #ff6b35;
+      --success: #00b42a;
+      --error: #f53f3f;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      padding: 20px;
-    }
-    .app {
-      max-width: 900px;
-      margin: 0 auto;
-    }
-    header {
-      text-align: center;
-      color: white;
-      margin-bottom: 30px;
-    }
-    header h1 {
-      font-size: 2rem;
-      margin-bottom: 8px;
-    }
-    header p {
-      opacity: 0.9;
-      font-size: 1.1rem;
-    }
-    .card {
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-      padding: 30px;
-      margin-bottom: 20px;
+
+    html {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
-    /* なぜ変換するの？セクション */
-    .why-section {
-      margin-bottom: 30px;
-      padding-bottom: 30px;
-      border-bottom: 1px solid #e9ecef;
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
     }
-    .why-title {
+
+    /* Main */
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 60px 24px 120px;
+      text-align: center;
+    }
+
+    /* Hero */
+    .hero {
+      margin-bottom: 48px;
+    }
+
+    .hero-title {
+      font-size: 48px;
+      font-weight: 700;
+      color: var(--accent);
+      font-style: italic;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-subtitle {
       font-size: 18px;
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 15px;
+      margin-bottom: 40px;
+    }
+
+    .hero-subtitle .mark {
+      color: var(--accent);
+    }
+
+    .hero-description {
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    /* Card */
+    .card {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      text-align: left;
+      margin-top: 40px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .card-section {
+      padding: 24px;
+    }
+
+    .card-section + .card-section {
+      border-top: 1px solid var(--border);
+    }
+
+    /* Why Section */
+    .why-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .why-toggle:hover .why-label {
+      color: var(--text-primary);
+    }
+
+    .why-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
       display: flex;
       align-items: center;
       gap: 8px;
+      transition: color 0.2s;
     }
+
+    .why-arrow {
+      color: var(--text-tertiary);
+      transition: transform 0.3s ease;
+      font-size: 12px;
+    }
+
+    .why-toggle.open .why-arrow {
+      transform: rotate(180deg);
+    }
+
     .why-content {
-      display: flex;
-      gap: 20px;
-      align-items: flex-start;
+      display: none;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
     }
-    @media (max-width: 700px) {
-      .why-content {
-        flex-direction: column;
-      }
+
+    .why-content.show {
+      display: block;
+      animation: fadeIn 0.3s ease;
     }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     .why-text {
-      flex: 1;
-    }
-    .why-text p {
-      color: #555;
+      font-size: 14px;
+      color: var(--text-secondary);
       line-height: 1.7;
-      margin-bottom: 15px;
-    }
-    .benefit-list {
-      list-style: none;
-      padding: 0;
-    }
-    .benefit-list li {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      margin-bottom: 10px;
-      color: #444;
-    }
-    .benefit-icon {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      flex-shrink: 0;
-    }
-
-    /* ビフォーアフター */
-    .before-after {
-      flex: 1;
-      min-width: 280px;
-    }
-    .comparison {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .comparison-box {
-      flex: 1;
-      background: #f8f9fa;
-      border-radius: 10px;
-      padding: 12px;
-      font-size: 12px;
-    }
-    .comparison-box.before {
-      border: 2px solid #dee2e6;
-    }
-    .comparison-box.after {
-      border: 2px solid #667eea;
-    }
-    .comparison-label {
-      font-weight: 600;
-      font-size: 11px;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .comparison-box.before .comparison-label {
-      color: #6c757d;
-    }
-    .comparison-box.after .comparison-label {
-      color: #667eea;
-    }
-    .comparison-code {
-      font-family: monospace;
-      font-size: 11px;
-      white-space: pre;
-      color: #333;
-      line-height: 1.5;
-    }
-    .arrow {
-      font-size: 24px;
-      color: #667eea;
-      flex-shrink: 0;
-    }
-
-    /* ドロップゾーン */
-    .dropzone {
-      border: 2px dashed #dee2e6;
-      border-radius: 12px;
-      padding: 50px 40px;
-      text-align: center;
-      transition: all 0.3s;
-      cursor: pointer;
       margin-bottom: 20px;
     }
-    .dropzone:hover, .dropzone.dragover {
-      border-color: #667eea;
-      background: #f8f9ff;
-    }
-    .dropzone-icon {
-      font-size: 56px;
-      margin-bottom: 15px;
-    }
-    .dropzone-text {
-      font-size: 18px;
-      color: #333;
-      margin-bottom: 8px;
-    }
-    .dropzone-hint {
-      font-size: 14px;
-      color: #6c757d;
-    }
-    .file-input {
-      display: none;
+
+    .why-text strong {
+      color: var(--accent-light);
     }
 
-    /* ファイル情報 */
+    .why-text code {
+      background: var(--bg-secondary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'SF Mono', 'Menlo', monospace;
+      font-size: 0.9em;
+      color: var(--accent-light);
+    }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .comparison-box {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      font-family: 'SF Mono', 'Menlo', monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .comparison-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+      margin-bottom: 10px;
+    }
+
+    .comparison-box.after .comparison-label {
+      color: var(--accent);
+    }
+
+    .comparison-arrow {
+      color: var(--text-tertiary);
+      font-size: 16px;
+    }
+
+    /* Dropzone */
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-md);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .dropzone:hover {
+      border-color: var(--border-hover);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .dropzone.dragover {
+      border-color: var(--accent);
+      background: rgba(240, 160, 48, 0.05);
+    }
+
+    .dropzone-icon {
+      font-size: 36px;
+      margin-bottom: 12px;
+    }
+
+    .dropzone-text {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .dropzone-hint {
+      font-size: 13px;
+      color: var(--text-tertiary);
+    }
+
+    /* File Info */
     .file-info {
       display: none;
       align-items: center;
       gap: 12px;
       padding: 16px;
-      background: #e8f5e9;
-      border-radius: 10px;
-      margin-bottom: 20px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
     }
+
     .file-info.show {
       display: flex;
     }
-    .file-info-icon {
-      font-size: 24px;
-    }
-    .file-info-name {
-      flex: 1;
-      font-weight: 500;
-      color: #2e7d32;
-    }
-    .file-info-remove {
-      background: none;
-      border: none;
-      color: #666;
-      cursor: pointer;
-      font-size: 20px;
-      padding: 5px;
-    }
-    .file-info-remove:hover {
-      color: #dc3545;
+
+    .file-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
     }
 
-    /* ボタン */
+    .file-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-status {
+      font-size: 12px;
+      color: var(--success);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .file-remove {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      font-size: 18px;
+    }
+
+    .file-remove:hover {
+      background: var(--border);
+      color: var(--error);
+    }
+
+    /* Button */
     .btn {
-      padding: 14px 28px;
-      font-size: 16px;
+      width: 100%;
+      padding: 14px 24px;
+      font-size: 15px;
       font-weight: 600;
       border: none;
-      border-radius: 10px;
+      border-radius: var(--radius-md);
       cursor: pointer;
-      transition: all 0.2s;
-      display: inline-flex;
+      transition: all 0.15s ease;
+      display: flex;
       align-items: center;
-      gap: 8px;
-    }
-    .btn-primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      width: 100%;
       justify-content: center;
-    }
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-    }
-    .btn-primary:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
-    .btn-secondary {
-      background: #6c757d;
-      color: white;
-    }
-    .btn-secondary:hover {
-      background: #5a6268;
-    }
-    .btn-success {
-      background: #28a745;
-      color: white;
-    }
-    .btn-success:hover {
-      background: #218838;
+      gap: 8px;
+      font-family: inherit;
     }
 
-    /* 出力セクション */
+    .btn-primary {
+      background: var(--accent);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-light);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .btn-icon {
+      font-size: 16px;
+    }
+
+    /* Output */
     .output-section {
       display: none;
-      margin-top: 30px;
-      padding-top: 30px;
-      border-top: 1px solid #e9ecef;
     }
+
     .output-section.show {
       display: block;
+      animation: slideUp 0.4s ease;
     }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     .output-header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: 15px;
+      justify-content: space-between;
+      margin-bottom: 16px;
     }
+
     .output-title {
-      font-size: 18px;
+      font-size: 13px;
       font-weight: 600;
-      color: #333;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
+
     .output-tabs {
       display: flex;
-      gap: 5px;
-    }
-    .output-tab {
-      padding: 8px 16px;
-      border: none;
-      background: #e9ecef;
+      background: var(--bg-secondary);
+      padding: 3px;
       border-radius: 6px;
+    }
+
+    .output-tab {
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
       cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s;
+      border-radius: 4px;
+      transition: all 0.15s;
+      font-family: inherit;
     }
-    .output-tab:hover {
-      background: #dee2e6;
+
+    .output-tab:hover:not(.active) {
+      color: var(--text-primary);
     }
+
     .output-tab.active {
-      background: #667eea;
-      color: white;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
     }
+
     .output-content {
-      background: #f8f9fa;
-      border-radius: 12px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
       overflow: hidden;
     }
+
     .output-code {
-      padding: 20px;
-      font-family: monospace;
-      font-size: 14px;
-      white-space: pre-wrap;
-      word-break: break-word;
-      max-height: 350px;
-      overflow-y: auto;
-    }
-    .output-preview {
       display: none;
       padding: 20px;
-      max-height: 350px;
+      font-family: 'SF Mono', 'Menlo', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 400px;
       overflow-y: auto;
+      color: var(--text-primary);
     }
-    .output-preview.show {
-      display: block;
-    }
+
     .output-code.show {
       display: block;
     }
-    .output-code:not(.show) {
+
+    .output-preview {
       display: none;
+      padding: 24px;
+      max-height: 400px;
+      overflow-y: auto;
     }
+
+    .output-preview.show {
+      display: block;
+    }
+
     .output-preview h1 {
-      font-size: 1.4rem;
-      margin-bottom: 15px;
-      color: #333;
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--accent-light);
     }
+
     .output-preview ul {
-      list-style: disc;
-      padding-left: 20px;
+      list-style: none;
+      padding-left: 0;
     }
+
     .output-preview li {
-      margin: 5px 0;
-      color: #555;
+      position: relative;
+      padding-left: 20px;
+      margin: 8px 0;
+      color: var(--text-secondary);
+      font-size: 14px;
     }
+
+    .output-preview li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 8px;
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+    }
+
     .output-preview ul ul {
-      margin-top: 5px;
+      margin-top: 8px;
     }
 
-    /* アクションボタン */
+    .output-preview ul ul li::before {
+      background: transparent;
+      border: 1.5px solid var(--accent);
+    }
+
+    .output-mindmap {
+      display: none;
+      height: 60vh;
+      min-height: 400px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+    }
+
+    .output-mindmap.show {
+      display: block;
+    }
+
+    .output-mindmap svg {
+      width: 100%;
+      height: 100%;
+    }
+
+
     .output-actions {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 10px;
-      margin-top: 20px;
-    }
-    .output-actions .btn {
-      flex: 1;
-      justify-content: center;
+      margin-top: 16px;
     }
 
-    /* メッセージ */
-    .message {
+    /* Toast */
+    .toast {
       position: fixed;
-      bottom: 30px;
+      bottom: 32px;
       left: 50%;
       transform: translateX(-50%) translateY(100px);
-      padding: 15px 25px;
-      border-radius: 10px;
-      color: white;
+      padding: 12px 20px;
+      background: var(--bg-card);
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      font-size: 14px;
       font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       opacity: 0;
-      transition: all 0.3s;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       z-index: 1000;
     }
-    .message.show {
+
+    .toast.show {
       transform: translateX(-50%) translateY(0);
       opacity: 1;
     }
-    .message.success {
-      background: #28a745;
-    }
-    .message.error {
-      background: #dc3545;
+
+    .toast.success {
+      color: var(--success);
     }
 
-    /* 使い方 */
-    .help-section {
-      margin-top: 30px;
-      padding: 20px;
-      background: #f8f9fa;
-      border-radius: 12px;
+    .toast.error {
+      color: var(--error);
     }
-    .help-section h3 {
-      margin-bottom: 12px;
-      color: #333;
+
+    .toast-icon {
       font-size: 16px;
     }
-    .help-section ol {
-      padding-left: 20px;
-      color: #555;
-    }
-    .help-section li {
-      margin: 8px 0;
+
+    /* Help */
+    .help {
+      margin-top: 32px;
+      text-align: left;
     }
 
-    /* レスポンシブ */
+    .help-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 16px;
+    }
+
+    .help-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .help-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .help-number {
+      width: 24px;
+      height: 24px;
+      background: var(--bg-tertiary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    /* Responsive */
     @media (max-width: 600px) {
-      .output-header {
-        flex-direction: column;
-        gap: 15px;
-      }
-      .output-actions {
-        flex-direction: column;
-      }
       .comparison {
-        flex-direction: column;
+        grid-template-columns: 1fr;
+        gap: 8px;
       }
-      .arrow {
+
+      .comparison-arrow {
         transform: rotate(90deg);
+        justify-self: center;
       }
+
+      .output-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-title {
+        font-size: 36px;
+      }
+    }
+
+    /* Hidden input */
+    .file-input {
+      display: none;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--border-hover);
     }
   </style>
 </head>
 <body>
-  <div class="app">
-    <header>
-      <h1>txt-to-markmap</h1>
-      <p>マインドマップをAI時代に活用できる形式に変換</p>
-    </header>
+  <main>
+    <section class="hero">
+      <h1 class="hero-title">txt→md</h1>
+      <p class="hero-subtitle"><span class="mark">text</span> + <span class="mark">markdown</span></p>
+      <p class="hero-description">マインドマップをAIが理解しやすいMarkdown形式に変換</p>
+    </section>
 
-    <div class="card">
-      <!-- なぜ変換するの？ -->
-      <div class="why-section">
-        <div class="why-title">
-          <span>💡</span> なぜマークダウンに変換するの？
-        </div>
-        <div class="why-content">
-          <div class="why-text">
-            <p>
-              GitMindのテキスト出力は<strong>タブ文字</strong>で階層を表現しますが、これはAIにとって構造が分かりにくい形式です。
-            </p>
-            <p>
-              <strong>マークダウン形式</strong>なら、<code>#</code>で見出し、<code>-</code>で箇条書きと、AIが学習データで大量に見てきた標準フォーマット。構造をより正確に理解してくれます。
-            </p>
-            <ul class="benefit-list">
-              <li>
-                <span class="benefit-icon">1</span>
-                <span><strong>AIが構造を正確に理解できる</strong><br><small style="color:#777">タブ区切りより # や - の方が明確</small></span>
-              </li>
-              <li>
-                <span class="benefit-icon">2</span>
-                <span><strong>世界標準のフォーマット</strong><br><small style="color:#777">GitHub、Notion、Obsidianなど多くのツールで使える</small></span>
-              </li>
-              <li>
-                <span class="benefit-icon">3</span>
-                <span><strong>そのままドキュメントになる</strong><br><small style="color:#777">AIに「これを元に企画書を書いて」と頼める</small></span>
-              </li>
-            </ul>
+    <div class="card" id="converter">
+      <!-- Why Section -->
+      <div class="card-section">
+        <div class="why-toggle" onclick="toggleWhy()">
+          <div class="why-label">
+            <span>💡</span>
+            なぜMarkdownに変換するの？
           </div>
-          <div class="before-after">
-            <div class="comparison">
-              <div class="comparison-box before">
-                <div class="comparison-label">
-                  <span>📄</span> Before（テキスト）
-                </div>
-                <div class="comparison-code">プロジェクト計画
+          <div class="why-arrow">▼</div>
+        </div>
+        <div class="why-content" id="whyContent">
+          <p class="why-text">
+            GitMindは<strong>タブ文字</strong>で階層を表現しますが、AIには構造が分かりにくい形式です。
+            <strong>Markdown</strong>なら <code>#</code> や <code>-</code> で明確に構造化され、
+            AIの学習データにも大量に含まれる標準フォーマットなので、より正確に理解してもらえます。
+          </p>
+          <div class="comparison">
+            <div class="comparison-box before">
+              <div class="comparison-label">Before</div>
+<div>プロジェクト計画
 	目標
 		売上10%増
-		顧客満足度向上
 	施策
-		新機能開発
-		サポート強化</div>
-              </div>
-              <div class="arrow">→</div>
-              <div class="comparison-box after">
-                <div class="comparison-label">
-                  <span>✨</span> After（マークダウン）
-                </div>
-                <div class="comparison-code"># プロジェクト計画
+		新機能開発</div>
+            </div>
+            <div class="comparison-arrow">→</div>
+            <div class="comparison-box after">
+              <div class="comparison-label">After</div>
+<div># プロジェクト計画
 - 目標
   - 売上10%増
-  - 顧客満足度向上
 - 施策
-  - 新機能開発
-  - サポート強化</div>
-              </div>
+  - 新機能開発</div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ファイルアップロード -->
-      <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
-        <div class="dropzone-icon">📄</div>
-        <div class="dropzone-text">GitMindの.txtファイルをドロップ</div>
-        <div class="dropzone-hint">または クリックしてファイルを選択</div>
+      <!-- Upload Section -->
+      <div class="card-section">
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+          <div class="dropzone-icon">📎</div>
+          <div class="dropzone-text">.txtファイルをドロップ</div>
+          <div class="dropzone-hint">または クリックして選択</div>
+        </div>
+        <input type="file" id="fileInput" class="file-input" accept=".txt,.text" onchange="handleFileSelect(event)">
+
+        <div class="file-info" id="fileInfo">
+          <div class="file-icon">📄</div>
+          <div class="file-details">
+            <div class="file-name" id="fileName"></div>
+            <div class="file-status">
+              <span>✓</span> 読み込み完了
+            </div>
+          </div>
+          <button class="file-remove" onclick="removeFile()" title="削除">×</button>
+        </div>
       </div>
-      <input type="file" id="fileInput" class="file-input" accept=".txt,.text" onchange="handleFileSelect(event)">
 
-      <!-- ファイル情報 -->
-      <div class="file-info" id="fileInfo">
-        <span class="file-info-icon">📄</span>
-        <span class="file-info-name" id="fileName"></span>
-        <button class="file-info-remove" onclick="removeFile()" title="削除">✕</button>
+      <!-- Convert Button -->
+      <div class="card-section">
+        <button class="btn btn-primary" id="convertBtn" onclick="convert()" disabled>
+          <span class="btn-icon">⚡</span>
+          変換する
+        </button>
       </div>
 
-      <!-- 変換ボタン -->
-      <button class="btn btn-primary" id="convertBtn" onclick="convert()" disabled>
-        <span>変換する</span>
-        <span>→</span>
-      </button>
-
-      <!-- 出力セクション -->
-      <div class="output-section" id="outputSection">
+      <!-- Output Section -->
+      <div class="card-section output-section" id="outputSection">
         <div class="output-header">
           <div class="output-title">変換結果</div>
           <div class="output-tabs">
-            <button class="output-tab active" onclick="switchOutput('code')">コード</button>
-            <button class="output-tab" onclick="switchOutput('preview')">プレビュー</button>
+            <button class="output-tab" onclick="switchOutput('code', event)">コード</button>
+            <button class="output-tab" onclick="switchOutput('preview', event)">プレビュー</button>
+            <button class="output-tab active" onclick="switchOutput('mindmap', event)">マップ</button>
           </div>
         </div>
         <div class="output-content">
-          <div class="output-code show" id="outputCode"></div>
+          <div class="output-code" id="outputCode"></div>
           <div class="output-preview" id="outputPreview"></div>
+          <div class="output-mindmap show" id="outputMindmap">
+            <svg id="mindmapSvg"></svg>
+          </div>
         </div>
         <div class="output-actions">
-          <button class="btn btn-success" onclick="downloadMarkdown()">
-            ⬇ ダウンロード
+          <button class="btn btn-primary" onclick="downloadMarkdown()">
+            <span class="btn-icon">↓</span>
+            ダウンロード
           </button>
           <button class="btn btn-secondary" onclick="copyOutput()">
-            📋 コピー
+            <span class="btn-icon">📋</span>
+            コピー
           </button>
         </div>
       </div>
+    </div>
 
-      <!-- 使い方 -->
-      <div class="help-section">
-        <h3>使い方</h3>
-        <ol>
-          <li>GitMindでマインドマップを開く</li>
-          <li>エクスポート → テキスト形式でダウンロード</li>
-          <li>ダウンロードした.txtファイルをここにドロップ</li>
-          <li>「変換する」をクリック</li>
-          <li>結果をダウンロードしてAIに読み込ませる！</li>
-        </ol>
+    <!-- Help -->
+    <div class="help">
+      <div class="help-title">使い方</div>
+      <div class="help-steps">
+        <div class="help-step">
+          <div class="help-number">1</div>
+          <span>GitMindでマインドマップを開き、テキスト形式でエクスポート</span>
+        </div>
+        <div class="help-step">
+          <div class="help-number">2</div>
+          <span>ダウンロードした .txt ファイルをここにドロップ</span>
+        </div>
+        <div class="help-step">
+          <div class="help-number">3</div>
+          <span>変換後のMarkdownをダウンロードしてAIに読み込ませる</span>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div id="message" class="message"></div>
+  </main>
+
+  <div id="toast" class="toast">
+    <span class="toast-icon" id="toastIcon"></span>
+    <span id="toastText"></span>
+  </div>
 
   <script>
     let currentFileName = 'output';
     let fileContent = '';
 
-    // ドラッグ&ドロップ
+    // Toggle why section
+    function toggleWhy() {
+      const toggle = document.querySelector('.why-toggle');
+      const content = document.getElementById('whyContent');
+      toggle.classList.toggle('open');
+      content.classList.toggle('show');
+    }
+
+    // Drag & drop
     const dropzone = document.getElementById('dropzone');
 
     dropzone.addEventListener('dragover', (e) => {
@@ -569,7 +809,6 @@
       if (file) processFile(file);
     });
 
-    // ファイル選択
     function handleFileSelect(event) {
       const file = event.target.files[0];
       if (file) processFile(file);
@@ -577,7 +816,7 @@
 
     function processFile(file) {
       if (!file.name.match(/\.(txt|text)$/i)) {
-        showMessage('テキストファイル (.txt) を選択してください', false);
+        showToast('テキストファイル (.txt) を選択してください', false);
         return;
       }
 
@@ -603,23 +842,20 @@
       document.getElementById('outputSection').classList.remove('show');
     }
 
-    // 変換
     function convert() {
       const lines = fileContent.split('\n');
 
       if (lines.length === 0 || (lines.length === 1 && lines[0].trim() === '')) {
-        showMessage('ファイルの内容が空です', false);
+        showToast('ファイルの内容が空です', false);
         return;
       }
 
       const result = [];
 
-      // 最初の行をタイトルとして処理
       if (lines[0].trim()) {
         result.push('# ' + lines[0].trim());
       }
 
-      // 2行目以降を処理
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i];
         if (line.trim() === '') continue;
@@ -633,21 +869,43 @@
 
       const markdown = result.join('\n');
 
-      // コード表示
       document.getElementById('outputCode').textContent = markdown;
-
-      // プレビュー生成
       document.getElementById('outputPreview').innerHTML = markdownToHtml(markdown);
 
-      // 出力セクション表示
-      document.getElementById('outputSection').classList.add('show');
-      showMessage('変換完了！', true);
+      // Render mindmap
+      renderMindmap(markdown);
 
-      // 出力セクションにスクロール
-      document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('outputSection').classList.add('show');
+
+      showToast('変換完了', true);
+
+      setTimeout(() => {
+        document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
     }
 
-    // マークダウンをHTMLに変換
+    let mm = null;
+
+    function renderMindmap(markdown) {
+      const { Transformer } = markmap;
+      const { Markmap } = markmap;
+
+      const transformer = new Transformer();
+      const { root } = transformer.transform(markdown);
+
+      const svg = document.getElementById('mindmapSvg');
+      svg.innerHTML = '';
+
+      if (mm) {
+        mm.destroy();
+      }
+
+      mm = Markmap.create(svg, {
+        colorFreezeLevel: 2,
+        initialExpandLevel: -1,
+      }, root);
+    }
+
     function markdownToHtml(md) {
       const lines = md.split('\n');
       let html = '';
@@ -692,20 +950,24 @@
       return div.innerHTML;
     }
 
-    // 出力タブ切り替え
-    function switchOutput(type) {
+    function switchOutput(type, event) {
       document.querySelectorAll('.output-tab').forEach(tab => tab.classList.remove('active'));
       event.target.classList.add('active');
 
       document.getElementById('outputCode').classList.toggle('show', type === 'code');
       document.getElementById('outputPreview').classList.toggle('show', type === 'preview');
+      document.getElementById('outputMindmap').classList.toggle('show', type === 'mindmap');
+
+      // Refit mindmap when switching to it
+      if (type === 'mindmap' && mm) {
+        setTimeout(() => mm.fit(), 100);
+      }
     }
 
-    // ダウンロード
     function downloadMarkdown() {
       const content = document.getElementById('outputCode').textContent;
       if (!content) {
-        showMessage('ダウンロードする内容がありません', false);
+        showToast('ダウンロードする内容がありません', false);
         return;
       }
 
@@ -719,31 +981,34 @@
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      showMessage(currentFileName + '.md をダウンロードしました', true);
+      showToast(currentFileName + '.md をダウンロード', true);
     }
 
-    // コピー
     function copyOutput() {
       const content = document.getElementById('outputCode').textContent;
       if (!content) {
-        showMessage('コピーする内容がありません', false);
+        showToast('コピーする内容がありません', false);
         return;
       }
 
       navigator.clipboard.writeText(content).then(() => {
-        showMessage('コピーしました', true);
+        showToast('コピーしました', true);
       }).catch(() => {
-        showMessage('コピーに失敗しました', false);
+        showToast('コピーに失敗しました', false);
       });
     }
 
-    // メッセージ表示
-    function showMessage(text, success) {
-      const msg = document.getElementById('message');
-      msg.textContent = text;
-      msg.className = 'message show ' + (success ? 'success' : 'error');
+    function showToast(text, success) {
+      const toast = document.getElementById('toast');
+      const icon = document.getElementById('toastIcon');
+      const textEl = document.getElementById('toastText');
+
+      icon.textContent = success ? '✓' : '✕';
+      textEl.textContent = text;
+      toast.className = 'toast show ' + (success ? 'success' : 'error');
+
       setTimeout(() => {
-        msg.className = 'message';
+        toast.className = 'toast';
       }, 2500);
     }
   </script>
