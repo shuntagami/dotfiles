@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>txt-to-markmap 変換ツール</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .description {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+    }
+    .container {
+      display: flex;
+      gap: 20px;
+    }
+    @media (max-width: 600px) {
+      .container {
+        flex-direction: column;
+      }
+    }
+    .panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    label {
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: #333;
+    }
+    textarea {
+      width: 100%;
+      height: 300px;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 14px;
+      resize: vertical;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: #007bff;
+    }
+    .buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin: 20px 0;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .convert-btn {
+      background: #007bff;
+      color: white;
+    }
+    .convert-btn:hover {
+      background: #0056b3;
+    }
+    .copy-btn {
+      background: #28a745;
+      color: white;
+    }
+    .copy-btn:hover {
+      background: #1e7e34;
+    }
+    .clear-btn {
+      background: #6c757d;
+      color: white;
+    }
+    .clear-btn:hover {
+      background: #545b62;
+    }
+    .message {
+      text-align: center;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      display: none;
+    }
+    .message.show {
+      display: block;
+    }
+    .message.success {
+      background: #d4edda;
+      color: #155724;
+    }
+    .usage {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 30px;
+    }
+    .usage h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    .usage pre {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>txt-to-markmap 変換ツール</h1>
+  <p class="description">GitMindのテキスト形式をMarkmap用のマークダウンに変換します</p>
+
+  <div class="container">
+    <div class="panel">
+      <label for="input">入力（タブ区切りテキスト）</label>
+      <textarea id="input" placeholder="ここにGitMindからコピーしたテキストを貼り付けてください..."></textarea>
+    </div>
+    <div class="panel">
+      <label for="output">出力（マークダウン）</label>
+      <textarea id="output" readonly placeholder="変換結果がここに表示されます..."></textarea>
+    </div>
+  </div>
+
+  <div class="buttons">
+    <button class="convert-btn" onclick="convert()">変換</button>
+    <button class="copy-btn" onclick="copyOutput()">コピー</button>
+    <button class="clear-btn" onclick="clearAll()">クリア</button>
+  </div>
+
+  <div id="message" class="message"></div>
+
+  <div class="usage">
+    <h2>使い方</h2>
+    <ol>
+      <li>GitMindでマインドマップを開く</li>
+      <li>エクスポート → テキスト形式でコピー</li>
+      <li>左側のテキストエリアに貼り付け</li>
+      <li>「変換」ボタンをクリック</li>
+      <li>「コピー」ボタンで結果をコピー</li>
+    </ol>
+    <h3>入力例</h3>
+    <pre>メインテーマ
+	トピック1
+		サブトピック1-1
+		サブトピック1-2
+	トピック2</pre>
+    <h3>出力例</h3>
+    <pre># メインテーマ
+- トピック1
+  - サブトピック1-1
+  - サブトピック1-2
+- トピック2</pre>
+  </div>
+
+  <script>
+    function convert() {
+      const input = document.getElementById('input').value;
+      const lines = input.split('\n');
+
+      if (lines.length === 0 || (lines.length === 1 && lines[0].trim() === '')) {
+        showMessage('テキストを入力してください', false);
+        return;
+      }
+
+      const result = [];
+
+      // 最初の行をタイトルとして処理
+      if (lines[0].trim()) {
+        result.push('# ' + lines[0].trim());
+      }
+
+      // 2行目以降を処理
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.trim() === '') continue;
+
+        // 行頭のタブを数える
+        const tabMatch = line.match(/^\t*/);
+        const indentLevel = tabMatch ? tabMatch[0].length : 0;
+        const cleanLine = line.trim();
+
+        // インデントに応じてスペースを追加
+        result.push('  '.repeat(indentLevel) + '- ' + cleanLine);
+      }
+
+      document.getElementById('output').value = result.join('\n');
+      showMessage('変換完了！', true);
+    }
+
+    function copyOutput() {
+      const output = document.getElementById('output');
+      if (!output.value) {
+        showMessage('コピーする内容がありません', false);
+        return;
+      }
+
+      navigator.clipboard.writeText(output.value).then(() => {
+        showMessage('クリップボードにコピーしました！', true);
+      }).catch(() => {
+        // フォールバック
+        output.select();
+        document.execCommand('copy');
+        showMessage('クリップボードにコピーしました！', true);
+      });
+    }
+
+    function clearAll() {
+      document.getElementById('input').value = '';
+      document.getElementById('output').value = '';
+      showMessage('クリアしました', true);
+    }
+
+    function showMessage(text, success) {
+      const msg = document.getElementById('message');
+      msg.textContent = text;
+      msg.className = 'message show' + (success ? ' success' : '');
+      setTimeout(() => {
+        msg.className = 'message';
+      }, 2000);
+    }
+
+    // 入力時に自動変換（オプション）
+    document.getElementById('input').addEventListener('input', () => {
+      // リアルタイム変換が必要な場合はここで convert() を呼ぶ
+    });
+  </script>
+</body>
+</html>
