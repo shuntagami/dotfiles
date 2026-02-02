@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markdown Viewer & Formatter</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .app {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+    }
+    header h1 {
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+    header p {
+      opacity: 0.9;
+      font-size: 1.1rem;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      padding: 30px;
+      margin-bottom: 20px;
+    }
+
+    /* 入力セクション */
+    .input-section {
+      margin-bottom: 20px;
+    }
+    .input-label {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 10px;
+      display: block;
+    }
+    textarea {
+      width: 100%;
+      height: 200px;
+      padding: 15px;
+      border: 2px solid #e9ecef;
+      border-radius: 12px;
+      font-family: monospace;
+      font-size: 14px;
+      resize: vertical;
+      transition: border-color 0.2s;
+      line-height: 1.6;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: #11998e;
+    }
+    textarea::placeholder {
+      color: #adb5bd;
+    }
+
+    /* ボタン */
+    .btn {
+      padding: 14px 28px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      color: white;
+      width: 100%;
+      justify-content: center;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(17, 153, 142, 0.4);
+    }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+    .btn-secondary:hover {
+      background: #5a6268;
+    }
+    .btn-success {
+      background: #11998e;
+      color: white;
+    }
+    .btn-success:hover {
+      background: #0d7d74;
+    }
+
+    /* 出力セクション */
+    .output-section {
+      display: none;
+      margin-top: 30px;
+      padding-top: 30px;
+      border-top: 1px solid #e9ecef;
+    }
+    .output-section.show {
+      display: block;
+    }
+    .output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .output-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+    .output-tabs {
+      display: flex;
+      gap: 5px;
+    }
+    .output-tab {
+      padding: 8px 16px;
+      border: none;
+      background: #e9ecef;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .output-tab:hover {
+      background: #dee2e6;
+    }
+    .output-tab.active {
+      background: #11998e;
+      color: white;
+    }
+    .output-content {
+      background: #f8f9fa;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .output-code {
+      padding: 20px;
+      font-family: monospace;
+      font-size: 14px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 500px;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+    .output-preview {
+      display: none;
+      padding: 25px;
+      max-height: 500px;
+      overflow-y: auto;
+      line-height: 1.8;
+    }
+    .output-preview.show {
+      display: block;
+    }
+    .output-code.show {
+      display: block;
+    }
+    .output-code:not(.show) {
+      display: none;
+    }
+
+    /* プレビューのスタイル */
+    .output-preview h1 {
+      font-size: 1.8rem;
+      margin: 0 0 20px 0;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e9ecef;
+      color: #333;
+    }
+    .output-preview h2 {
+      font-size: 1.4rem;
+      margin: 25px 0 15px 0;
+      color: #333;
+    }
+    .output-preview h3 {
+      font-size: 1.2rem;
+      margin: 20px 0 10px 0;
+      color: #444;
+    }
+    .output-preview h4, .output-preview h5, .output-preview h6 {
+      font-size: 1rem;
+      margin: 15px 0 10px 0;
+      color: #555;
+    }
+    .output-preview p {
+      margin: 0 0 15px 0;
+      color: #444;
+    }
+    .output-preview ul, .output-preview ol {
+      margin: 0 0 15px 0;
+      padding-left: 25px;
+    }
+    .output-preview li {
+      margin: 5px 0;
+      color: #444;
+    }
+    .output-preview ul ul, .output-preview ol ol, .output-preview ul ol, .output-preview ol ul {
+      margin: 5px 0;
+    }
+    .output-preview code {
+      background: #e9ecef;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+    .output-preview pre {
+      background: #2d3748;
+      color: #e2e8f0;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 0 0 15px 0;
+    }
+    .output-preview pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+    }
+    .output-preview blockquote {
+      border-left: 4px solid #11998e;
+      margin: 0 0 15px 0;
+      padding: 10px 20px;
+      background: #f0fff4;
+      color: #555;
+    }
+    .output-preview hr {
+      border: none;
+      border-top: 1px solid #e9ecef;
+      margin: 20px 0;
+    }
+    .output-preview strong {
+      font-weight: 600;
+      color: #333;
+    }
+    .output-preview em {
+      font-style: italic;
+    }
+    .output-preview a {
+      color: #11998e;
+      text-decoration: none;
+    }
+    .output-preview a:hover {
+      text-decoration: underline;
+    }
+    .output-preview table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 0 0 15px 0;
+    }
+    .output-preview th, .output-preview td {
+      border: 1px solid #dee2e6;
+      padding: 10px;
+      text-align: left;
+    }
+    .output-preview th {
+      background: #f8f9fa;
+      font-weight: 600;
+    }
+
+    /* アクションボタン */
+    .output-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .output-actions .btn {
+      flex: 1;
+      justify-content: center;
+    }
+
+    /* メッセージ */
+    .message {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      padding: 15px 25px;
+      border-radius: 10px;
+      color: white;
+      font-weight: 500;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 1000;
+    }
+    .message.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    .message.success {
+      background: #11998e;
+    }
+    .message.error {
+      background: #dc3545;
+    }
+
+    /* 特徴セクション */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 25px;
+      padding-top: 25px;
+      border-top: 1px solid #e9ecef;
+    }
+    .feature {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .feature-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .feature-text {
+      font-size: 14px;
+      color: #555;
+    }
+    .feature-text strong {
+      display: block;
+      color: #333;
+      margin-bottom: 2px;
+    }
+
+    /* レスポンシブ */
+    @media (max-width: 600px) {
+      .output-header {
+        flex-direction: column;
+        gap: 15px;
+      }
+      .output-actions {
+        flex-direction: column;
+      }
+      .features {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Markdown Viewer</h1>
+      <p>マークダウンを見やすく整形・プレビュー</p>
+    </header>
+
+    <div class="card">
+      <!-- 入力セクション -->
+      <div class="input-section">
+        <label class="input-label">マークダウンを貼り付け</label>
+        <textarea id="input" placeholder="# 見出し
+
+ここにマークダウンを貼り付けてください...
+
+- リスト項目1
+- リスト項目2
+  - ネストしたリスト
+
+**太字** や *斜体* もサポートしています。"></textarea>
+      </div>
+
+      <!-- 変換ボタン -->
+      <button class="btn btn-primary" id="convertBtn" onclick="convert()">
+        <span>整形・プレビュー</span>
+        <span>→</span>
+      </button>
+
+      <!-- 出力セクション -->
+      <div class="output-section" id="outputSection">
+        <div class="output-header">
+          <div class="output-title">結果</div>
+          <div class="output-tabs">
+            <button class="output-tab" onclick="switchOutput('code')">コード</button>
+            <button class="output-tab active" onclick="switchOutput('preview')">プレビュー</button>
+          </div>
+        </div>
+        <div class="output-content">
+          <div class="output-code" id="outputCode"></div>
+          <div class="output-preview show" id="outputPreview"></div>
+        </div>
+        <div class="output-actions">
+          <button class="btn btn-success" onclick="downloadMarkdown()">
+            ⬇ ダウンロード
+          </button>
+          <button class="btn btn-secondary" onclick="copyOutput()">
+            📋 コピー
+          </button>
+          <button class="btn btn-secondary" onclick="clearAll()">
+            🔄 クリア
+          </button>
+        </div>
+      </div>
+
+      <!-- 特徴 -->
+      <div class="features">
+        <div class="feature">
+          <span class="feature-icon">✨</span>
+          <div class="feature-text">
+            <strong>自動整形</strong>
+            見出しの前後に空行を入れ、読みやすく整形
+          </div>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">👀</span>
+          <div class="feature-text">
+            <strong>リアルタイムプレビュー</strong>
+            HTMLレンダリングで完成形を確認
+          </div>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">📥</span>
+          <div class="feature-text">
+            <strong>ダウンロード</strong>
+            整形済みの.mdファイルを保存
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="message" class="message"></div>
+
+  <script>
+    let formattedMarkdown = '';
+
+    function convert() {
+      const input = document.getElementById('input').value;
+
+      if (!input.trim()) {
+        showMessage('マークダウンを入力してください', false);
+        return;
+      }
+
+      // マークダウンを整形
+      formattedMarkdown = formatMarkdown(input);
+
+      // コード表示
+      document.getElementById('outputCode').textContent = formattedMarkdown;
+
+      // プレビュー生成
+      document.getElementById('outputPreview').innerHTML = markdownToHtml(formattedMarkdown);
+
+      // 出力セクション表示
+      document.getElementById('outputSection').classList.add('show');
+      showMessage('整形完了！', true);
+
+      // 出力セクションにスクロール
+      document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // マークダウンを整形
+    function formatMarkdown(md) {
+      let lines = md.split('\n');
+      let result = [];
+      let prevLineType = 'empty';
+      let inCodeBlock = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+
+        // コードブロック内はそのまま
+        if (line.trim().startsWith('```')) {
+          inCodeBlock = !inCodeBlock;
+          if (!inCodeBlock && prevLineType !== 'empty') {
+            result.push('');
+          }
+          result.push(line);
+          prevLineType = 'code';
+          continue;
+        }
+
+        if (inCodeBlock) {
+          result.push(line);
+          prevLineType = 'code';
+          continue;
+        }
+
+        // 空行
+        if (line.trim() === '') {
+          if (prevLineType !== 'empty') {
+            result.push('');
+            prevLineType = 'empty';
+          }
+          continue;
+        }
+
+        // 見出し
+        if (line.match(/^#{1,6}\s/)) {
+          if (prevLineType !== 'empty' && result.length > 0) {
+            result.push('');
+          }
+          result.push(line);
+          prevLineType = 'heading';
+          continue;
+        }
+
+        // 水平線
+        if (line.match(/^(-{3,}|\*{3,}|_{3,})$/)) {
+          if (prevLineType !== 'empty' && result.length > 0) {
+            result.push('');
+          }
+          result.push(line);
+          prevLineType = 'hr';
+          continue;
+        }
+
+        // リスト項目
+        if (line.match(/^(\s*)[-*+]\s/) || line.match(/^(\s*)\d+\.\s/)) {
+          if (prevLineType !== 'list' && prevLineType !== 'empty' && result.length > 0) {
+            result.push('');
+          }
+          result.push(line);
+          prevLineType = 'list';
+          continue;
+        }
+
+        // 引用
+        if (line.match(/^>\s?/)) {
+          if (prevLineType !== 'quote' && prevLineType !== 'empty' && result.length > 0) {
+            result.push('');
+          }
+          result.push(line);
+          prevLineType = 'quote';
+          continue;
+        }
+
+        // テーブル
+        if (line.match(/^\|/)) {
+          if (prevLineType !== 'table' && prevLineType !== 'empty' && result.length > 0) {
+            result.push('');
+          }
+          result.push(line);
+          prevLineType = 'table';
+          continue;
+        }
+
+        // 通常の段落
+        if (prevLineType !== 'paragraph' && prevLineType !== 'empty' && result.length > 0) {
+          result.push('');
+        }
+        // 長い文章を読みやすく分割
+        const formattedLines = breakLongText(line);
+        result.push(...formattedLines);
+        prevLineType = 'paragraph';
+      }
+
+      // 末尾の空行を削除
+      while (result.length > 0 && result[result.length - 1] === '') {
+        result.pop();
+      }
+
+      return result.join('\n');
+    }
+
+    // 長い文章を読みやすく分割（40文字程度で改行）
+    function breakLongText(text, maxLength = 40) {
+      const result = [];
+
+      // まず「。」で分割
+      const sentences = text.split(/(?<=。)/);
+
+      for (const sentence of sentences) {
+        const trimmed = sentence.trim();
+        if (!trimmed) continue;
+
+        // 40文字以下ならそのまま追加
+        if (trimmed.length <= maxLength) {
+          result.push(trimmed + '  ');
+        } else {
+          // 40文字を超える場合は句読点で分割
+          const parts = breakAtPunctuation(trimmed, maxLength);
+          for (let i = 0; i < parts.length; i++) {
+            if (i < parts.length - 1) {
+              result.push(parts[i].replace(/\s+$/, '') + '  ');
+            } else {
+              result.push(parts[i] + '  ');
+            }
+          }
+        }
+      }
+
+      // 最後の行の末尾スペースを削除（段落末は不要）
+      if (result.length > 0) {
+        result[result.length - 1] = result[result.length - 1].replace(/\s+$/, '');
+      }
+
+      return result.length > 0 ? result : [text];
+    }
+
+    // 句読点で分割（「。」がない長い文用）
+    function breakAtPunctuation(text, maxLength) {
+      const result = [];
+      let remaining = text;
+      const punctuations = ['、', '，', '！', '？', '）', '」', '』', '；', '：'];
+
+      while (remaining.length > maxLength) {
+        let breakPoint = -1;
+
+        // まずmaxLength以内で最後の句読点を探す
+        for (let i = maxLength - 1; i >= 0; i--) {
+          if (punctuations.includes(remaining[i])) {
+            breakPoint = i + 1;
+            break;
+          }
+        }
+
+        // 見つからない場合、maxLength以降の最初の句読点を探す
+        if (breakPoint === -1) {
+          for (let i = maxLength; i < remaining.length; i++) {
+            if (punctuations.includes(remaining[i])) {
+              breakPoint = i + 1;
+              break;
+            }
+          }
+        }
+
+        // それでも見つからない場合は分割しない
+        if (breakPoint === -1) {
+          break;
+        }
+
+        result.push(remaining.substring(0, breakPoint).trim() + '  ');
+        remaining = remaining.substring(breakPoint).trim();
+      }
+
+      if (remaining) {
+        result.push(remaining);
+      }
+
+      return result;
+    }
+
+    // マークダウンをHTMLに変換
+    function markdownToHtml(md) {
+      let html = md;
+
+      // コードブロック
+      html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+        return `<pre><code>${escapeHtml(code.trim())}</code></pre>`;
+      });
+
+      // インラインコード
+      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+      // 見出し
+      html = html.replace(/^###### (.+)$/gm, '<h6>$1</h6>');
+      html = html.replace(/^##### (.+)$/gm, '<h5>$1</h5>');
+      html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+      html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+      html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+      html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+      // 水平線
+      html = html.replace(/^(-{3,}|\*{3,}|_{3,})$/gm, '<hr>');
+
+      // 太字・斜体
+      html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+      html = html.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
+      html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+      html = html.replace(/_(.+?)_/g, '<em>$1</em>');
+
+      // リンク
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+
+      // 画像
+      html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;">');
+
+      // 引用
+      html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+      html = html.replace(/<\/blockquote>\n<blockquote>/g, '\n');
+
+      // テーブル
+      html = html.replace(/^\|(.+)\|$/gm, (match, content) => {
+        const cells = content.split('|').map(c => c.trim());
+        if (cells.every(c => c.match(/^[-:]+$/))) {
+          return '<!-- table separator -->';
+        }
+        const isHeader = !html.includes('<!-- table separator -->') ||
+                         html.lastIndexOf('<table>') > html.lastIndexOf('<!-- table separator -->');
+        const tag = isHeader ? 'th' : 'td';
+        return `<tr>${cells.map(c => `<${tag}>${c}</${tag}>`).join('')}</tr>`;
+      });
+      html = html.replace(/(<tr>.*<\/tr>)/s, (match) => {
+        if (match.includes('<th>')) {
+          return `<table>${match}`;
+        }
+        return match;
+      });
+      html = html.replace(/<!-- table separator -->/g, '');
+      html = html.replace(/<\/tr>\n(?!<tr>)/g, '</tr></table>\n');
+
+      // リスト処理
+      html = processLists(html);
+
+      // 段落
+      html = html.split('\n\n').map(block => {
+        block = block.trim();
+        if (!block) return '';
+        if (block.startsWith('<')) return block;
+        return `<p>${block.replace(/\n/g, '<br>')}</p>`;
+      }).join('\n');
+
+      return html;
+    }
+
+    // リスト処理
+    function processLists(html) {
+      const lines = html.split('\n');
+      let result = [];
+      let listStack = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const ulMatch = line.match(/^(\s*)[-*+]\s+(.+)$/);
+        const olMatch = line.match(/^(\s*)\d+\.\s+(.+)$/);
+
+        if (ulMatch || olMatch) {
+          const indent = (ulMatch || olMatch)[1].length;
+          const content = (ulMatch || olMatch)[2];
+          const listType = ulMatch ? 'ul' : 'ol';
+
+          // インデントレベルに応じてリストを調整
+          while (listStack.length > 0 && listStack[listStack.length - 1].indent >= indent) {
+            const popped = listStack.pop();
+            result.push(`</${popped.type}>`);
+          }
+
+          if (listStack.length === 0 || listStack[listStack.length - 1].indent < indent) {
+            result.push(`<${listType}>`);
+            listStack.push({ type: listType, indent: indent });
+          }
+
+          result.push(`<li>${content}</li>`);
+        } else {
+          // リストを閉じる
+          while (listStack.length > 0) {
+            const popped = listStack.pop();
+            result.push(`</${popped.type}>`);
+          }
+          result.push(line);
+        }
+      }
+
+      // 残りのリストを閉じる
+      while (listStack.length > 0) {
+        const popped = listStack.pop();
+        result.push(`</${popped.type}>`);
+      }
+
+      return result.join('\n');
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // 出力タブ切り替え
+    function switchOutput(type) {
+      document.querySelectorAll('.output-tab').forEach(tab => tab.classList.remove('active'));
+      event.target.classList.add('active');
+
+      document.getElementById('outputCode').classList.toggle('show', type === 'code');
+      document.getElementById('outputPreview').classList.toggle('show', type === 'preview');
+    }
+
+    // ダウンロード
+    function downloadMarkdown() {
+      if (!formattedMarkdown) {
+        showMessage('ダウンロードする内容がありません', false);
+        return;
+      }
+
+      const blob = new Blob([formattedMarkdown], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'document.md';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showMessage('ダウンロードしました', true);
+    }
+
+    // コピー
+    function copyOutput() {
+      if (!formattedMarkdown) {
+        showMessage('コピーする内容がありません', false);
+        return;
+      }
+
+      navigator.clipboard.writeText(formattedMarkdown).then(() => {
+        showMessage('コピーしました', true);
+      }).catch(() => {
+        showMessage('コピーに失敗しました', false);
+      });
+    }
+
+    // クリア
+    function clearAll() {
+      document.getElementById('input').value = '';
+      document.getElementById('outputCode').textContent = '';
+      document.getElementById('outputPreview').innerHTML = '';
+      document.getElementById('outputSection').classList.remove('show');
+      formattedMarkdown = '';
+      showMessage('クリアしました', true);
+    }
+
+    // メッセージ表示
+    function showMessage(text, success) {
+      const msg = document.getElementById('message');
+      msg.textContent = text;
+      msg.className = 'message show ' + (success ? 'success' : 'error');
+      setTimeout(() => {
+        msg.className = 'message';
+      }, 2500);
+    }
+
+    // 入力時にボタンの状態を更新
+    document.getElementById('input').addEventListener('input', function() {
+      document.getElementById('convertBtn').disabled = !this.value.trim();
+    });
+  </script>
+</body>
+</html>
