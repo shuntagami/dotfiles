@@ -1,860 +1,1213 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Markdown Viewer & Formatter</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-      min-height: 100vh;
-      padding: 20px;
-    }
-    .app {
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-    header {
-      text-align: center;
-      color: white;
-      margin-bottom: 30px;
-    }
-    header h1 {
-      font-size: 2rem;
-      margin-bottom: 8px;
-    }
-    header p {
-      opacity: 0.9;
-      font-size: 1.1rem;
-    }
-    .card {
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-      padding: 30px;
-      margin-bottom: 20px;
-    }
-
-    /* 入力セクション */
-    .input-section {
-      margin-bottom: 20px;
-    }
-    .input-label {
-      font-size: 16px;
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 10px;
-      display: block;
-    }
-    textarea {
-      width: 100%;
-      height: 200px;
-      padding: 15px;
-      border: 2px solid #e9ecef;
-      border-radius: 12px;
-      font-family: monospace;
-      font-size: 14px;
-      resize: vertical;
-      transition: border-color 0.2s;
-      line-height: 1.6;
-    }
-    textarea:focus {
-      outline: none;
-      border-color: #11998e;
-    }
-    textarea::placeholder {
-      color: #adb5bd;
-    }
-
-    /* ボタン */
-    .btn {
-      padding: 14px 28px;
-      font-size: 16px;
-      font-weight: 600;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .btn-primary {
-      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-      color: white;
-      width: 100%;
-      justify-content: center;
-    }
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 20px rgba(17, 153, 142, 0.4);
-    }
-    .btn-primary:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
-    .btn-secondary {
-      background: #6c757d;
-      color: white;
-    }
-    .btn-secondary:hover {
-      background: #5a6268;
-    }
-    .btn-success {
-      background: #11998e;
-      color: white;
-    }
-    .btn-success:hover {
-      background: #0d7d74;
-    }
-
-    /* 出力セクション */
-    .output-section {
-      display: none;
-      margin-top: 30px;
-      padding-top: 30px;
-      border-top: 1px solid #e9ecef;
-    }
-    .output-section.show {
-      display: block;
-    }
-    .output-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-    }
-    .output-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #333;
-    }
-    .output-tabs {
-      display: flex;
-      gap: 5px;
-    }
-    .output-tab {
-      padding: 8px 16px;
-      border: none;
-      background: #e9ecef;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s;
-    }
-    .output-tab:hover {
-      background: #dee2e6;
-    }
-    .output-tab.active {
-      background: #11998e;
-      color: white;
-    }
-    .output-content {
-      background: #f8f9fa;
-      border-radius: 12px;
-      overflow: hidden;
-    }
-    .output-code {
-      padding: 20px;
-      font-family: monospace;
-      font-size: 14px;
-      white-space: pre-wrap;
-      word-break: break-word;
-      max-height: 500px;
-      overflow-y: auto;
-      line-height: 1.6;
-    }
-    .output-preview {
-      display: none;
-      padding: 25px;
-      max-height: 500px;
-      overflow-y: auto;
-      line-height: 1.8;
-    }
-    .output-preview.show {
-      display: block;
-    }
-    .output-code.show {
-      display: block;
-    }
-    .output-code:not(.show) {
-      display: none;
-    }
-
-    /* プレビューのスタイル */
-    .output-preview h1 {
-      font-size: 1.8rem;
-      margin: 0 0 20px 0;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #e9ecef;
-      color: #333;
-    }
-    .output-preview h2 {
-      font-size: 1.4rem;
-      margin: 25px 0 15px 0;
-      color: #333;
-    }
-    .output-preview h3 {
-      font-size: 1.2rem;
-      margin: 20px 0 10px 0;
-      color: #444;
-    }
-    .output-preview h4, .output-preview h5, .output-preview h6 {
-      font-size: 1rem;
-      margin: 15px 0 10px 0;
-      color: #555;
-    }
-    .output-preview p {
-      margin: 0 0 15px 0;
-      color: #444;
-    }
-    .output-preview ul, .output-preview ol {
-      margin: 0 0 15px 0;
-      padding-left: 25px;
-    }
-    .output-preview li {
-      margin: 5px 0;
-      color: #444;
-    }
-    .output-preview ul ul, .output-preview ol ol, .output-preview ul ol, .output-preview ol ul {
-      margin: 5px 0;
-    }
-    .output-preview code {
-      background: #e9ecef;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-family: monospace;
-      font-size: 0.9em;
-    }
-    .output-preview pre {
-      background: #2d3748;
-      color: #e2e8f0;
-      padding: 15px;
-      border-radius: 8px;
-      overflow-x: auto;
-      margin: 0 0 15px 0;
-    }
-    .output-preview pre code {
-      background: none;
-      padding: 0;
-      color: inherit;
-    }
-    .output-preview blockquote {
-      border-left: 4px solid #11998e;
-      margin: 0 0 15px 0;
-      padding: 10px 20px;
-      background: #f0fff4;
-      color: #555;
-    }
-    .output-preview hr {
-      border: none;
-      border-top: 1px solid #e9ecef;
-      margin: 20px 0;
-    }
-    .output-preview strong {
-      font-weight: 600;
-      color: #333;
-    }
-    .output-preview em {
-      font-style: italic;
-    }
-    .output-preview a {
-      color: #11998e;
-      text-decoration: none;
-    }
-    .output-preview a:hover {
-      text-decoration: underline;
-    }
-    .output-preview table {
-      border-collapse: collapse;
-      width: 100%;
-      margin: 0 0 15px 0;
-    }
-    .output-preview th, .output-preview td {
-      border: 1px solid #dee2e6;
-      padding: 10px;
-      text-align: left;
-    }
-    .output-preview th {
-      background: #f8f9fa;
-      font-weight: 600;
-    }
-
-    /* アクションボタン */
-    .output-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 20px;
-    }
-    .output-actions .btn {
-      flex: 1;
-      justify-content: center;
-    }
-
-    /* メッセージ */
-    .message {
-      position: fixed;
-      bottom: 30px;
-      left: 50%;
-      transform: translateX(-50%) translateY(100px);
-      padding: 15px 25px;
-      border-radius: 10px;
-      color: white;
-      font-weight: 500;
-      opacity: 0;
-      transition: all 0.3s;
-      z-index: 1000;
-    }
-    .message.show {
-      transform: translateX(-50%) translateY(0);
-      opacity: 1;
-    }
-    .message.success {
-      background: #11998e;
-    }
-    .message.error {
-      background: #dc3545;
-    }
-
-    /* 特徴セクション */
-    .features {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
-      margin-top: 25px;
-      padding-top: 25px;
-      border-top: 1px solid #e9ecef;
-    }
-    .feature {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-    }
-    .feature-icon {
-      font-size: 20px;
-      flex-shrink: 0;
-    }
-    .feature-text {
-      font-size: 14px;
-      color: #555;
-    }
-    .feature-text strong {
-      display: block;
-      color: #333;
-      margin-bottom: 2px;
-    }
-
-    /* レスポンシブ */
-    @media (max-width: 600px) {
-      .output-header {
-        flex-direction: column;
-        gap: 15px;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Markdown Viewer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-primary: #ffffff;
+        --bg-secondary: #f1f5f9;
+        --bg-tertiary: #e2e8f0;
+        --text-primary: #1a1a1a;
+        --text-secondary: #65717b;
+        --text-tertiary: #9caab7;
+        --border: #e4edf4;
+        --accent: #3ea8ff;
+        --accent-hover: #0f83fd;
+        --accent-bg: rgba(62, 168, 255, 0.1);
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+        --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+        --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
       }
-      .output-actions {
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      html {
+        font-family:
+          "Noto Sans JP",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      body {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        display: flex;
         flex-direction: column;
       }
-      .features {
-        grid-template-columns: 1fr;
+
+      /* Header - Zenn style */
+      .header {
+        flex-shrink: 0;
+        background: var(--bg-primary);
+        border-bottom: 1px solid var(--border);
+        padding: 0 24px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
       }
-    }
-  </style>
-</head>
-<body>
-  <div class="app">
-    <header>
-      <h1>Markdown Viewer</h1>
-      <p>マークダウンを見やすく整形・プレビュー</p>
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        text-decoration: none;
+      }
+
+      .logo-mark {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--accent);
+        font-style: italic;
+        letter-spacing: -2px;
+      }
+
+      .logo-text {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-left: 8px;
+        padding-left: 12px;
+        border-left: 1px solid var(--border);
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .btn {
+        padding: 8px 16px;
+        font-size: 14px;
+        font-weight: 500;
+        border: none;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: inherit;
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: var(--accent-hover);
+      }
+
+      .btn-ghost {
+        background: transparent;
+        color: var(--text-secondary);
+      }
+
+      .btn-ghost:hover {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+      }
+
+      .btn-outline {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        border: 1px solid var(--border);
+      }
+
+      .btn-outline:hover {
+        background: var(--bg-secondary);
+        border-color: var(--text-tertiary);
+      }
+
+      /* Main Layout */
+      .main {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+        padding: 20px;
+        gap: 20px;
+        background: var(--bg-secondary);
+      }
+
+      /* Pane */
+      .pane {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        background: var(--bg-primary);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        overflow: hidden;
+      }
+
+      .pane-header {
+        flex-shrink: 0;
+        padding: 10px 16px;
+        background: var(--bg-primary);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+      }
+
+      .pane-header.hidden {
+        display: none;
+      }
+
+      .pane-content {
+        flex: 1;
+        overflow: hidden;
+        background: var(--bg-primary);
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Editor */
+      .editor-input {
+        width: 100%;
+        height: 100%;
+        padding: 20px 24px;
+        border: none;
+        background: transparent;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        font-size: 14px;
+        line-height: 1.8;
+        color: var(--text-primary);
+        resize: none;
+        overflow-y: auto;
+      }
+
+      .editor-input:focus {
+        outline: none;
+      }
+
+      .editor-input::placeholder {
+        color: var(--text-tertiary);
+      }
+
+      /* Output Tabs */
+      .output-tabs {
+        display: flex;
+        background: var(--bg-secondary);
+        padding: 3px;
+        border-radius: 8px;
+      }
+
+      .output-tab {
+        padding: 6px 14px;
+        font-size: 13px;
+        font-weight: 500;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        border-radius: 6px;
+        transition: all 0.15s;
+        font-family: inherit;
+      }
+
+      .output-tab:hover:not(.active) {
+        color: var(--text-primary);
+      }
+
+      .output-tab.active {
+        background: var(--bg-primary);
+        color: var(--accent);
+        box-shadow: var(--shadow-sm);
+      }
+
+      /* Output Code */
+      .output-code {
+        display: none;
+        height: 100%;
+        padding: 20px 24px;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        font-size: 14px;
+        line-height: 1.8;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: var(--text-primary);
+        overflow: auto;
+      }
+
+      .output-code.show {
+        display: block;
+      }
+
+      /* Preview - Zenn article style */
+      .output-preview {
+        display: none;
+        height: 100%;
+        padding: 32px 40px;
+        overflow: auto;
+      }
+
+      .output-preview.show {
+        display: block;
+      }
+
+      .output-preview h1 {
+        font-size: 1.9em;
+        font-weight: 700;
+        margin: 0 0 24px 0;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+        line-height: 1.4;
+        letter-spacing: -0.01em;
+      }
+
+      .output-preview h2 {
+        font-size: 1.5em;
+        font-weight: 700;
+        margin: 48px 0 16px 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+        line-height: 1.4;
+      }
+
+      .output-preview h3 {
+        font-size: 1.25em;
+        font-weight: 700;
+        margin: 40px 0 12px 0;
+        line-height: 1.4;
+      }
+
+      .output-preview h4,
+      .output-preview h5,
+      .output-preview h6 {
+        font-size: 1.1em;
+        font-weight: 700;
+        margin: 32px 0 10px 0;
+        line-height: 1.4;
+      }
+
+      .output-preview p {
+        margin: 0 0 24px 0;
+        color: var(--text-primary);
+        font-size: 16px;
+        line-height: 1.9;
+      }
+
+      .output-preview ul,
+      .output-preview ol {
+        margin: 0 0 24px 0;
+        padding-left: 28px;
+      }
+
+      .output-preview li {
+        margin: 8px 0;
+        color: var(--text-primary);
+        font-size: 16px;
+        line-height: 1.8;
+      }
+
+      .output-preview li::marker {
+        color: var(--accent);
+      }
+
+      .output-preview code {
+        background: var(--bg-secondary);
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        font-size: 0.9em;
+        color: var(--text-primary);
+      }
+
+      .output-preview pre {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 20px 24px;
+        border-radius: var(--radius-md);
+        overflow-x: auto;
+        margin: 0 0 24px 0;
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      .output-preview pre code {
+        background: none;
+        padding: 0;
+        color: inherit;
+        font-size: inherit;
+      }
+
+      .output-preview blockquote {
+        border-left: 4px solid var(--accent);
+        margin: 0 0 24px 0;
+        padding: 12px 20px;
+        background: var(--accent-bg);
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      }
+
+      .output-preview blockquote p {
+        margin: 0;
+        color: var(--text-primary);
+      }
+
+      .output-preview hr {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 48px 0;
+      }
+
+      .output-preview strong {
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .output-preview a {
+        color: var(--accent);
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+        transition: border-color 0.15s;
+      }
+
+      .output-preview a:hover {
+        border-bottom-color: var(--accent);
+      }
+
+      .output-preview table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 0 0 24px 0;
+        font-size: 15px;
+      }
+
+      .output-preview th,
+      .output-preview td {
+        border: 1px solid var(--border);
+        padding: 12px 16px;
+        text-align: left;
+      }
+
+      .output-preview th {
+        background: var(--bg-secondary);
+        font-weight: 700;
+        font-size: 14px;
+      }
+
+      .output-preview img {
+        max-width: 100%;
+        border-radius: var(--radius-md);
+      }
+
+      /* Empty state */
+      .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: var(--text-tertiary);
+        text-align: center;
+        padding: 48px;
+      }
+
+      .empty-state-icon {
+        font-size: 56px;
+        margin-bottom: 20px;
+        opacity: 0.6;
+      }
+
+      .empty-state-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+      }
+
+      .empty-state-text {
+        font-size: 14px;
+        color: var(--text-tertiary);
+        line-height: 1.6;
+      }
+
+      /* Toast - Zenn style */
+      .toast {
+        position: fixed;
+        bottom: 32px;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        padding: 12px 24px;
+        background: var(--bg-primary);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1000;
+        border: 1px solid var(--border);
+      }
+
+      .toast.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+
+      .toast.success .toast-icon {
+        color: #22c55e;
+      }
+
+      .toast.error .toast-icon {
+        color: #ef4444;
+      }
+
+      .toast-icon {
+        font-size: 18px;
+      }
+
+      /* TOC Dropdown - Zenn style */
+      .toc-wrapper {
+        position: relative;
+      }
+
+      .toc-toggle {
+        padding: 8px 14px;
+        font-size: 13px;
+        font-weight: 500;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--bg-primary);
+        color: var(--text-secondary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.15s;
+        font-family: inherit;
+      }
+
+      .toc-toggle:hover {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+      }
+
+      .toc-toggle .arrow {
+        font-size: 10px;
+        transition: transform 0.2s;
+      }
+
+      .toc-toggle.open .arrow {
+        transform: rotate(180deg);
+      }
+
+      .toc-dropdown {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        width: 300px;
+        max-height: 420px;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-8px);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .toc-dropdown.open {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+      }
+
+      .toc-header {
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .toc-header::before {
+        content: "";
+        display: block;
+        width: 3px;
+        height: 14px;
+        background: var(--accent);
+        border-radius: 2px;
+      }
+
+      .toc-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px 0;
+      }
+
+      .toc-empty {
+        padding: 24px 18px;
+        color: var(--text-tertiary);
+        font-size: 14px;
+        text-align: center;
+      }
+
+      .toc-item {
+        display: block;
+        padding: 10px 18px;
+        font-size: 14px;
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: all 0.15s;
+        cursor: pointer;
+        border-left: 2px solid transparent;
+      }
+
+      .toc-item:hover {
+        background: var(--bg-secondary);
+        color: var(--accent);
+        border-left-color: var(--accent);
+      }
+
+      .toc-item.level-2 {
+        padding-left: 32px;
+        font-size: 13px;
+      }
+
+      .toc-item.level-3 {
+        padding-left: 46px;
+        font-size: 13px;
+        color: var(--text-tertiary);
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .main {
+          flex-direction: column;
+          padding: 16px;
+          gap: 16px;
+        }
+
+        .pane {
+          flex: none;
+          min-height: 300px;
+        }
+
+        .header {
+          padding: 0 16px;
+        }
+
+        .header-actions .btn span:not(.btn-icon) {
+          display: none;
+        }
+
+        .btn {
+          padding: 8px 12px;
+        }
+
+        .logo-text {
+          display: none;
+        }
+
+        .output-preview {
+          padding: 24px 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-left">
+        <div class="logo">
+          <span class="logo-mark">//</span>
+          <span class="logo-text">Markdown整形ツール</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-ghost" onclick="copyOutput()">
+          <span class="btn-icon">📋</span>
+          <span>コピー</span>
+        </button>
+        <button class="btn btn-outline" onclick="downloadMarkdown()">
+          <span class="btn-icon">⬇</span>
+          <span>ダウンロード</span>
+        </button>
+        <button class="btn btn-primary" onclick="convert()">
+          <span>整形する</span>
+        </button>
+      </div>
     </header>
 
-    <div class="card">
-      <!-- 入力セクション -->
-      <div class="input-section">
-        <label class="input-label">マークダウンを貼り付け</label>
-        <textarea id="input" placeholder="# 見出し
+    <main class="main">
+      <!-- Input Pane -->
+      <div class="pane">
+        <div class="pane-content">
+          <textarea
+            class="editor-input"
+            id="input"
+            placeholder="ここにMarkdownを貼り付けてください
 
-ここにマークダウンを貼り付けてください...
-
-- リスト項目1
-- リスト項目2
-  - ネストしたリスト
-
-**太字** や *斜体* もサポートしています。"></textarea>
+句読点（、。）で自動改行して読みやすくします。
+⌘ + Enter で整形を実行できます。"
+          ></textarea>
+        </div>
       </div>
 
-      <!-- 変換ボタン -->
-      <button class="btn btn-primary" id="convertBtn" onclick="convert()">
-        <span>整形・プレビュー</span>
-        <span>→</span>
-      </button>
-
-      <!-- 出力セクション -->
-      <div class="output-section" id="outputSection">
-        <div class="output-header">
-          <div class="output-title">結果</div>
+      <!-- Output Pane -->
+      <div class="pane">
+        <div class="pane-header">
           <div class="output-tabs">
-            <button class="output-tab" onclick="switchOutput('code')">コード</button>
-            <button class="output-tab active" onclick="switchOutput('preview')">プレビュー</button>
+            <button
+              class="output-tab active"
+              onclick="switchOutput('preview', event)"
+            >
+              プレビュー
+            </button>
+            <button class="output-tab" onclick="switchOutput('code', event)">
+              コード
+            </button>
+          </div>
+          <div class="toc-wrapper">
+            <button class="toc-toggle" id="tocToggle" onclick="toggleToc()">
+              <span>目次</span>
+              <span class="arrow">▼</span>
+            </button>
+            <div class="toc-dropdown" id="tocDropdown">
+              <div class="toc-header">目次</div>
+              <nav class="toc-content" id="tocContent">
+                <div class="toc-empty">見出しがありません</div>
+              </nav>
+            </div>
           </div>
         </div>
-        <div class="output-content">
+        <div class="pane-content">
+          <div class="output-preview show" id="outputPreview">
+            <div class="empty-state">
+              <div class="empty-state-icon">📝</div>
+              <div class="empty-state-title">長い文章を読みやすく整形</div>
+              <div class="empty-state-text">
+                句読点で自動改行して文字壁を解消します
+              </div>
+            </div>
+          </div>
           <div class="output-code" id="outputCode"></div>
-          <div class="output-preview show" id="outputPreview"></div>
-        </div>
-        <div class="output-actions">
-          <button class="btn btn-success" onclick="downloadMarkdown()">
-            ⬇ ダウンロード
-          </button>
-          <button class="btn btn-secondary" onclick="copyOutput()">
-            📋 コピー
-          </button>
-          <button class="btn btn-secondary" onclick="clearAll()">
-            🔄 クリア
-          </button>
         </div>
       </div>
+    </main>
 
-      <!-- 特徴 -->
-      <div class="features">
-        <div class="feature">
-          <span class="feature-icon">✨</span>
-          <div class="feature-text">
-            <strong>自動整形</strong>
-            見出しの前後に空行を入れ、読みやすく整形
-          </div>
-        </div>
-        <div class="feature">
-          <span class="feature-icon">👀</span>
-          <div class="feature-text">
-            <strong>リアルタイムプレビュー</strong>
-            HTMLレンダリングで完成形を確認
-          </div>
-        </div>
-        <div class="feature">
-          <span class="feature-icon">📥</span>
-          <div class="feature-text">
-            <strong>ダウンロード</strong>
-            整形済みの.mdファイルを保存
-          </div>
-        </div>
-      </div>
+    <div id="toast" class="toast">
+      <span id="toastIcon" class="toast-icon"></span>
+      <span id="toastText"></span>
     </div>
-  </div>
 
-  <div id="message" class="message"></div>
+    <script>
+      let formattedMarkdown = "";
 
-  <script>
-    let formattedMarkdown = '';
+      function convert() {
+        const input = document.getElementById("input").value;
 
-    function convert() {
-      const input = document.getElementById('input').value;
+        if (!input.trim()) {
+          showToast("マークダウンを入力してください", false);
+          return;
+        }
 
-      if (!input.trim()) {
-        showMessage('マークダウンを入力してください', false);
-        return;
+        formattedMarkdown = formatMarkdown(input);
+        generateToc(formattedMarkdown);
+
+        document.getElementById("outputCode").textContent = formattedMarkdown;
+        document.getElementById("outputPreview").innerHTML =
+          markdownToHtml(formattedMarkdown);
+
+        showToast("整形が完了しました", true);
       }
 
-      // マークダウンを整形
-      formattedMarkdown = formatMarkdown(input);
+      function formatMarkdown(md) {
+        let lines = md.split("\n");
+        let result = [];
+        let prevLineType = "empty";
+        let inCodeBlock = false;
 
-      // コード表示
-      document.getElementById('outputCode').textContent = formattedMarkdown;
+        for (let i = 0; i < lines.length; i++) {
+          let line = lines[i];
 
-      // プレビュー生成
-      document.getElementById('outputPreview').innerHTML = markdownToHtml(formattedMarkdown);
-
-      // 出力セクション表示
-      document.getElementById('outputSection').classList.add('show');
-      showMessage('整形完了！', true);
-
-      // 出力セクションにスクロール
-      document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    // マークダウンを整形
-    function formatMarkdown(md) {
-      let lines = md.split('\n');
-      let result = [];
-      let prevLineType = 'empty';
-      let inCodeBlock = false;
-
-      for (let i = 0; i < lines.length; i++) {
-        let line = lines[i];
-
-        // コードブロック内はそのまま
-        if (line.trim().startsWith('```')) {
-          inCodeBlock = !inCodeBlock;
-          if (!inCodeBlock && prevLineType !== 'empty') {
-            result.push('');
+          if (line.trim().startsWith("```")) {
+            inCodeBlock = !inCodeBlock;
+            if (!inCodeBlock && prevLineType !== "empty") {
+              result.push("");
+            }
+            result.push(line);
+            prevLineType = "code";
+            continue;
           }
-          result.push(line);
-          prevLineType = 'code';
-          continue;
-        }
 
-        if (inCodeBlock) {
-          result.push(line);
-          prevLineType = 'code';
-          continue;
-        }
-
-        // 空行
-        if (line.trim() === '') {
-          if (prevLineType !== 'empty') {
-            result.push('');
-            prevLineType = 'empty';
+          if (inCodeBlock) {
+            result.push(line);
+            prevLineType = "code";
+            continue;
           }
-          continue;
-        }
 
-        // 見出し
-        if (line.match(/^#{1,6}\s/)) {
-          if (prevLineType !== 'empty' && result.length > 0) {
-            result.push('');
+          if (line.trim() === "") {
+            if (prevLineType !== "empty") {
+              result.push("");
+              prevLineType = "empty";
+            }
+            continue;
           }
-          result.push(line);
-          prevLineType = 'heading';
-          continue;
-        }
 
-        // 水平線
-        if (line.match(/^(-{3,}|\*{3,}|_{3,})$/)) {
-          if (prevLineType !== 'empty' && result.length > 0) {
-            result.push('');
+          if (line.match(/^#{1,6}\s/)) {
+            if (prevLineType !== "empty" && result.length > 0) {
+              result.push("");
+            }
+            result.push(line);
+            prevLineType = "heading";
+            continue;
           }
-          result.push(line);
-          prevLineType = 'hr';
-          continue;
-        }
 
-        // リスト項目
-        if (line.match(/^(\s*)[-*+]\s/) || line.match(/^(\s*)\d+\.\s/)) {
-          if (prevLineType !== 'list' && prevLineType !== 'empty' && result.length > 0) {
-            result.push('');
+          if (line.match(/^(-{3,}|\*{3,}|_{3,})$/)) {
+            if (prevLineType !== "empty" && result.length > 0) {
+              result.push("");
+            }
+            result.push(line);
+            prevLineType = "hr";
+            continue;
           }
-          result.push(line);
-          prevLineType = 'list';
-          continue;
-        }
 
-        // 引用
-        if (line.match(/^>\s?/)) {
-          if (prevLineType !== 'quote' && prevLineType !== 'empty' && result.length > 0) {
-            result.push('');
+          if (line.match(/^(\s*)[-*+]\s/) || line.match(/^(\s*)\d+\.\s/)) {
+            if (
+              prevLineType !== "list" &&
+              prevLineType !== "empty" &&
+              result.length > 0
+            ) {
+              result.push("");
+            }
+            result.push(line);
+            prevLineType = "list";
+            continue;
           }
-          result.push(line);
-          prevLineType = 'quote';
-          continue;
-        }
 
-        // テーブル
-        if (line.match(/^\|/)) {
-          if (prevLineType !== 'table' && prevLineType !== 'empty' && result.length > 0) {
-            result.push('');
+          if (line.match(/^>\s?/)) {
+            if (
+              prevLineType !== "quote" &&
+              prevLineType !== "empty" &&
+              result.length > 0
+            ) {
+              result.push("");
+            }
+            result.push(line);
+            prevLineType = "quote";
+            continue;
           }
-          result.push(line);
-          prevLineType = 'table';
-          continue;
+
+          if (line.match(/^\|/)) {
+            if (
+              prevLineType !== "table" &&
+              prevLineType !== "empty" &&
+              result.length > 0
+            ) {
+              result.push("");
+            }
+            result.push(line);
+            prevLineType = "table";
+            continue;
+          }
+
+          if (
+            prevLineType !== "paragraph" &&
+            prevLineType !== "empty" &&
+            result.length > 0
+          ) {
+            result.push("");
+          }
+          const formattedLines = breakLongText(line);
+          result.push(...formattedLines);
+          prevLineType = "paragraph";
         }
 
-        // 通常の段落
-        if (prevLineType !== 'paragraph' && prevLineType !== 'empty' && result.length > 0) {
-          result.push('');
+        while (result.length > 0 && result[result.length - 1] === "") {
+          result.pop();
         }
-        // 長い文章を読みやすく分割
-        const formattedLines = breakLongText(line);
-        result.push(...formattedLines);
-        prevLineType = 'paragraph';
+
+        return result.join("\n");
       }
 
-      // 末尾の空行を削除
-      while (result.length > 0 && result[result.length - 1] === '') {
-        result.pop();
-      }
+      function breakLongText(text, maxLength = 40) {
+        const result = [];
+        const sentences = text.split(/(?<=。)/);
 
-      return result.join('\n');
-    }
+        for (const sentence of sentences) {
+          const trimmed = sentence.trim();
+          if (!trimmed) continue;
 
-    // 長い文章を読みやすく分割（40文字程度で改行）
-    function breakLongText(text, maxLength = 40) {
-      const result = [];
-
-      // まず「。」で分割
-      const sentences = text.split(/(?<=。)/);
-
-      for (const sentence of sentences) {
-        const trimmed = sentence.trim();
-        if (!trimmed) continue;
-
-        // 40文字以下ならそのまま追加
-        if (trimmed.length <= maxLength) {
-          result.push(trimmed + '  ');
-        } else {
-          // 40文字を超える場合は句読点で分割
-          const parts = breakAtPunctuation(trimmed, maxLength);
-          for (let i = 0; i < parts.length; i++) {
-            if (i < parts.length - 1) {
-              result.push(parts[i].replace(/\s+$/, '') + '  ');
-            } else {
-              result.push(parts[i] + '  ');
+          if (trimmed.length <= maxLength) {
+            result.push(trimmed + "  ");
+          } else {
+            const parts = breakAtPunctuation(trimmed, maxLength);
+            for (let i = 0; i < parts.length; i++) {
+              if (i < parts.length - 1) {
+                result.push(parts[i].replace(/\s+$/, "") + "  ");
+              } else {
+                result.push(parts[i] + "  ");
+              }
             }
           }
         }
-      }
 
-      // 最後の行の末尾スペースを削除（段落末は不要）
-      if (result.length > 0) {
-        result[result.length - 1] = result[result.length - 1].replace(/\s+$/, '');
-      }
-
-      return result.length > 0 ? result : [text];
-    }
-
-    // 句読点で分割（「。」がない長い文用）
-    function breakAtPunctuation(text, maxLength) {
-      const result = [];
-      let remaining = text;
-      const punctuations = ['、', '，', '！', '？', '）', '」', '』', '；', '：'];
-
-      while (remaining.length > maxLength) {
-        let breakPoint = -1;
-
-        // まずmaxLength以内で最後の句読点を探す
-        for (let i = maxLength - 1; i >= 0; i--) {
-          if (punctuations.includes(remaining[i])) {
-            breakPoint = i + 1;
-            break;
-          }
+        if (result.length > 0) {
+          result[result.length - 1] = result[result.length - 1].replace(
+            /\s+$/,
+            "",
+          );
         }
 
-        // 見つからない場合、maxLength以降の最初の句読点を探す
-        if (breakPoint === -1) {
-          for (let i = maxLength; i < remaining.length; i++) {
+        return result.length > 0 ? result : [text];
+      }
+
+      function breakAtPunctuation(text, maxLength) {
+        const result = [];
+        let remaining = text;
+        const punctuations = [
+          "、",
+          "，",
+          "！",
+          "？",
+          "）",
+          "」",
+          "』",
+          "；",
+          "：",
+        ];
+
+        while (remaining.length > maxLength) {
+          let breakPoint = -1;
+
+          for (let i = maxLength - 1; i >= 0; i--) {
             if (punctuations.includes(remaining[i])) {
               breakPoint = i + 1;
               break;
             }
           }
-        }
 
-        // それでも見つからない場合は分割しない
-        if (breakPoint === -1) {
-          break;
-        }
-
-        result.push(remaining.substring(0, breakPoint).trim() + '  ');
-        remaining = remaining.substring(breakPoint).trim();
-      }
-
-      if (remaining) {
-        result.push(remaining);
-      }
-
-      return result;
-    }
-
-    // マークダウンをHTMLに変換
-    function markdownToHtml(md) {
-      let html = md;
-
-      // コードブロック
-      html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
-        return `<pre><code>${escapeHtml(code.trim())}</code></pre>`;
-      });
-
-      // インラインコード
-      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-      // 見出し
-      html = html.replace(/^###### (.+)$/gm, '<h6>$1</h6>');
-      html = html.replace(/^##### (.+)$/gm, '<h5>$1</h5>');
-      html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
-      html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-      html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-      html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-
-      // 水平線
-      html = html.replace(/^(-{3,}|\*{3,}|_{3,})$/gm, '<hr>');
-
-      // 太字・斜体
-      html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
-      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-      html = html.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
-      html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
-      html = html.replace(/_(.+?)_/g, '<em>$1</em>');
-
-      // リンク
-      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-
-      // 画像
-      html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;">');
-
-      // 引用
-      html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
-      html = html.replace(/<\/blockquote>\n<blockquote>/g, '\n');
-
-      // テーブル
-      html = html.replace(/^\|(.+)\|$/gm, (match, content) => {
-        const cells = content.split('|').map(c => c.trim());
-        if (cells.every(c => c.match(/^[-:]+$/))) {
-          return '<!-- table separator -->';
-        }
-        const isHeader = !html.includes('<!-- table separator -->') ||
-                         html.lastIndexOf('<table>') > html.lastIndexOf('<!-- table separator -->');
-        const tag = isHeader ? 'th' : 'td';
-        return `<tr>${cells.map(c => `<${tag}>${c}</${tag}>`).join('')}</tr>`;
-      });
-      html = html.replace(/(<tr>.*<\/tr>)/s, (match) => {
-        if (match.includes('<th>')) {
-          return `<table>${match}`;
-        }
-        return match;
-      });
-      html = html.replace(/<!-- table separator -->/g, '');
-      html = html.replace(/<\/tr>\n(?!<tr>)/g, '</tr></table>\n');
-
-      // リスト処理
-      html = processLists(html);
-
-      // 段落
-      html = html.split('\n\n').map(block => {
-        block = block.trim();
-        if (!block) return '';
-        if (block.startsWith('<')) return block;
-        return `<p>${block.replace(/\n/g, '<br>')}</p>`;
-      }).join('\n');
-
-      return html;
-    }
-
-    // リスト処理
-    function processLists(html) {
-      const lines = html.split('\n');
-      let result = [];
-      let listStack = [];
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const ulMatch = line.match(/^(\s*)[-*+]\s+(.+)$/);
-        const olMatch = line.match(/^(\s*)\d+\.\s+(.+)$/);
-
-        if (ulMatch || olMatch) {
-          const indent = (ulMatch || olMatch)[1].length;
-          const content = (ulMatch || olMatch)[2];
-          const listType = ulMatch ? 'ul' : 'ol';
-
-          // インデントレベルに応じてリストを調整
-          while (listStack.length > 0 && listStack[listStack.length - 1].indent >= indent) {
-            const popped = listStack.pop();
-            result.push(`</${popped.type}>`);
+          if (breakPoint === -1) {
+            for (let i = maxLength; i < remaining.length; i++) {
+              if (punctuations.includes(remaining[i])) {
+                breakPoint = i + 1;
+                break;
+              }
+            }
           }
 
-          if (listStack.length === 0 || listStack[listStack.length - 1].indent < indent) {
-            result.push(`<${listType}>`);
-            listStack.push({ type: listType, indent: indent });
+          if (breakPoint === -1) {
+            break;
           }
 
-          result.push(`<li>${content}</li>`);
-        } else {
-          // リストを閉じる
-          while (listStack.length > 0) {
-            const popped = listStack.pop();
-            result.push(`</${popped.type}>`);
-          }
-          result.push(line);
+          result.push(remaining.substring(0, breakPoint).trim() + "  ");
+          remaining = remaining.substring(breakPoint).trim();
         }
+
+        if (remaining) {
+          result.push(remaining);
+        }
+
+        return result;
       }
 
-      // 残りのリストを閉じる
-      while (listStack.length > 0) {
-        const popped = listStack.pop();
-        result.push(`</${popped.type}>`);
+      function markdownToHtml(md) {
+        let html = md;
+        let headingIndex = 0;
+
+        html = html.replace(/^(#{1,6})\s+(.+)$/gm, (match, hashes, text) => {
+          const level = hashes.length;
+          const id = "heading-" + headingIndex++;
+          return `<h${level} id="${id}">${text}</h${level}>`;
+        });
+
+        html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+          return `<pre><code>${escapeHtml(code.trim())}</code></pre>`;
+        });
+
+        html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+
+        html = html.replace(/^(-{3,}|\*{3,}|_{3,})$/gm, "<hr>");
+
+        html = html.replace(
+          /\*\*\*(.+?)\*\*\*/g,
+          "<strong><em>$1</em></strong>"
+        );
+        html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+        html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+        html = html.replace(/___(.+?)___/g, "<strong><em>$1</em></strong>");
+        html = html.replace(/__(.+?)__/g, "<strong>$1</strong>");
+        html = html.replace(/_(.+?)_/g, "<em>$1</em>");
+
+        html = html.replace(
+          /\[([^\]]+)\]\(([^)]+)\)/g,
+          '<a href="$2" target="_blank">$1</a>'
+        );
+        html = html.replace(
+          /!\[([^\]]*)\]\(([^)]+)\)/g,
+          '<img src="$2" alt="$1" style="max-width:100%;">'
+        );
+
+        html = html.replace(/^> (.+)$/gm, "<blockquote>$1</blockquote>");
+        html = html.replace(/<\/blockquote>\n<blockquote>/g, "\n");
+
+        html = html.replace(/^\|(.+)\|$/gm, (match, content) => {
+          const cells = content.split("|").map((c) => c.trim());
+          if (cells.every((c) => c.match(/^[-:]+$/))) {
+            return "<!-- table separator -->";
+          }
+          const isHeader =
+            !html.includes("<!-- table separator -->") ||
+            html.lastIndexOf("<table>") >
+              html.lastIndexOf("<!-- table separator -->");
+          const tag = isHeader ? "th" : "td";
+          return `<tr>${cells.map((c) => `<${tag}>${c}</${tag}>`).join("")}</tr>`;
+        });
+        html = html.replace(/(<tr>.*<\/tr>)/s, (match) => {
+          if (match.includes("<th>")) {
+            return `<table>${match}`;
+          }
+          return match;
+        });
+        html = html.replace(/<!-- table separator -->/g, "");
+        html = html.replace(/<\/tr>\n(?!<tr>)/g, "</tr></table>\n");
+
+        html = processLists(html);
+
+        html = html
+          .split("\n\n")
+          .map((block) => {
+            block = block.trim();
+            if (!block) return "";
+            if (block.startsWith("<")) return block;
+            return `<p>${block.replace(/\n/g, "<br>")}</p>`;
+          })
+          .join("\n");
+
+        return html;
       }
 
-      return result.join('\n');
-    }
+      function processLists(html) {
+        const lines = html.split("\n");
+        let result = [];
+        let listStack = [];
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          const ulMatch = line.match(/^(\s*)[-*+]\s+(.+)$/);
+          const olMatch = line.match(/^(\s*)\d+\.\s+(.+)$/);
 
-    // 出力タブ切り替え
-    function switchOutput(type) {
-      document.querySelectorAll('.output-tab').forEach(tab => tab.classList.remove('active'));
-      event.target.classList.add('active');
+          if (ulMatch || olMatch) {
+            const indent = (ulMatch || olMatch)[1].length;
+            const content = (ulMatch || olMatch)[2];
+            const listType = ulMatch ? "ul" : "ol";
 
-      document.getElementById('outputCode').classList.toggle('show', type === 'code');
-      document.getElementById('outputPreview').classList.toggle('show', type === 'preview');
-    }
+            while (
+              listStack.length > 0 &&
+              listStack[listStack.length - 1].indent >= indent
+            ) {
+              const popped = listStack.pop();
+              result.push(`</${popped.type}>`);
+            }
 
-    // ダウンロード
-    function downloadMarkdown() {
-      if (!formattedMarkdown) {
-        showMessage('ダウンロードする内容がありません', false);
-        return;
+            if (
+              listStack.length === 0 ||
+              listStack[listStack.length - 1].indent < indent
+            ) {
+              result.push(`<${listType}>`);
+              listStack.push({ type: listType, indent: indent });
+            }
+
+            result.push(`<li>${content}</li>`);
+          } else {
+            while (listStack.length > 0) {
+              const popped = listStack.pop();
+              result.push(`</${popped.type}>`);
+            }
+            result.push(line);
+          }
+        }
+
+        while (listStack.length > 0) {
+          const popped = listStack.pop();
+          result.push(`</${popped.type}>`);
+        }
+
+        return result.join("\n");
       }
 
-      const blob = new Blob([formattedMarkdown], { type: 'text/markdown' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'document.md';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      showMessage('ダウンロードしました', true);
-    }
-
-    // コピー
-    function copyOutput() {
-      if (!formattedMarkdown) {
-        showMessage('コピーする内容がありません', false);
-        return;
+      function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
       }
 
-      navigator.clipboard.writeText(formattedMarkdown).then(() => {
-        showMessage('コピーしました', true);
-      }).catch(() => {
-        showMessage('コピーに失敗しました', false);
+      function switchOutput(type, event) {
+        document
+          .querySelectorAll(".output-tab")
+          .forEach((tab) => tab.classList.remove("active"));
+        event.target.classList.add("active");
+
+        document
+          .getElementById("outputCode")
+          .classList.toggle("show", type === "code");
+        document
+          .getElementById("outputPreview")
+          .classList.toggle("show", type === "preview");
+      }
+
+      function downloadMarkdown() {
+        if (!formattedMarkdown) {
+          showToast("先に整形してください", false);
+          return;
+        }
+
+        const blob = new Blob([formattedMarkdown], { type: "text/markdown" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "document.md";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showToast("ダウンロードしました", true);
+      }
+
+      function copyOutput() {
+        if (!formattedMarkdown) {
+          showToast("先に整形してください", false);
+          return;
+        }
+
+        navigator.clipboard
+          .writeText(formattedMarkdown)
+          .then(() => {
+            showToast("クリップボードにコピーしました", true);
+          })
+          .catch(() => {
+            showToast("コピーに失敗しました", false);
+          });
+      }
+
+      function showToast(text, success) {
+        const toast = document.getElementById("toast");
+        const icon = document.getElementById("toastIcon");
+        const textEl = document.getElementById("toastText");
+
+        icon.textContent = success ? "✓" : "✕";
+        textEl.textContent = text;
+        toast.className = "toast show " + (success ? "success" : "error");
+
+        setTimeout(() => {
+          toast.className = "toast";
+        }, 2500);
+      }
+
+      // Keyboard shortcut
+      document.addEventListener("keydown", (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+          e.preventDefault();
+          convert();
+        }
       });
-    }
 
-    // クリア
-    function clearAll() {
-      document.getElementById('input').value = '';
-      document.getElementById('outputCode').textContent = '';
-      document.getElementById('outputPreview').innerHTML = '';
-      document.getElementById('outputSection').classList.remove('show');
-      formattedMarkdown = '';
-      showMessage('クリアしました', true);
-    }
+      // TOC functions
+      function toggleToc() {
+        const toggle = document.getElementById("tocToggle");
+        const dropdown = document.getElementById("tocDropdown");
+        toggle.classList.toggle("open");
+        dropdown.classList.toggle("open");
+      }
 
-    // メッセージ表示
-    function showMessage(text, success) {
-      const msg = document.getElementById('message');
-      msg.textContent = text;
-      msg.className = 'message show ' + (success ? 'success' : 'error');
-      setTimeout(() => {
-        msg.className = 'message';
-      }, 2500);
-    }
+      // Close dropdown when clicking outside
+      document.addEventListener("click", (e) => {
+        const wrapper = document.querySelector(".toc-wrapper");
+        if (wrapper && !wrapper.contains(e.target)) {
+          document.getElementById("tocToggle").classList.remove("open");
+          document.getElementById("tocDropdown").classList.remove("open");
+        }
+      });
 
-    // 入力時にボタンの状態を更新
-    document.getElementById('input').addEventListener('input', function() {
-      document.getElementById('convertBtn').disabled = !this.value.trim();
-    });
-  </script>
-</body>
+      function generateToc(markdown) {
+        const tocContent = document.getElementById("tocContent");
+        const headings = [];
+        const lines = markdown.split("\n");
+        let headingIndex = 0;
+
+        lines.forEach((line) => {
+          const match = line.match(/^(#{1,3})\s+(.+)$/);
+          if (match) {
+            const level = match[1].length;
+            const text = match[2];
+            const id = "heading-" + headingIndex;
+            headings.push({ level, text, id });
+            headingIndex++;
+          }
+        });
+
+        if (headings.length === 0) {
+          tocContent.innerHTML = '<div class="toc-empty">見出しがありません</div>';
+          return headings;
+        }
+
+        tocContent.innerHTML = headings
+          .map(
+            (h) =>
+              `<a class="toc-item level-${h.level}" onclick="scrollToHeading('${h.id}')">${h.text}</a>`
+          )
+          .join("");
+
+        return headings;
+      }
+
+      function scrollToHeading(id) {
+        const element = document.getElementById(id);
+        const previewPane = document.getElementById("outputPreview");
+        if (element && previewPane) {
+          const offset = element.offsetTop - previewPane.offsetTop;
+          previewPane.scrollTo({ top: offset, behavior: "smooth" });
+        }
+        // Close TOC dropdown
+        document.getElementById("tocToggle").classList.remove("open");
+        document.getElementById("tocDropdown").classList.remove("open");
+      }
+    </script>
+  </body>
 </html>
