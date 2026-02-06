@@ -175,7 +175,7 @@ init-repo() {
 # 例:
 #   mpr feat/add-univapay-webhook
 #   mpr feat/add-univapay-webhook main shun/univapay-mirror
-mpr() {
+mpr() (
   set -euo pipefail
 
   # ── 入力
@@ -233,7 +233,7 @@ Original PR: ${pr_url}"
 
   # ── 完了表示
   echo "Created PR from ${src_branch} as ${new_branch} (base=${base_branch}) on ${repo}"
-}
+)
 
 # Create a new directory and enter it
 function mkd() {
