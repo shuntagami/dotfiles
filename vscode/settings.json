@@ -137,7 +137,7 @@
   // ===================
   // Claude Code
   // ===================
-  "claudeCode.selectedModel": "claude-opus-4-5-20251101",
+  "claudeCode.selectedModel": "claude-opus-4-6",
   "claudeCode.preferredLocation": "panel",
   "extensions.ignoreRecommendations": true,
   "gitlens.views.scm.grouped.views": {
