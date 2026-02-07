@@ -117,17 +117,17 @@ function avl() {
 
 # Display Manager
 ## Mirror
-alias mirror.on='~/dotfiles/scripts/display_manager.py mirror enable ext0 main'
-alias mirror.off='~/dotfiles/scripts/display_manager.py mirror disable'
+alias mirror.on='~/dotfiles/scripts/display_manager mirror enable ext0 main'
+alias mirror.off='~/dotfiles/scripts/display_manager mirror disable'
 
 ## Res
-alias res.max='~/dotfiles/scripts/display_manager.py res highest main'
-alias res.default='~/dotfiles/scripts/display_manager.py res default all'
-alias res.40='~/dotfiles/scripts/display_manager.py res 3840 1620'
-alias res.31='~/dotfiles/scripts/display_manager.py res 3360 1890'
-alias res.27='~/dotfiles/scripts/display_manager.py res 3008 1692'
-alias res.qhd='~/dotfiles/scripts/display_manager.py res 2560 1440'
-alias res.fhd='~/dotfiles/scripts/display_manager.py res 1920 1080'
+alias res.max='~/dotfiles/scripts/display_manager res highest main'
+alias res.default='~/dotfiles/scripts/display_manager res default all'
+alias res.40='~/dotfiles/scripts/display_manager res 3840 1620'
+alias res.31='~/dotfiles/scripts/display_manager res 3360 1890'
+alias res.27='~/dotfiles/scripts/display_manager res 3008 1692'
+alias res.qhd='~/dotfiles/scripts/display_manager res 2560 1440'
+alias res.fhd='~/dotfiles/scripts/display_manager res 1920 1080'
 
 # Check typo between HEAD and default branch
 alias typocheck="git diff HEAD..$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@') --name-only | xargs -I {} typos {}"
