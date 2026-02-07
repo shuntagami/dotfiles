@@ -1,28 +1,15 @@
-#!/usr/bin/env pwsh
+#!/usr/bin/env node
 
-param (
-    [Parameter(Mandatory=$true)]
-    [double]$eur
-)
+const amount = Number(process.argv[2]);
 
-# Function to get the latest EUR to JPY exchange rate
-function Get-EurToJpyRate {
-    $apiUrl = "https://api.exchangerate-api.com/v4/latest/EUR"
-    $response = Invoke-RestMethod -Uri $apiUrl
-    return $response.rates.JPY
+if (!amount || isNaN(amount)) {
+  console.log("Usage: eur-to-jpy <amount>");
+  process.exit(1);
 }
 
-# Function to convert EUR to JPY
-function Convert-EurToJpy {
-    param (
-        [double]$eurAmount
-    )
-
-    $rate = Get-EurToJpyRate
-    $jpyAmount = $eurAmount * $rate
-    return [math]::Round($jpyAmount, 2)
-}
-
-$jpy = Convert-EurToJpy -eurAmount $eur
-Write-Output "$eur EUR is approximately $jpy JPY."
-
+fetch("https://api.exchangerate-api.com/v4/latest/EUR")
+  .then((res) => res.json())
+  .then((data) => {
+    const jpy = (amount * data.rates.JPY).toFixed(2);
+    console.log(`${amount} EUR is approximately ${jpy} JPY.`);
+  });

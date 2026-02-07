@@ -1,21 +1,10 @@
-#!/usr/bin/env pwsh
+#!/usr/bin/env node
 
-param (
-    [string]$encodedUrl
-)
+const encodedUrl = process.argv[2];
 
-function Decode-Url {
-    param (
-        [string]$url
-    )
-
-    # URLをデコード
-    $decodedUrl = [System.Web.HttpUtility]::UrlDecode([System.Web.HttpUtility]::UrlDecode($url))
-    Write-Output "Decoded URL: $decodedUrl"
+if (!encodedUrl) {
+  console.log("Please provide an encoded URL as an argument.");
+  process.exit(1);
 }
 
-if (-not $encodedUrl) {
-    Write-Output "Please provide an encoded URL as an argument."
-} else {
-    Decode-Url -url $encodedUrl
-}
+console.log(`Decoded URL: ${decodeURIComponent(decodeURIComponent(encodedUrl))}`);
