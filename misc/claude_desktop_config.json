@@ -11,6 +11,8 @@
     }
   },
   "preferences": {
-    "quickEntryShortcut": "off"
+    "quickEntryShortcut": "off",
+    "sidebarMode": "chat",
+    "coworkScheduledTasksEnabled": false
   }
 }
