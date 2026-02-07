@@ -29,6 +29,7 @@ ln -sf ~/dotfiles/.vimrc ~/.vimrc
 ln -sf ~/dotfiles/.zpreztorc ~/.zpreztorc
 ln -sf ~/dotfiles/.zshenv ~/.zshenv
 ln -sf ~/dotfiles/.zshrc ~/.zshrc
+mkdir -p ~/.docker
 ln -sf ~/dotfiles/misc/docker-config.json ~/.docker/config.json
 
 # ssh config
@@ -37,15 +38,15 @@ if [ ! -d ${HOME}/.ssh ]; then
 fi
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
-  if ! grep -sq "require('keyboard')" ~/.hammerspoon/init.lua; then
-    ln -sf ~/dotfiles/hammerspoon ~/.hammerspoon
-    ln -sf ~/dotfiles/misc/claude_desktop_config.json ~/Library/Application\ Support/Claude/claude_desktop_config.json
-    ln -sf ~/dotfiles/misc/memo-config.toml ~/.config/memo/config.toml
-  fi
+  ln -sfn ~/dotfiles/hammerspoon ~/.hammerspoon
+  mkdir -p ~/Library/Application\ Support/Claude
+  ln -sf ~/dotfiles/misc/claude_desktop_config.json ~/Library/Application\ Support/Claude/claude_desktop_config.json
+  mkdir -p ~/.config/memo
+  ln -sf ~/dotfiles/misc/memo-config.toml ~/.config/memo/config.toml
 
   # The location of the configuration file for kareabiner-elements
   # https://karabiner-elements.pqrs.org/docs/manual/misc/configuration-file-path/
-  ln -s ~/dotfiles/karabiner ~/.config
+  ln -sfn ~/dotfiles/karabiner ~/.config/karabiner
   launchctl kickstart -k gui/`id -u`/org.pqrs.karabiner.karabiner_console_user_server
 fi
 
