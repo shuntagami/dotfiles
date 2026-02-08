@@ -8,12 +8,12 @@ fi
 
 # prezto
 setopt EXTENDED_GLOB
-for rcfile in "${ZDOTDIR:-$HOME}"/.zprezto/runcoms/^README.md(.N); do
+for rcfile in "${ZDOTDIR:-$HOME}"/.zprezto/runcoms/^(README.md|zpreztorc|zshenv|zshrc)(.N); do
   ln -sf "$rcfile" "${ZDOTDIR:-$HOME}/.${rcfile:t}"
 done
 
 # add and update submodule
-cd ${HOME}/.zprezto && git pull && git submodule sync --recursive && git submodule update --init --recursive
+git -C ${HOME}/.zprezto pull && git -C ${HOME}/.zprezto submodule sync --recursive && git -C ${HOME}/.zprezto submodule update --init --recursive
 
 # symlink dotfiles
 ln -sf ~/dotfiles/.dein.toml ~/.dein.toml
@@ -44,7 +44,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   mkdir -p ~/.config/memo
   ln -sf ~/dotfiles/misc/memo-config.toml ~/.config/memo/config.toml
 
-  # The location of the configuration file for kareabiner-elements
+  # The location of the configuration file for karabiner-elements
   # https://karabiner-elements.pqrs.org/docs/manual/misc/configuration-file-path/
   ln -sfn ~/dotfiles/karabiner ~/.config/karabiner
   launchctl kickstart -k gui/`id -u`/org.pqrs.karabiner.karabiner_console_user_server
@@ -53,4 +53,4 @@ fi
 # change shell
 chsh -s $(which zsh)
 
-exec ${SHELL} -l
+echo "Deploy complete! Run 'exec \$SHELL -l' to reload your shell."
