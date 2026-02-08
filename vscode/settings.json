@@ -15,10 +15,10 @@
   "editor.quickSuggestions": {
     "comments": "off",
     "strings": "off",
-    "other": "off"
+    "other": "off",
   },
   "editor.codeActionsOnSave": {
-    "source.fixAll": "explicit"
+    "source.fixAll": "explicit",
   },
   "editor.suggestSelection": "first",
   "editor.minimap.enabled": false,
@@ -36,7 +36,7 @@
     "statusBar.noFolderBackground": "#8ac6f2",
     "statusBar.debuggingBackground": "#8ac6f2",
     "statusBar.foreground": "#444444",
-    "statusBar.debuggingForeground": "#444444"
+    "statusBar.debuggingForeground": "#444444",
   },
   "workbench.editor.enablePreview": false,
   "workbench.editor.openPositioning": "last",
@@ -83,19 +83,19 @@
   "vim.normalModeKeyBindings": [
     {
       "before": ["u"],
-      "commands": ["undo"]
+      "commands": ["undo"],
     },
     {
       "before": ["ctrl+r"],
-      "commands": ["redo"]
-    }
+      "commands": ["redo"],
+    },
   ],
   "vim.handleKeys": {
     "<C-f>": false,
     "<C-a>": false,
     "<C-w>": false,
     "<C-p>": false,
-    "<C-b>": false
+    "<C-b>": false,
   },
   // ===================
   // Prettier / JavaScript / TypeScript
@@ -110,7 +110,7 @@
   // Language Overrides
   // ===================
   "[makefile]": {
-    "editor.insertSpaces": false
+    "editor.insertSpaces": false,
   },
   "[markdown]": {
     "files.trimTrailingWhitespace": false,
@@ -118,11 +118,11 @@
     "editor.quickSuggestions": {
       "comments": "on",
       "strings": "on",
-      "other": "on"
-    }
+      "other": "on",
+    },
   },
   "[yaml]": {
-    "editor.formatOnSave": false
+    "editor.formatOnSave": false,
   },
   // ===================
   // Cursor
@@ -137,7 +137,7 @@
   // ===================
   // Claude Code
   // ===================
-  "claudeCode.selectedModel": "claude-opus-4-6",
+  "claudeCode.selectedModel": "opus",
   "claudeCode.preferredLocation": "panel",
   "extensions.ignoreRecommendations": true,
   "gitlens.views.scm.grouped.views": {
@@ -151,6 +151,6 @@
     "fileHistory": false,
     "repositories": true,
     "searchAndCompare": true,
-    "launchpad": false
-  }
+    "launchpad": false,
+  },
 }
