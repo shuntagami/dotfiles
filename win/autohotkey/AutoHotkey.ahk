@@ -13,6 +13,5 @@ InstallKeybdHook
 SetTitleMatchMode(2)
 SendMode("Input")
 
-#include "textReplacement.ahk"
 #include "macKeyboard.ahk"
 #include "altIme.ahk" ; comment out this for JIS keyboard
