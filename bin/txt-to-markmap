@@ -36,4 +36,6 @@ end
 # カレントディレクトリに.mdファイルを保存
 File.write(output_file_path, output_content.join("\n") + "\n")
 
-puts "変換が完了しました。ファイル '#{output_file_path}' が作成されました。"
+IO.popen("pbcopy", "w") { |io| io.write(output_content.join("\n") + "\n") }
+
+puts "変換が完了しました。ファイル '#{output_file_path}' が作成されました。（クリップボードにコピー済み）"
