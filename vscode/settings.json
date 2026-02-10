@@ -80,15 +80,27 @@
   "vim.useSystemClipboard": true,
   "vim.mouseSelectionGoesIntoVisualMode": false,
   "vim.autoSwitchInputMethod.enable": false,
-  "vim.normalModeKeyBindings": [
-    {
-      "before": ["u"],
-      "commands": ["undo"],
-    },
-    {
-      "before": ["ctrl+r"],
-      "commands": ["redo"],
-    },
+  "vim.surround": true,
+  "vim.hlsearch": true,
+  "vim.ignorecase": true,
+  "vim.smartcase": true,
+  "vim.incsearch": true,
+  "vim.normalModeKeyBindingsNonRecursive": [
+    { "before": ["u"], "commands": ["undo"] },
+    { "before": ["ctrl+r"], "commands": ["redo"] },
+    { "before": ["<Esc>", "<Esc>"], "commands": [":nohl"] },
+    { "before": ["d"], "after": ["\"", "_", "d"] },
+    { "before": ["d", "d"], "after": ["\"", "_", "d", "d"] },
+    { "before": ["D"], "after": ["\"", "_", "D"] },
+    { "before": ["x"], "after": ["\"", "_", "x"] },
+    { "before": ["X"], "after": ["\"", "_", "X"] },
+    { "before": ["c"], "after": ["\"", "_", "c"] },
+    { "before": ["c", "c"], "after": ["\"", "_", "c", "c"] },
+    { "before": ["C"], "after": ["\"", "_", "C"] }
+  ],
+  "vim.visualModeKeyBindingsNonRecursive": [
+    { "before": ["d"], "after": ["\"", "_", "d"] },
+    { "before": ["c"], "after": ["\"", "_", "c"] }
   ],
   "vim.handleKeys": {
     "<C-f>": false,
