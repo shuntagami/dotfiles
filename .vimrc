@@ -117,7 +117,7 @@ set smartcase
 set incsearch
 set wrapscan
 set hlsearch
-nmap <Esc><Esc> :nohlsearch<CR><Esc>
+nnoremap <Esc><Esc> :nohlsearch<CR><Esc>
 
 " ==============================================================================
 " プラグイン設定
