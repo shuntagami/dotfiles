@@ -278,3 +278,37 @@ cut() {
 # （関数内でも NO_GLOB を設定して二重で安全対策）
 alias cut='noglob cut'
 
+unzipall() {
+  if [ "$#" -eq 0 ]; then
+    echo "Usage: unzipall <zip-file> [more.zip...]"
+    return 1
+  fi
+
+  for zipfile in "$@"; do
+    if [ ! -f "$zipfile" ]; then
+      echo "File not found: $zipfile"
+      continue
+    fi
+
+    echo "Extracting: $zipfile"
+
+    # 1. 最初のzip解凍（文字化け対策）
+    LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 unzip -oq "$zipfile" 2>/dev/null || \
+    ditto -x -k "$zipfile" .
+
+    rm -f "$zipfile"
+
+    # 2. 再帰解凍（zipがなくなるまで1個ずつ処理）
+    while true; do
+      nextzip=$(find . -type f -name "*.zip" | head -n 1)
+      [ -z "$nextzip" ] && break
+
+      echo "Extracting nested: $nextzip"
+
+      LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 unzip -oq "$nextzip" 2>/dev/null || \
+      ditto -x -k "$nextzip" .
+
+      rm -f "$nextzip"
+    done
+  done
+}
