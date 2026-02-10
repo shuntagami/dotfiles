@@ -3,5 +3,4 @@ node_modules
 .env
 .envrc
 __pycache__/
-shuntagami_tmp/
 .pnpm-store
