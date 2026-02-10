@@ -2,71 +2,16 @@
 repo = 'Shougo/dein.vim'
 
 [[plugins]]
-repo = 'Shougo/vimproc.vim'
-build = 'make'
-
-[[plugins]]
-repo = 'Shougo/unite.vim'
-
-[[plugins]]
-repo = 'Shougo/neomru.vim'
-
-[[plugins]]
-repo = 'tpope/vim-endwise'
-
-[[plugins]]
-repo = '907th/vim-auto-save'
-
-[[plugins]]
-repo = 'tomtom/tcomment_vim'
-
-[[plugins]]
-repo = 'tpope/vim-commentary'
-
-[[plugins]]
 repo = 'tpope/vim-surround'
 
 [[plugins]]
 repo = 'w0ng/vim-hybrid'
 
 [[plugins]]
-repo = 'nathanaelkane/vim-indent-guides'
-
-[[plugins]]
-repo = 'vim-scripts/AnsiEsc.vim'
-
-[[plugins]]
 repo = 'bronson/vim-trailing-whitespace'
 
 [[plugins]]
-repo = 'KohPoll/vim-less'
-
-[[plugins]]
-repo = 'prabirshrestha/async.vim'
-
-[[plugins]]
-repo = 'prabirshrestha/asyncomplete.vim'
-
-[[plugins]]
-repo = 'prabirshrestha/vim-lsp'
-
-[[plugins]]
-repo = 'mattn/vim-lsp-settings'
-
-[[plugins]]
-repo = 'prabirshrestha/asyncomplete-lsp.vim'
-
-[[plugins]]
-repo = 'hashivim/vim-terraform'
-
-[[plugins]]
-repo = 'maksimr/vim-jsbeautify'
-
-[[plugins]]
-repo = 'editorconfig/editorconfig-vim'
-
-[[plugins]]
-repo = 'fatih/vim-go'
+repo = '907th/vim-auto-save'
 
 [[plugins]]
 repo = 'mattn/vim-molder'
