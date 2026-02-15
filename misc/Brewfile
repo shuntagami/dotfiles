@@ -88,6 +88,7 @@ brew "portaudio"
 brew "postgresql@14", restart_service: :changed
 brew "pstree"
 brew "pygobject3"
+brew "qpdf"
 brew "re2"
 brew "ripgrep"
 brew "scrcpy"
