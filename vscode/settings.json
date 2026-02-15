@@ -89,18 +89,14 @@
     { "before": ["u"], "commands": ["undo"] },
     { "before": ["ctrl+r"], "commands": ["redo"] },
     { "before": ["<Esc>", "<Esc>"], "commands": [":nohl"] },
-    { "before": ["d"], "after": ["\"", "_", "d"] },
-    { "before": ["d", "d"], "after": ["\"", "_", "d", "d"] },
-    { "before": ["D"], "after": ["\"", "_", "D"] },
     { "before": ["x"], "after": ["\"", "_", "x"] },
     { "before": ["X"], "after": ["\"", "_", "X"] },
     { "before": ["c"], "after": ["\"", "_", "c"] },
     { "before": ["c", "c"], "after": ["\"", "_", "c", "c"] },
-    { "before": ["C"], "after": ["\"", "_", "C"] }
+    { "before": ["C"], "after": ["\"", "_", "C"] },
   ],
   "vim.visualModeKeyBindingsNonRecursive": [
-    { "before": ["d"], "after": ["\"", "_", "d"] },
-    { "before": ["c"], "after": ["\"", "_", "c"] }
+    { "before": ["c"], "after": ["\"", "_", "c"] },
   ],
   "vim.handleKeys": {
     "<C-f>": false,
@@ -149,7 +145,7 @@
   // ===================
   // Claude Code
   // ===================
-  "claudeCode.selectedModel": "opus",
+  "claudeCode.selectedModel": "claude-opus-4-6",
   "claudeCode.dangerouslySkipPermissions": true,
   "claudeCode.preferredLocation": "panel",
   "extensions.ignoreRecommendations": true,

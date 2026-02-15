@@ -77,12 +77,8 @@ else
 endif
 
 " 削除時にクリップボードを上書きしない（ブラックホールレジスタを使用）
-nnoremap d "_d
-nnoremap dd "_dd
-nnoremap D "_D
 nnoremap x "_x
 nnoremap X "_X
-xnoremap d "_d
 nnoremap c "_c
 nnoremap cc "_cc
 nnoremap C "_C
