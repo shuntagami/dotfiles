@@ -209,9 +209,9 @@ mpr() (
     fi
   fi
 
-  # ── 新規ブランチ名（未指定なら末尾を採用）
+  # ── 新規ブランチ名（未指定なら末尾に日時を付与して競合回避）
   if [ -z "${new_branch}" ]; then
-    new_branch="shun/${src_branch##*/}"
+    new_branch="shun/${src_branch##*/}-$(date +%Y%m%d-%H%M%S)"
   fi
 
   # ── 取得・ブランチ作成・push
