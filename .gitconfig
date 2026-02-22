@@ -108,6 +108,9 @@
 
 	empty-push = "!f() { branch=$(git branch --show-current); git commit --allow-empty -m \"empty commit for deploy\" && git push origin $branch; }; f"
 
+	# Add all, commit with "update", and push
+	up = "!git add -A && git commit -m 'update' && git push"
+
 [apply]
 	# Detect whitespace errors when applying a patch.
 	whitespace = fix
