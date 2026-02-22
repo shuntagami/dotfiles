@@ -34,6 +34,10 @@ get_setting_dirs() {
 # 確認プロンプト関数
 confirm_replace() {
   local file_path=$1
+  # Auto-approve when called from setup.sh
+  if [[ "${DOTFILES_AUTO:-}" == "1" ]]; then
+    return 0
+  fi
   echo "Warning: ${file_path} already exists and is not a symlink."
   read -p "Do you want to replace it with a symlink? (y/N): " -n 1 -r
   echo

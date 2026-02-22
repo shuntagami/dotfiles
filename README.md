@@ -4,7 +4,7 @@ MacOS / Ubuntu dotfiles.
 
 With this dotfiles, it
 
-- allows you to setup dev environment in **just 3 commands** 🚀.
+- allows you to setup dev environment in **just 1 command** 🚀.
 - would work **both on MacOS and Ubuntu**✨.
 
 ## Requirement
@@ -13,39 +13,28 @@ With this dotfiles, it
 - XCode Command Line Tools(for Mac user. if you don't have, get by runnning following command.)
 
 ```bash
-$ xcode-select --install
+xcode-select --install
 ```
 
 ## How to use
 
-Run the following commnad.
-
 ```bash
-$ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts/install-dotfiles.sh)"
-$ ~/dotfiles/scripts/install-packages.sh
-$ ~/dotfiles/scripts/deploy.sh
+# 1. Download dotfiles
+bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts/install-dotfiles.sh)"
+
+# 2. Run setup (packages, symlinks, macOS settings, VSCode — all in one)
+~/dotfiles/scripts/setup.sh
 ```
 
-### For Mac user
+### Run individual steps manually
 
-- Setup macOS.
-
-```bash
-$ ~/dotfiles/scripts/macos.sh
-```
-
-- Setup Iterm.
-
-_(Preferences(⌘,)_ → _Preferences_ → check <b>Load preferences from a custom folder or URL</b>, change it to <b>/Users/Username/dotfiles/misc</b>)
-
-![sample](https://user-images.githubusercontent.com/69618840/153607360-dc173d13-c551-4f2c-9ce5-02cbfeb0a120.png)
-
-### For Visual Studio Code user
-
-- Setup Visual Studio Code
+You can also run each step separately if needed.
 
 ```bash
-$ ~/dotfiles/vscode/setup.sh
+~/dotfiles/scripts/install-packages.sh  # Install Homebrew, anyenv, etc.
+~/dotfiles/scripts/deploy.sh            # Symlink dotfiles
+~/dotfiles/scripts/macos.sh             # Configure macOS defaults
+~/dotfiles/vscode/setup.sh              # Set up VSCode/Cursor
 ```
 
 ## Keywords
