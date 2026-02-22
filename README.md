@@ -9,7 +9,7 @@
 ![VSCode](https://img.shields.io/badge/VS_Code-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white)
 ![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
 
-### 新しいMacを手に入れた。<br>コマンド1つで、いつもの開発環境が手に入る。
+### 新しいMacを手に入れた。<br>コマンド1つで、全部入ってる。
 
 <br>
 
@@ -23,11 +23,17 @@ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts
 
 ## 🧩 これは何？
 
-新しいMacを買うたびに、Chromeを入れて、Slackを入れて、Zoomを入れて、Spotifyを入れて ──
-そんな作業を何時間もかけてやっていませんか？　もうその必要はありません。
+まさか新しいMacを買うたびに、Safariで「Chrome ダウンロード」と検索するところから始めていませんか・・・？
 
-このリポジトリは、**たった1つのコマンドで、自分の理想の環境を丸ごと再現する**仕組みです。
-普段使いのアプリから、macOSやLinuxの細かな設定ファイル（「**.**」で始まるので**dotfiles**と呼ばれます）まで、すべてを一括で管理・復元できます。
+次にSlack、Zoom、LINE ── 気づけば同じことをもう何十回も繰り返して、1時間、2時間、いや3時間と溶けている。
+
+やっとアプリが揃ったと思って、Cursorを開いていざ仕事を始めようと思ったらたら、  
+拡張機能も設定も何もない。自動保存すらオフ。
+
+このリポジトリを使えば、**たった1つのコマンドで、プロのエンジニアが理想とする生産性の高いMacの環境がそのまま手に入ります。**
+
+> [!NOTE]
+> macOSやLinuxの設定ファイルは「**.**」から始まる名前を持つため、**dotfiles**と呼ばれています。
 
 ---
 
@@ -124,10 +130,10 @@ Claude Desktop、Cursor、MCPサーバー設定を含む、**最新のAIツー�
 
 ### 事前に必要なもの
 
-| OS | 必要なもの |
-|:---|:---|
-| 🍎 macOS | XCode Command Line Tools（`xcode-select --install`で取得） |
-| 🐧 Ubuntu | 20.04以上 |
+| OS        | 必要なもの                                                 |
+| :-------- | :--------------------------------------------------------- |
+| 🍎 macOS  | XCode Command Line Tools（`xcode-select --install`で取得） |
+| 🐧 Ubuntu | 20.04以上                                                  |
 
 ### セットアップ（2ステップで完了）
 
@@ -162,16 +168,16 @@ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts
 
 ## 🗂️ 管理している主なツール・設定
 
-| カテゴリ | ツール |
-|:---|:---|
-| **シェル** | [Zsh](https://www.zsh.org/) + [Prezto](https://github.com/sorin-ionescu/prezto)（補完・ハイライト・サジェスト） |
-| **エディタ** | [Vim](https://github.com/vim/vim)（[dein.vim](https://github.com/Shougo/dein.vim)）/ [VSCode](https://github.com/microsoft/vscode) / [Cursor](https://www.cursor.com/) |
-| **パッケージ管理** | [Homebrew](https://github.com/Homebrew/brew) / [apt](https://github.com/Debian/apt) |
-| **バージョン管理** | [anyenv](https://github.com/anyenv/anyenv)（Node.js, Ruby, Python） |
-| **ターミナル** | [iTerm2](https://github.com/gnachman/iTerm2) |
-| **キーボード** | [Karabiner-Elements](https://github.com/pqrs-org/Karabiner-Elements) / [Hammerspoon](https://github.com/Hammerspoon/hammerspoon) |
-| **AI** | [Claude Desktop](https://claude.ai/) / Cursor / MCP |
-| **システム監視** | [btop](https://github.com/aristocratos/btop) |
+| カテゴリ           | ツール                                                                                                                                                                 |
+| :----------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **シェル**         | [Zsh](https://www.zsh.org/) + [Prezto](https://github.com/sorin-ionescu/prezto)（補完・ハイライト・サジェスト）                                                        |
+| **エディタ**       | [Vim](https://github.com/vim/vim)（[dein.vim](https://github.com/Shougo/dein.vim)）/ [VSCode](https://github.com/microsoft/vscode) / [Cursor](https://www.cursor.com/) |
+| **パッケージ管理** | [Homebrew](https://github.com/Homebrew/brew) / [apt](https://github.com/Debian/apt)                                                                                    |
+| **バージョン管理** | [anyenv](https://github.com/anyenv/anyenv)（Node.js, Ruby, Python）                                                                                                    |
+| **ターミナル**     | [iTerm2](https://github.com/gnachman/iTerm2)                                                                                                                           |
+| **キーボード**     | [Karabiner-Elements](https://github.com/pqrs-org/Karabiner-Elements) / [Hammerspoon](https://github.com/Hammerspoon/hammerspoon)                                       |
+| **AI**             | [Claude Desktop](https://claude.ai/) / Cursor / MCP                                                                                                                    |
+| **システム監視**   | [btop](https://github.com/aristocratos/btop)                                                                                                                           |
 
 ---
 
@@ -179,12 +185,12 @@ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts
 
 > **「設定は、コードである。」**
 
-| 原則 | 説明 |
-|:---|:---|
-| **宣言的** | Brewfileや設定ファイルに書かれた状態が、そのまま環境の正解になる |
-| **冪等** | 何度実行しても同じ結果になる。壊れない |
-| **モジュラー** | 全体を一括で実行することも、個別に実行することもできる |
-| **クロスプラットフォーム** | OSの差異はスクリプトが吸収する |
+| 原則                       | 説明                                                             |
+| :------------------------- | :--------------------------------------------------------------- |
+| **宣言的**                 | Brewfileや設定ファイルに書かれた状態が、そのまま環境の正解になる |
+| **冪等**                   | 何度実行しても同じ結果になる。壊れない                           |
+| **モジュラー**             | 全体を一括で実行することも、個別に実行することもできる           |
+| **クロスプラットフォーム** | OSの差異はスクリプトが吸収する                                   |
 
 ---
 
