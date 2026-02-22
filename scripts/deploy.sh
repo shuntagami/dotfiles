@@ -41,7 +41,11 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   # The location of the configuration file for karabiner-elements
   # https://karabiner-elements.pqrs.org/docs/manual/misc/configuration-file-path/
   ln -sfn ~/dotfiles/karabiner ~/.config/karabiner
-  launchctl kickstart -k gui/`id -u`/org.pqrs.karabiner.karabiner_console_user_server
+  if launchctl print gui/$(id -u)/org.pqrs.service.agent.karabiner_console_user_server &>/dev/null; then
+    launchctl kickstart -k gui/$(id -u)/org.pqrs.service.agent.karabiner_console_user_server
+  else
+    open -a "Karabiner-Elements"
+  fi
 fi
 
 # change shell
