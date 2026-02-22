@@ -135,8 +135,7 @@ defaults write -g KeyRepeat -int 1 # normal minimum is 2 (30 ms)
 # Energy saving                                                               #
 ###############################################################################
 
-# Enable lid wakeup
-sudo pmset -a lidwake 1
+IS_LAPTOP=$([[ $(sysctl -n hw.model) == *"Book"* ]] && echo true || echo false)
 
 # Restart automatically on power loss
 sudo pmset -a autorestart 1
@@ -147,24 +146,27 @@ sudo systemsetup -setrestartfreeze on
 # Sleep the display after 15 minutes
 sudo pmset -a displaysleep 15
 
-# Disable machine sleep while charging
-sudo pmset -c sleep 0
-
-# Set machine sleep to 5 minutes on battery
-sudo pmset -b sleep 5
-
 # Set standby delay to 24 hours (default is 1 hour)
 sudo pmset -a standbydelay 86400
 
 # Never go into computer sleep mode
 sudo systemsetup -setcomputersleep Off > /dev/null
 
-# Remove the sleep image file to save disk space
-sudo rm /private/var/vm/sleepimage
-# Create a zero-byte file instead…
-sudo touch /private/var/vm/sleepimage
-# …and make sure it can’t be rewritten
-sudo chflags uchg /private/var/vm/sleepimage
+if $IS_LAPTOP; then
+  # Enable lid wakeup (laptop only)
+  sudo pmset -a lidwake 1
+
+  # Disable machine sleep while charging
+  sudo pmset -c sleep 0
+
+  # Set machine sleep to 5 minutes on battery
+  sudo pmset -b sleep 5
+
+  # Remove the sleep image file to save disk space
+  sudo rm -f /private/var/vm/sleepimage
+  sudo touch /private/var/vm/sleepimage
+  sudo chflags uchg /private/var/vm/sleepimage
+fi
 
 ###############################################################################
 # Screen                                                                      #
@@ -187,6 +189,18 @@ defaults write com.apple.screencapture type -string "png"
 
 # Disable shadow in screenshots
 defaults write com.apple.screencapture disable-shadow -bool true
+
+# Screenshot keyboard shortcuts
+# 28: Save picture of screen as a file (⇧⌘3) → disabled
+# 29: Copy picture of screen to clipboard (⌃⇧⌘3) → disabled
+# 30: Save picture of selected area as a file (⇧⌘4) → disabled
+# 31: Copy picture of selected area to clipboard (⇧⌘4) → enabled
+# 184: Screenshot and recording options (⇧⌘5) → enabled
+defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 28 '{ enabled = 0; value = { parameters = (51, 20, 131072); type = standard; }; }'
+defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 29 '{ enabled = 0; value = { parameters = (51, 20, 393216); type = standard; }; }'
+defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 30 '{ enabled = 0; value = { parameters = (52, 21, 131072); type = standard; }; }'
+defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 31 '{ enabled = 1; value = { parameters = (52, 21, 393216); type = standard; }; }'
+defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 184 '{ enabled = 1; value = { parameters = (53, 23, 131072); type = standard; }; }'
 
 # Enable subpixel font rendering on non-Apple LCDs
 # Reference: https://github.com/kevinSuttle/macOS-Defaults/issues/17#issuecomment-266633501
@@ -474,6 +488,81 @@ defaults write com.apple.messageshelper.MessageController SOInputLineSettings -d
 defaults write com.apple.messageshelper.MessageController SOInputLineSettings -dict-add "continuousSpellCheckingEnabled" -bool false
 
 ###############################################################################
+# Safari                                                                      #
+###############################################################################
+
+# Show the full URL in the address bar (not just the domain)
+defaults write com.apple.Safari ShowFullURLInSmartSearchField -bool true
+
+# Enable the Develop menu and the Web Inspector
+defaults write com.apple.Safari IncludeDevelopMenu -bool true
+defaults write com.apple.Safari WebKitDeveloperExtrasEnabledPreferenceKey -bool true
+defaults write com.apple.Safari com.apple.Safari.ContentPageGroupIdentifier.WebKit2DeveloperExtrasEnabled -bool true
+
+# Enable "Do Not Track"
+defaults write com.apple.Safari SendDoNotTrackHTTPHeader -bool true
+
+# Prevent Safari from opening "safe" files automatically after downloading
+defaults write com.apple.Safari AutoOpenSafeDownloads -bool false
+
+# Show Safari's bookmarks bar
+defaults write com.apple.Safari ShowFavoritesBar -bool true
+
+# Enable Safari's debug menu
+defaults write com.apple.Safari IncludeInternalDebugMenu -bool true
+
+# Update extensions automatically
+defaults write com.apple.Safari InstallExtensionUpdatesAutomatically -bool true
+
+# Disable AutoFill
+defaults write com.apple.Safari AutoFillFromAddressBook -bool false
+defaults write com.apple.Safari AutoFillPasswords -bool false
+defaults write com.apple.Safari AutoFillCreditCardData -bool false
+defaults write com.apple.Safari AutoFillMiscellaneousForms -bool false
+
+# Block pop-up windows
+defaults write com.apple.Safari WebKitJavaScriptCanOpenWindowsAutomatically -bool false
+defaults write com.apple.Safari com.apple.Safari.ContentPageGroupIdentifier.WebKit2JavaScriptCanOpenWindowsAutomatically -bool false
+
+###############################################################################
+# Spotlight                                                                   #
+###############################################################################
+
+# Disable Spotlight indexing for any volume that gets mounted and has not yet
+# been indexed before
+sudo defaults write /.Spotlight-V100/VolumeConfiguration Exclusions -array "/Volumes"
+
+# Only show useful categories in Spotlight
+# Enabled: Applications, System Preferences, Calculator, Folders, Documents
+# Disabled: Siri Suggestions, Websites, Fonts, Music, Movies, etc.
+defaults write com.apple.spotlight orderedItems -array \
+	'{"enabled" = 1;"name" = "APPLICATIONS";}' \
+	'{"enabled" = 1;"name" = "SYSTEM_PREFS";}' \
+	'{"enabled" = 1;"name" = "DIRECTORIES";}' \
+	'{"enabled" = 1;"name" = "DOCUMENTS";}' \
+	'{"enabled" = 1;"name" = "PDF";}' \
+	'{"enabled" = 1;"name" = "SPREADSHEETS";}' \
+	'{"enabled" = 1;"name" = "PRESENTATIONS";}' \
+	'{"enabled" = 1;"name" = "CONTACT";}' \
+	'{"enabled" = 1;"name" = "EVENT_TODO";}' \
+	'{"enabled" = 0;"name" = "FONTS";}' \
+	'{"enabled" = 0;"name" = "MESSAGES";}' \
+	'{"enabled" = 0;"name" = "IMAGES";}' \
+	'{"enabled" = 0;"name" = "BOOKMARKS";}' \
+	'{"enabled" = 0;"name" = "MUSIC";}' \
+	'{"enabled" = 0;"name" = "MOVIES";}' \
+	'{"enabled" = 0;"name" = "SOURCE";}' \
+	'{"enabled" = 0;"name" = "MENU_OTHER";}' \
+	'{"enabled" = 0;"name" = "MENU_EXPRESSION";}' \
+	'{"enabled" = 0;"name" = "MENU_WEBSEARCH";}' \
+	'{"enabled" = 0;"name" = "MENU_SPOTLIGHT_SUGGESTIONS";}'
+
+# Rebuild the index
+killall mds > /dev/null 2>&1
+sudo mdutil -i on / > /dev/null
+sudo mdutil -E / > /dev/null
+
+###############################################################################
 # Google Chrome & Google Chrome Canary                                        #
 ###############################################################################
 
@@ -493,9 +582,58 @@ defaults write com.google.Chrome.canary DisablePrintPreview -bool true
 defaults write com.google.Chrome PMPrintingExpandedStateForPrint2 -bool true
 defaults write com.google.Chrome.canary PMPrintingExpandedStateForPrint2 -bool true
 
-# computer name
-sudo scutil --set ComputerName "Shun-Tagami-MacBook"
-sudo scutil --set LocalHostName "Shun-Tagami-MacBook"
+# computer name (distinguish laptop vs desktop)
+if $IS_LAPTOP; then
+  sudo scutil --set ComputerName "Shun-Tagami-MBP"
+  sudo scutil --set LocalHostName "Shun-Tagami-MBP"
+else
+  sudo scutil --set ComputerName "Shun-Tagami-Mac-mini"
+  sudo scutil --set LocalHostName "Shun-Tagami-Mac-mini"
+fi
+
+###############################################################################
+# TextEdit                                                                    #
+###############################################################################
+
+# Use plain text mode for new documents
+defaults write com.apple.TextEdit RichText -int 0
+
+# Open and save files as UTF-8
+defaults write com.apple.TextEdit PlainTextEncoding -int 4
+defaults write com.apple.TextEdit PlainTextEncodingForWrite -int 4
+
+###############################################################################
+# Time Machine                                                                #
+###############################################################################
+
+# Prevent Time Machine from prompting to use new hard drives as backup volume
+defaults write com.apple.TimeMachine DoNotOfferNewDisksForBackup -bool true
+
+# Disable local Time Machine snapshots
+sudo tmutil disablelocal 2>/dev/null || true
+
+###############################################################################
+# Aqua Voice                                                                  #
+###############################################################################
+
+# Set hotkeys (default lock shortcut is different, override to ControlLeft+Space)
+AQUA_VOICE_SETTINGS="$HOME/Library/Application Support/Aqua Voice/settings.json"
+if [ -f "$AQUA_VOICE_SETTINGS" ]; then
+  python3 -c "
+import json, sys
+path = sys.argv[1]
+with open(path, 'r') as f:
+    settings = json.load(f)
+settings['hotkeys'] = [
+    {'keys': 'Fn', 'action': 'activate'},
+    {'keys': 'Meta+Control+KeyV', 'action': 'paste_last_transcript'},
+    {'keys': 'Escape', 'action': 'cancel'},
+    {'keys': 'ControlLeft+Space', 'action': 'lock'}
+]
+with open(path, 'w') as f:
+    json.dump(settings, f, indent=2)
+" "$AQUA_VOICE_SETTINGS"
+fi
 
 ###############################################################################
 # Kill affected applications                                                  #
