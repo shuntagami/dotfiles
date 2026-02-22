@@ -45,6 +45,6 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 fi
 
 # change shell
-sudo chsh -s $(which zsh) $USER
+sudo chsh -s $(which zsh) $(id -un)
 
 echo "Deploy complete! Run 'exec \$SHELL -l' to reload your shell."
