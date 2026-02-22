@@ -1,204 +1,153 @@
-#!/usr/bin/env ruby
+#!/usr/bin/env node
 
-require 'etc'
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
 
-# ANSI Colorize
-def color(name, str)
-  colors = {
-    :BLACK  => "0;30",
-    :RED    => "0;31",
-    :GREEN  => "0;32",
-    :BROWN  => "0;33",
-    :NAVY   => "0;34",
-    :PURPLE => "0;35",
-    :CYAN   => "0;36",
-    :GRAY   => "0;37",
-    :DIM    => "1;30",
-    :ORANGE => "1;31",
-    :LIME   => "1;32",
-    :YELLOW => "1;33",
-    :BLUE   => "1;34",
-    :PINK   => "1;35",
-    :AQUA   => "1;36",
-    :WHITE  => "1;37",
+function colorize(code, str) {
+  return `\x1b[${code}m${str}\x1b[0m`;
+}
+
+const COLORS = {
+  NAVY: '0;34', RED: '0;31', CYAN: '0;36', ORANGE: '1;31',
+  YELLOW: '1;33', PINK: '1;35', AQUA: '1;36',
+};
+
+// uid/gid name caches
+const uidCache = new Map();
+const gidCache = new Map();
+
+function getUsername(uid) {
+  if (!uidCache.has(uid)) {
+    try {
+      uidCache.set(uid, execSync(`id -un ${uid}`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim());
+    } catch { uidCache.set(uid, String(uid)); }
   }
-  code = colors[name]
-  "\x1b[#{code}m#{str}\x1b[0m"
-end
+  return uidCache.get(uid);
+}
 
-class Node
-  attr_reader :name, :stat
+function getGroupname(gid) {
+  if (!gidCache.has(gid)) {
+    try {
+      const out = execSync(`dscl . -search /Groups PrimaryGroupID ${gid}`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+      gidCache.set(gid, out.split(/\s+/)[0] || String(gid));
+    } catch { gidCache.set(gid, String(gid)); }
+  }
+  return gidCache.get(gid);
+}
 
-  def initialize(entry, opts)
-    @name = entry
-    @stat = File.lstat(entry)
-    @all = opts["a"]
-    @human = opts["h"]
-    @tab = opts["t"]
-  end
+function modeStr(mode) {
+  const bits = [0o400, 0o200, 0o100, 0o040, 0o020, 0o010, 0o004, 0o002, 0o001];
+  const chars = ['r', 'w', 'x', 'r', 'w', 'x', 'r', 'w', 'x'];
+  return bits.map((b, i) => (mode & b) ? chars[i] : '-').join('');
+}
 
-  def uid
-    Etc.getpwuid(@stat.uid).name
-  end
+function humanSize(bytes) {
+  if (bytes > 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + 'M';
+  if (bytes > 1024) return (bytes / 1024).toFixed(1) + 'K';
+  return bytes + 'B';
+}
 
-  def gid
-    Etc.getgrgid(@stat.gid).name
-  end
+function formatTime(date) {
+  const y = date.getFullYear();
+  const mo = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const h = String(date.getHours()).padStart(2, '0');
+  const mi = String(date.getMinutes()).padStart(2, '0');
+  const s = String(date.getSeconds()).padStart(2, '0');
+  return `${y}-${mo}-${d} ${h}:${mi}:${s}`;
+}
 
-  def dir?
-    @stat.directory?
-  end
+class Node {
+  constructor(fullPath, opts) {
+    this.fullPath = fullPath;
+    this.name = path.basename(fullPath);
+    this.stat = fs.lstatSync(fullPath);
+    this.opts = opts;
+  }
 
-  def file?
-    @stat.file?
-  end
+  get isDir() { return this.stat.isDirectory(); }
+  get isSym() { return this.stat.isSymbolicLink(); }
+  get isExec() { return !!(this.stat.mode & 0o111); }
+  get isPipe() { return this.stat.isFIFO(); }
+  get isSocket() { return this.stat.isSocket(); }
+  get isBlock() { return this.stat.isBlockDevice(); }
+  get isChar() { return this.stat.isCharacterDevice(); }
 
-  def exec?
-    @stat.executable_real?
-  end
+  get level() {
+    if (this.isDir) return 1;
+    if (this.isPipe) return 2;
+    if (this.isSocket) return 3;
+    if (this.isBlock) return 4;
+    if (this.isChar) return 5;
+    if (this.isSym) return 6;
+    if (this.isExec) return 7;
+    return 8;
+  }
 
-  def sym?
-    @stat.symlink?
-  end
+  get coloredName() {
+    if (this.isDir) return colorize(COLORS.NAVY, this.name);
+    if (this.isSym) return `${colorize(COLORS.CYAN, this.name)} -> ${fs.readlinkSync(this.fullPath)}`;
+    if (this.isExec) return colorize(COLORS.RED, this.name);
+    if (this.isPipe) return colorize(COLORS.ORANGE, this.name);
+    if (this.isSocket) return colorize(COLORS.YELLOW, this.name);
+    if (this.isBlock) return colorize(COLORS.PINK, this.name);
+    if (this.isChar) return colorize(COLORS.AQUA, this.name);
+    return this.name;
+  }
 
-  def pipe?
-    @stat.pipe?
-  end
+  toString() {
+    if (!this.opts.a) return this.coloredName;
 
-  def socket?
-    @stat.socket?
-  end
+    const size = this.opts.h
+      ? humanSize(this.stat.size).padStart(6)
+      : String(this.stat.size).padStart(10);
+    const sep = this.opts.t ? '\t' : ' ';
 
-  def block?
-    @stat.blockdev?
-  end
-
-  def char?
-    @stat.chardev?
-  end
-
-  # mode parser
-  def mode
-    mode = @stat.mode
-
-    str = ""
-
-    # user
-    str << ((mode & Integer("0b100000000") > 0) ? "r" : "-")
-    str << ((mode & Integer("0b010000000") > 0) ? "w" : "-")
-    str << ((mode & Integer("0b001000000") > 0) ? "x" : "-")
-
-    # group
-    str << ((mode & Integer("0b000100000") > 0) ? "r" : "-")
-    str << ((mode & Integer("0b000010000") > 0) ? "w" : "-")
-    str << ((mode & Integer("0b000001000") > 0) ? "x" : "-")
-
-    # other
-    str << ((mode & Integer("0b000000100") > 0) ? "r" : "-")
-    str << ((mode & Integer("0b000000010") > 0) ? "w" : "-")
-    str << ((mode & Integer("0b000000001") > 0) ? "x" : "-")
-
-    str
-  end
-
-  # human readable size
-  def size
-    size = @stat.size
-    if size > 1024*1024
-      size = size.quo(1024*1024).round(1).to_f.to_s + "M"
-    elsif size > 1024
-      size = size.quo(1024).round(1).to_f.to_s + "K"
-    else
-      size = size.to_s + "B"
-    end
-    size.rjust(6)
-  end
-
-  def mtime
-    @stat.mtime.strftime("%Y-%m-%d %H:%M:%S")
-  end
-
-  # output('-a', '-h' supported)
-  def to_s
-    name = File.basename(@name)
-    name = case
-           when dir?    then color(:NAVY, name)
-           when sym?    then "#{color(:CYAN, name)} -> #{File.readlink(@name)}"
-           when exec?   then color(:RED, name)
-           when pipe?   then color(:ORANGE, name)
-           when socket? then color(:YELLOW, name)
-           when block?  then color(:PINK, name)
-           when char?   then color(:AQUA, name)
-           else name
-           end
-
-    # no "-a" flag, return only filename
-    return name.to_s unless @all
-
-    # if "-h" flag, show human readable, otherwise row
-    size = @human ? self.size: @stat.size.to_s.rjust(10)
-
-    indent = @tab ? "\t": " "
-    [
-      mode,
-      uid,
-      gid,
+    return [
+      modeStr(this.stat.mode),
+      getUsername(this.stat.uid),
+      getGroupname(this.stat.gid),
       size,
-      mtime,
-      name
-    ].join(indent)
-  end
+      formatTime(this.stat.mtime),
+      this.coloredName,
+    ].join(sep);
+  }
 
-  # sort level by file type
-  def level
-    return 1 if dir?
-    return 2 if pipe?
-    return 3 if socket?
-    return 4 if block?
-    return 5 if char?
-    return 6 if sym?
-    return 7 if exec?
-    return 8 if file?
-  end
+  compareTo(other) {
+    if (this.level !== other.level) return this.level - other.level;
+    const a = this.name, b = other.name;
+    if (/^\d+$/.test(a) && /^\d+$/.test(b)) return Number(a) - Number(b);
+    return a < b ? -1 : a > b ? 1 : 0;
+  }
+}
 
-  # sort by file type and name
-  def <=>(target)
-    if level == target.level
-      if name.to_s.match(/^\d+$/) && target.name.to_s.match(/^\d+$/)
-        return name.to_s.to_i <=> target.name.to_s.to_i
-      end
-      return name <=> target.name
-    end
+// Parse args
+const opts = { a: false, h: false, t: false };
+const positional = [];
+for (const arg of process.argv.slice(2)) {
+  if (arg.startsWith('-') && arg !== '-') {
+    for (const c of arg.slice(1)) {
+      if (c in opts) opts[c] = true;
+    }
+  } else {
+    positional.push(arg);
+  }
+}
 
-    level <=> target.level
-  end
-end
+const target = positional[0] || '.';
+if (!fs.existsSync(target)) {
+  console.log(`${target}: No such file or directory`);
+  process.exit(1);
+}
 
-if __FILE__ == $0
-  require "pathname"
-  require "optparse"
-
-  opts = ARGV.getopts('aht')
-  target = ARGV[0] || "."
-
-  path = Pathname.new(target)
-
-  unless path.exist?
-    puts "#{target}: No such file or directory"
-    exit(1)
-  end
-
-  if path.directory?
-    # arg is directory
-    result = Dir.entries(target).reject {|entry|
-      entry == "." || entry == ".."
-    }.map {|entry|
-      Node.new(path.join(entry), opts)
-    }.sort
-
-    puts result
-  else
-    # arg is file
-    puts Node.new(path.join(), opts)
-  end
-end
+const stat = fs.lstatSync(target);
+if (stat.isDirectory()) {
+  const entries = fs.readdirSync(target)
+    .filter(e => e !== '.' && e !== '..')
+    .map(e => new Node(path.join(target, e), opts))
+    .sort((a, b) => a.compareTo(b));
+  entries.forEach(e => console.log(e.toString()));
+} else {
+  console.log(new Node(target, opts).toString());
+}

@@ -1,41 +1,37 @@
-#!/usr/bin/env ruby
+#!/usr/bin/env node
 
-input_file_path = ARGV[0]
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
 
-if input_file_path.nil? || input_file_path.empty?
-  puts "使用方法: txt-to-markmap <入力ファイル>"
-  exit 1
-end
+const inputFile = process.argv[2];
+if (!inputFile) {
+  console.log('使用方法: txt-to-markmap <入力ファイル>');
+  process.exit(1);
+}
 
-# ファイルのベース名を取得して.mdを拡張子として設定
-base_name = File.basename(input_file_path, ".*")
-output_file_path = "#{base_name}.md"
+const baseName = path.basename(inputFile, path.extname(inputFile));
+const outputFile = `${baseName}.md`;
 
-# 入力ファイルを読み込み
-content = File.readlines(input_file_path, chomp: true)
+const lines = fs.readFileSync(inputFile, 'utf8').split('\n');
+const output = [];
 
-# 出力ファイル用のバッファ
-output_content = []
+if (lines.length > 0) {
+  output.push(`# ${lines[0].trim()}`);
+}
 
-# 最初の行を処理
-if content.length > 0
-  first_line = content[0].strip
-  output_content << "# #{first_line}"
-end
+for (let i = 1; i < lines.length; i++) {
+  const line = lines[i];
+  const indentLevel = (line.match(/^\t*/)[0] || '').length;
+  const clean = line.trim();
+  if (clean) output.push(`${' '.repeat(indentLevel * 2)}- ${clean}`);
+}
 
-# 2行目以降を処理
-content[1..].each do |line|
-  # 行頭のタブを数える
-  indent_level = line.count("\t")
-  # タブを削除して行の内容を取得
-  clean_line = line.strip
-  # 箇条書きの行を作成 (レベルに応じてスペースと - を追加)
-  output_content << "#{' ' * indent_level * 2}- #{clean_line}"
-end
+const content = output.join('\n') + '\n';
+fs.writeFileSync(outputFile, content);
 
-# カレントディレクトリに.mdファイルを保存
-File.write(output_file_path, output_content.join("\n") + "\n")
+try {
+  execSync('pbcopy', { input: content });
+} catch {}
 
-IO.popen("pbcopy", "w") { |io| io.write(output_content.join("\n") + "\n") }
-
-puts "変換が完了しました。ファイル '#{output_file_path}' が作成されました。（クリップボードにコピー済み）"
+console.log(`変換が完了しました。ファイル '${outputFile}' が作成されました。（クリップボードにコピー済み）`);

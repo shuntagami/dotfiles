@@ -1,94 +1,57 @@
-#!/usr/bin/env ruby
+#!/usr/bin/env node
 
-HELP = <<~EOS
-  display os version
+const { execSync } = require('child_process');
+const fs = require('fs');
+
+const HELP = `  display os version
 
   $ os
   Ubuntu 17.04 zesty
-  macOS 26.0 Tahoe
-EOS
+  macOS 26.0 Tahoe`;
 
-if ARGV[0] == "-h"
-  puts HELP
-  exit 0
-end
+if (process.argv[2] === '-h') {
+  console.log(HELP);
+  process.exit(0);
+}
 
-uname = `uname`.strip
+const uname = execSync('uname', { encoding: 'utf8' }).trim();
 
-########################################
-# Linux
-########################################
-if uname =~ /Linux/
-  path = if File.exist?("/etc/lsb-release")
-           "/etc/lsb-release"
-         elsif File.exist?("/etc/os-release")
-           "/etc/os-release"
-         end
+if (/Linux/.test(uname)) {
+  const relPath = ['/etc/lsb-release', '/etc/os-release'].find(p => fs.existsSync(p));
+  if (relPath) {
+    const kv = {};
+    fs.readFileSync(relPath, 'utf8').split('\n')
+      .filter(l => !l.startsWith('#') && l.trim())
+      .forEach(l => {
+        const [k, ...rest] = l.split('=');
+        kv[k] = rest.join('=').replace(/^"|"$/g, '');
+      });
+    const product = kv.DISTRIB_ID || kv.NAME || 'Linux';
+    const version = kv.DISTRIB_RELEASE || kv.VERSION_ID || '';
+    const codename = kv.DISTRIB_CODENAME || kv.VERSION_CODENAME || '';
+    console.log(`${product} ${version}${codename ? ' ' + codename : ''}`);
+  } else {
+    console.log('Linux');
+  }
+  process.exit(0);
+}
 
-  if path
-    kv = File.read(path)
-             .lines
-             .reject { |e| e.start_with?("#") }
-             .map { |e| e.strip }
-             .reject(&:empty?)
-             .map { |e| e.split("=", 2) }
-             .to_h
+if (/Darwin/.test(uname)) {
+  const productName = execSync('sw_vers -productName', { encoding: 'utf8' }).trim();
+  const versionStr = execSync('sw_vers -productVersion', { encoding: 'utf8' }).trim();
+  const [major, minor] = versionStr.split('.').map(Number);
 
-    # 値の両端の引用符を外す
-    kv.transform_values! { |v| v&.gsub(/\A"|"\z/, "") }
+  const macosNames = { 26: 'Tahoe', 15: 'Sequoia', 14: 'Sonoma', 13: 'Ventura', 12: 'Monterey', 11: 'Big Sur' };
+  const mac10Names = { 15: 'Catalina', 14: 'Mojave', 13: 'High Sierra', 12: 'Sierra', 11: 'El Capitan', 10: 'Yosemite' };
 
-    product = kv["DISTRIB_ID"]     || kv["NAME"]     || "Linux"
-    version = kv["DISTRIB_RELEASE"]|| kv["VERSION_ID"] || ""
-    codename= kv["DISTRIB_CODENAME"] || kv["VERSION_CODENAME"] || ""
-    codename = codename.empty? ? "" : " #{codename}"
-    puts "#{product} #{version}#{codename}"
-  else
-    puts "Linux"
-  end
-  exit 0
-end
+  let name;
+  if (major >= 26) name = 'Tahoe';
+  else if (macosNames[major]) name = macosNames[major];
+  else if (major === 10) name = mac10Names[minor] || 'Unknown';
+  else name = 'Unknown';
 
-########################################
-# macOS
-########################################
-if uname =~ /Darwin/
-  product_name = `sw_vers -productName`.strip       # "macOS"
-  version_str  = `sw_vers -productVersion`.strip    # 例: "26.0.1", "15.1", "11.7.10"
+  console.log(`${productName} ${versionStr} ${name}`);
+  process.exit(0);
+}
 
-  # major/minor/patch を整数で取得（欠けたら 0 扱い）
-  parts = version_str.split(".").map!(&:to_i)
-  major, minor, patch = (parts + [0,0,0])[0,3]
-
-  # 11 以降は major で判定、10 系は minor で判定
-  macos_name =
-    if major >= 26
-      "Tahoe"
-    elsif major == 15
-      "Sequoia"
-    elsif major == 14
-      "Sonoma"
-    elsif major == 13
-      "Ventura"
-    elsif major == 12
-      "Monterey"
-    elsif major == 11
-      "Big Sur"
-    elsif major == 10
-      case minor
-      when 15 then "Catalina"
-      when 14 then "Mojave"
-      when 13 then "High Sierra"
-      when 12 then "Sierra"
-      when 11 then "El Capitan"
-      when 10 then "Yosemite"
-      else         "Unknown"
-      end
-    else
-      "Unknown"
-    end
-
-  puts "#{product_name} #{version_str} #{macos_name}"
-  exit 0
-end
-
-puts "Unknown OS"
+console.log('Unknown OS');

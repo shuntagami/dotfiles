@@ -10,10 +10,6 @@ if (-not (Test-Path -Path "$HOME\.editorconfig")) {
     New-Item -ItemType SymbolicLink -Path "$HOME\.editorconfig" -Target "$HOME\dotfiles\.editorconfig"
 }
 
-if (-not (Test-Path -Path "$HOME\.gemrc")) {
-    New-Item -ItemType SymbolicLink -Path "$HOME\.gemrc" -Target "$HOME\dotfiles\.gemrc"
-}
-
 if (-not (Test-Path -Path "$HOME\.gitconfig")) {
     New-Item -ItemType SymbolicLink -Path "$HOME\.gitconfig" -Target "$HOME\dotfiles\.gitconfig"
 }

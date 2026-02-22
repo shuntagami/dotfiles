@@ -1,46 +1,67 @@
-#!/usr/bin/env ruby
-require 'time'
+#!/usr/bin/env node
 
-cities = {
-  "東京 (日本)"       => "Asia/Tokyo",
-  "ハワイ (米国)"     => "Pacific/Honolulu",
-  "ニューヨーク (米国)" => "America/New_York",
-  "ロンドン (英国)"   => "Europe/London",
-  "パリ (仏国)"       => "Europe/Paris",
-  "シンガポール"      => "Asia/Singapore",
-  "シドニー (豪州)"   => "Australia/Sydney"
+const cities = [
+  ['東京 (日本)',          'Asia/Tokyo'],
+  ['ハワイ (米国)',        'Pacific/Honolulu'],
+  ['ニューヨーク (米国)',  'America/New_York'],
+  ['ロンドン (英国)',      'Europe/London'],
+  ['パリ (仏国)',          'Europe/Paris'],
+  ['シンガポール',         'Asia/Singapore'],
+  ['シドニー (豪州)',      'Australia/Sydney'],
+];
+
+const inputTime = process.argv[2];
+let baseDate;
+
+try {
+  if (inputTime) {
+    const [h, m] = inputTime.split(':').map(Number);
+    const now = new Date();
+    baseDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), h - 9, m || 0));
+    console.log(`--- 日本時間 [${inputTime}] を各都市に変換 ---`);
+  } else {
+    baseDate = new Date();
+    console.log('--- 世界の現在時刻 (日本との時差) ---');
+  }
+} catch {
+  console.log('エラー: 時間の形式が正しくありません (例: 15:00)');
+  process.exit(1);
 }
 
-begin
-  if ARGV[0]
-    # 入力された時間を日本時間(+09:00)として解釈し、UTCに変換しておく
-    base_time_utc = Time.parse("#{Time.now.strftime('%Y-%m-%d')} #{ARGV[0]} +0900").utc
-    puts "--- 日本時間 [#{ARGV[0]}] を各都市に変換 ---"
-  else
-    base_time_utc = Time.now.utc
-    puts "--- 世界の現在時刻 (日本との時差) ---"
-  end
-rescue ArgumentError
-  puts "エラー: 時間の形式が正しくありません (例: 15:00)"
-  exit
-end
+function getUtcOffsetHours(zone, date) {
+  const utcStr = date.toLocaleString('en-US', { timeZone: 'UTC' });
+  const tzStr = date.toLocaleString('en-US', { timeZone: zone });
+  return (new Date(tzStr) - new Date(utcStr)) / 3600000;
+}
 
-puts "%-18s | %-19s | %s" % ["都市", "現地時間", "日本との時差"]
-puts "-" * 60
+function displayWidth(str) {
+  let w = 0;
+  for (const ch of str) {
+    const c = ch.codePointAt(0);
+    w += (c >= 0x1100 && c <= 0x115F) || (c >= 0x2E80 && c <= 0x33BF) ||
+         (c >= 0x3400 && c <= 0x4DBF) || (c >= 0x4E00 && c <= 0x9FFF) ||
+         (c >= 0xF900 && c <= 0xFAFF) || (c >= 0xFF01 && c <= 0xFF60) ||
+         (c >= 0x3040 && c <= 0x309F) || (c >= 0x30A0 && c <= 0x30FF) ? 2 : 1;
+  }
+  return w;
+}
 
-cities.each do |name, zone|
-  # 1. タイムゾーンを切り替える
-  ENV['TZ'] = zone
+function padEndCJK(str, width) {
+  return str + ' '.repeat(Math.max(0, width - displayWidth(str)));
+}
 
-  # 2. UTC時間を、その都市のローカル時間に変換して取得
-  # Time.at(utc).localtime が ENV['TZ'] を参照します
-  local_time = Time.at(base_time_utc).localtime
+console.log(`${padEndCJK('都市', 18)}| ${padEndCJK('現地時間', 19)}| 日本との時差`);
+console.log('-'.repeat(60));
 
-  # 3. 日本(JST: +9時間 = 32400秒)との時差を計算
-  diff_hours = (local_time.utc_offset - 32400) / 3600.0
-  diff_str = diff_hours >= 0 ? "+#{diff_hours.to_i}h" : "#{diff_hours.to_i}h"
-
-  printf("%-17s | %s | %5s\n", name, local_time.strftime("%Y-%m-%d %H:%M"), diff_str)
-end
-
-ENV['TZ'] = nil
+for (const [name, zone] of cities) {
+  const fmt = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: zone,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+  const localStr = fmt.format(baseDate);
+  const offset = getUtcOffsetHours(zone, baseDate);
+  const diff = Math.round(offset - 9);
+  const diffStr = (diff >= 0 ? `+${diff}h` : `${diff}h`).padStart(5);
+  console.log(`${padEndCJK(name, 17)} | ${localStr} | ${diffStr}`);
+}

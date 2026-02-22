@@ -1,151 +1,120 @@
-#!/usr/bin/env ruby
-# frozen_string_literal: true
-#
-# --------------------------------------------
-# 概要:
-#   指定した Markdown/テキストファイルを下記ルールで整形し、
-#   **元ファイルを上書き保存** (一回目だけ差分が出る) します。
-#   以後同じファイルに対し何度実行しても差分が出ない **idempotent** 仕様。
-#
-#   1. ◎で始まる行 → **..** で太字化し、項目末に空行 1 行を追加
-#   2. 通常段落は文末の「。」, "!", "！" で必ず改行し、行末に
-#      ゼロ幅スペース + 半角スペース 2 つ (以下 LINE_BREAK) を付与
-#   3. Markdown が自動的に改行扱いする行 (見出し・リスト等) と、
-#      すでに LINE_BREAK が付与されている行は変更しない
-#   4. 引用符（「〜」や『〜』）内は改行せず、閉じ括弧までを 1 行として扱う
-#      （例: 「えー。おもろ。」 は 1 行）
-# --------------------------------------------
+#!/usr/bin/env node
+// frozen_string_literal equivalent: strings are immutable in JS by default
+//
+// 概要:
+//   指定した Markdown/テキストファイルを下記ルールで整形し、
+//   元ファイルを上書き保存 (一回目だけ差分が出る) します。
+//   以後同じファイルに対し何度実行しても差分が出ない idempotent 仕様。
 
-ZERO_WIDTH_SPACE    = "\u200B"
-LINE_BREAK          = "#{ZERO_WIDTH_SPACE}  "           # => "\u200B␣␣"
-LINE_BREAK_STRIPPED = LINE_BREAK.rstrip                 # "\u200B"
+const fs = require('fs');
+const path = require('path');
 
-SECTION_HEADER_RE   = %r{\A\s*(\*\*)?◎}.freeze
-SENTENCE_ENDS   = ["。", "!", "！"].freeze
-OPENING_QUOTES  = ["「", "『"].freeze
-CLOSING_QUOTES  = ["」", "』"].freeze
+const ZERO_WIDTH_SPACE = '\u200B';
+const LINE_BREAK = `${ZERO_WIDTH_SPACE}  `;
 
-AUTO_BREAK_PATTERNS = [
-  /^\s*$/,                # 空行
-  /^\s*#/,                # 見出し
-  /^\s*[-+*]\s+/,         # 箇条書き
-  /^\s*\d+\.\s+/,         # 番号付きリスト
-  /^\s*>/,                # 引用
-  /^\s*```/               # コードフェンス
-].freeze
+const SENTENCE_ENDS = ['。', '!', '！'];
+const OPENING_QUOTES = ['「', '『'];
+const CLOSING_QUOTES = ['」', '』'];
 
-# ------------------------------------------------
-# 判定系ヘルパ
-# ------------------------------------------------
+const AUTO_BREAK_PATTERNS = [
+  /^\s*$/,           // 空行
+  /^\s*#/,           // 見出し
+  /^\s*[-+*]\s+/,    // 箇条書き
+  /^\s*\d+\.\s+/,    // 番号付きリスト
+  /^\s*>/,           // 引用
+  /^\s*```/,         // コードフェンス
+];
 
-def auto_break_line?(line)
-  AUTO_BREAK_PATTERNS.any? { |re| re.match?(line) }
-end
+const SECTION_HEADER_RE = /^\s*(\*\*)?◎/;
 
-def already_formatted?(line)
-  line.end_with?(LINE_BREAK)
-end
+function autoBreakLine(line) {
+  return AUTO_BREAK_PATTERNS.some(re => re.test(line));
+}
 
-# ------------------------------------------------
-# フォーマッタ本体 (idempotent)
-# ------------------------------------------------
+function alreadyFormatted(line) {
+  return line.endsWith(LINE_BREAK);
+}
 
-def format_text(lines)
-  out = []
+function formatText(lines) {
+  const out = [];
 
-  lines.each_with_index do |raw, idx|
-    # 1) 既に整形済みならそのまま出力
-    if already_formatted?(raw)
-      out << raw
-      next
-    end
+  for (let idx = 0; idx < lines.length; idx++) {
+    const raw = lines[idx];
 
-    # 2) 空行 / 自動改行行はそのまま保持
-    line = raw.dup.rstrip
-    if auto_break_line?(line)
-      out << line
-      next
-    end
+    if (alreadyFormatted(raw)) {
+      out.push(raw);
+      continue;
+    }
 
-    # 3) ◎ セクションタイトル
-    if line.match?(SECTION_HEADER_RE)
-      # まだ太字が付いていなければ付与
-      line = "**#{line}**" unless line.start_with?("**")
-      # 改行コードを保証
-      line << LINE_BREAK unless already_formatted?(line)
-      out << line
-      # 次行が別のセクションなら空行を追加 (未整形のケースのみ)
-      if lines[idx + 1]&.start_with?("◎")
-        out << ""
-      end
-      next
-    end
+    const line = raw.trimEnd();
+    if (autoBreakLine(line)) {
+      out.push(line);
+      continue;
+    }
 
-    # 4) 通常段落 → 文単位に分割し LINE_BREAK 付与
-    buffer   = +""
-    in_quote = false
-    i        = 0
+    // ◎ セクションタイトル
+    if (SECTION_HEADER_RE.test(line)) {
+      let result = line;
+      if (!result.startsWith('**')) result = `**${result}**`;
+      if (!alreadyFormatted(result)) result += LINE_BREAK;
+      out.push(result);
+      if (lines[idx + 1] && lines[idx + 1].startsWith('◎')) {
+        out.push('');
+      }
+      continue;
+    }
 
-    while i < line.length
-      ch = line[i]
-      buffer << ch
+    // 通常段落 → 文単位に分割
+    let buffer = '';
+    let inQuote = false;
+    let i = 0;
 
-      # --------------------------------------------------------
-      #   引用符の開閉を検出
-      # --------------------------------------------------------
-      if OPENING_QUOTES.include?(ch)
-        in_quote = true
+    while (i < line.length) {
+      const ch = line[i];
+      buffer += ch;
 
-      elsif in_quote && CLOSING_QUOTES.include?(ch)
-        in_quote = false
-        # 引用全体を 1 文として flush
-        out << "#{buffer.strip}#{LINE_BREAK}"
-        buffer.clear
+      if (OPENING_QUOTES.includes(ch)) {
+        inQuote = true;
+      } else if (inQuote && CLOSING_QUOTES.includes(ch)) {
+        inQuote = false;
+        out.push(`${buffer.trim()}${LINE_BREAK}`);
+        buffer = '';
+      } else if (!inQuote && SENTENCE_ENDS.includes(ch)) {
+        if (i + 1 < line.length && CLOSING_QUOTES.includes(line[i + 1])) {
+          i++;
+          buffer += line[i];
+        }
+        out.push(`${buffer.trim()}${LINE_BREAK}`);
+        buffer = '';
+      }
 
-      # --------------------------------------------------------
-      #   句点・感嘆符で改行（※引用内は除外）
-      # --------------------------------------------------------
-      elsif !in_quote && SENTENCE_ENDS.include?(ch)
-        # 句読点直後に閉じ括弧が続くならまとめて飲み込む
-        if (i + 1) < line.length && CLOSING_QUOTES.include?(line[i + 1])
-          i += 1
-          buffer << line[i]
-        end
+      i++;
+    }
 
-        out << "#{buffer.strip}#{LINE_BREAK}"
-        buffer.clear
-      end
+    if (buffer.trim()) {
+      out.push(`${buffer.trim()}${LINE_BREAK}`);
+    }
+  }
 
-      i += 1
-    end
+  return out.join('\n');
+}
 
-    out << "#{buffer.strip}#{LINE_BREAK}" unless buffer.strip.empty?
-  end
+// CLI
+const filePath = process.argv[2];
+if (!filePath) {
+  console.error(`Usage: node ${path.basename(__filename)} INPUT_FILE`);
+  process.exit(1);
+}
 
-  out.join("\n")
-end
+if (!fs.existsSync(filePath)) {
+  console.error(`File not found: ${filePath}`);
+  process.exit(1);
+}
 
-# ------------------------------------------------
-# CLI / main
-# ------------------------------------------------
+const originalLines = fs.readFileSync(filePath, 'utf8').split('\n');
+// Remove trailing empty element from split if file ends with newline
+if (originalLines[originalLines.length - 1] === '') originalLines.pop();
 
-def main
-  unless ARGV.size == 1
-    warn "Usage: ruby #{File.basename(__FILE__)} INPUT_FILE"
-    exit 1
-  end
-
-  path = ARGV.first
-  unless File.exist?(path)
-    warn "File not found: #{path}"
-    exit 1
-  end
-
-  original_lines = File.readlines(path, chomp: true, encoding: "UTF-8")
-  formatted_text = format_text(original_lines)
-
-  File.write(path, formatted_text, encoding: "UTF-8")
-  puts "Formatted (idempotent) → #{path}"
-end
-
-main if $PROGRAM_NAME == __FILE__
+const formatted = formatText(originalLines);
+fs.writeFileSync(filePath, formatted, 'utf8');
+console.log(`Formatted (idempotent) → ${filePath}`);

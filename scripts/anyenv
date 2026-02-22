@@ -9,7 +9,6 @@ DEST=$DOTFILES/pkg/.anyenv
 export ANYENV_ROOT=$DEST
 
 NODENV_ROOT=$DEST/envs/nodenv
-RBENV_ROOT=$DEST/envs/rbenv
 
 has () {
   type "$1" > /dev/null 2>&1
@@ -36,14 +35,6 @@ install-anyenv() {
     [ ! -e "${NODENV_ROOT}"/default-packages ] && ln -sf "${DOTFILES}"/misc/default-packages "${NODENV_ROOT}"/.
   fi
 
-  if ! has "${RBENV_ROOT}"/bin/rbenv; then
-    "${DEST}"/bin/anyenv install rbenv
-
-    # rbenv-default-gems
-    [ ! -d "${RBENV_ROOT}"/plugins/rbenv-default-gems ] && git clone -q https://github.com/rbenv/rbenv-default-gems.git "${RBENV_ROOT}"/plugins/rbenv-default-gems
-    [ ! -e "${RBENV_ROOT}"/default-gems ] && ln -sf "${DOTFILES}"/misc/default-gems "${RBENV_ROOT}"/.
-  fi
-
   # Install Node version from .node-version and set as global
   if [ -f "${DOTFILES}/.node-version" ]; then
     NODE_VERSION=$(cat "${DOTFILES}/.node-version")
@@ -51,14 +42,5 @@ install-anyenv() {
       "${NODENV_ROOT}"/bin/nodenv install "${NODE_VERSION}"
     fi
     "${NODENV_ROOT}"/bin/nodenv global "${NODE_VERSION}"
-  fi
-
-  # Install Ruby version from .ruby-version and set as global
-  if [ -f "${DOTFILES}/.ruby-version" ]; then
-    RUBY_VERSION=$(cat "${DOTFILES}/.ruby-version")
-    if [ ! -d "${RBENV_ROOT}/versions/${RUBY_VERSION}" ]; then
-      "${RBENV_ROOT}"/bin/rbenv install "${RUBY_VERSION}"
-    fi
-    "${RBENV_ROOT}"/bin/rbenv global "${RUBY_VERSION}"
   fi
 }

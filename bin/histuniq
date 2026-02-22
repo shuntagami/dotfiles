@@ -1,45 +1,44 @@
-#!/usr/bin/env ruby
+#!/usr/bin/env node
 
-require "nkf"
+const fs = require('fs');
+const path = require('path');
 
-filename = "#{ENV["HOME"]}/.zsh_history"
-lines = []
+const filename = path.join(process.env.HOME, '.zsh_history');
+const lines = [];
 
-File.foreach(filename) do |line|
-  begin
-    if line == "\n"
-      # NOP
-    elsif line.size > 300
-      # NOP
-    elsif line.count("'") % 2 == 1
-      # NOP
-    elsif line.count('"') % 2 == 1
-      # NOP
-    elsif line.count("`") % 2 == 1
-      # NOP
-    elsif NKF.guess(line) == NKF::ASCII
-      lines << line.strip.gsub(/ +/, " ")
-    else
-      puts "ignored: #{line}"
-    end
-  rescue
-    puts "ignored: #{line}"
-  end
-end
-
-uniqed = lines.uniq
-
-blacklist = uniqed.select{|line|
-  line.start_with?("D=")
+const raw = fs.readFileSync(filename, 'utf8').split('\n');
+for (const rawLine of raw) {
+  try {
+    const line = rawLine;
+    if (line === '') continue;
+    if (line.length > 300) continue;
+    if ((line.split("'").length - 1) % 2 === 1) continue;
+    if ((line.split('"').length - 1) % 2 === 1) continue;
+    if ((line.split('`').length - 1) % 2 === 1) continue;
+    // ASCII check (equivalent to NKF.guess == ASCII)
+    if (!/^[\x00-\x7F]*$/.test(line)) {
+      console.log(`ignored: ${line}`);
+      continue;
+    }
+    lines.push(line.trim().replace(/ +/g, ' '));
+  } catch {
+    console.log(`ignored: ${rawLine}`);
+  }
 }
 
-filtered = (uniqed - blacklist).unshift(blacklist.last)
+const uniqed = [...new Set(lines)];
 
-puts "log line: #{filtered.size}"
+const blacklist = uniqed.filter(l => l.startsWith('D='));
+const filtered = uniqed.filter(l => !l.startsWith('D='));
+if (blacklist.length > 0) {
+  filtered.unshift(blacklist[blacklist.length - 1]);
+}
 
-result = filtered.join("\n").concat("\n")
+console.log(`log line: ${filtered.length}`);
 
-File.write(filename, result)
-puts "#{filename} saved"
-File.write("#{filename}.bk", result)
-puts "#{filename}.bk saved"
+const result = filtered.join('\n') + '\n';
+
+fs.writeFileSync(filename, result);
+console.log(`${filename} saved`);
+fs.writeFileSync(`${filename}.bk`, result);
+console.log(`${filename}.bk saved`);

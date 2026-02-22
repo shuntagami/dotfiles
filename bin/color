@@ -1,10 +1,8 @@
-#!/usr/bin/env ruby
+#!/usr/bin/env node
 
-########################################
-# HELP
-########################################
-HELP=<<EOS
-coloring every kind of file roughly
+const readline = require('readline');
+
+const HELP = `coloring every kind of file roughly
 
 \\e[0;30m
 str
@@ -12,155 +10,71 @@ str
 
 
 # Normal             # Bright FG       # Bright BG
-\e[0;30m BLACK  \e[0m = "0;30"   \e[0;90m BLACK  \e[0m = "0;90"  \e[0;100m BLACK  \e[0m = "0;100"
-\e[0;31m RED    \e[0m = "0;31"   \e[0;91m RED    \e[0m = "0;91"  \e[0;101m RED    \e[0m = "0;101"
-\e[0;32m GREEN  \e[0m = "0;32"   \e[0;92m GREEN  \e[0m = "0;92"  \e[0;102m GREEN  \e[0m = "0;102"
-\e[0;33m BROWN  \e[0m = "0;33"   \e[0;93m BROWN  \e[0m = "0;93"  \e[0;103m BROWN  \e[0m = "0;103"
-\e[0;34m NAVY   \e[0m = "0;34"   \e[0;94m NAVY   \e[0m = "0;94"  \e[0;104m NAVY   \e[0m = "0;104"
-\e[0;35m PURPLE \e[0m = "0;35"   \e[0;95m PURPLE \e[0m = "0;95"  \e[0;105m PURPLE \e[0m = "0;105"
-\e[0;36m CYAN   \e[0m = "0;36"   \e[0;96m CYAN   \e[0m = "0;96"  \e[0;106m CYAN   \e[0m = "0;106"
-\e[0;37m GRAY   \e[0m = "0;37"   \e[0;97m GRAY   \e[0m = "0;97"  \e[0;107m GRAY   \e[0m = "0;107"
-
-
-# Bold               # Bright FG       # Bright BG
-\e[1;30m DIM    \e[0m = "1;30"   \e[1;90m DIM    \e[0m = "1;90"  \e[1;100m BLACK  \e[0m = "1;100"
-\e[1;31m ORANGE \e[0m = "1;31"   \e[1;91m ORANGE \e[0m = "1;91"  \e[1;101m RED    \e[0m = "1;101"
-\e[1;32m LIME   \e[0m = "1;32"   \e[1;92m LIME   \e[0m = "1;92"  \e[1;102m GREEN  \e[0m = "1;102"
-\e[1;33m YELLOW \e[0m = "1;33"   \e[1;93m YELLOW \e[0m = "1;93"  \e[1;103m BROWN  \e[0m = "1;103"
-\e[1;34m BLUE   \e[0m = "1;34"   \e[1;94m BLUE   \e[0m = "1;94"  \e[1;104m NAVY   \e[0m = "1;104"
-\e[1;35m PINK   \e[0m = "1;35"   \e[1;95m PINK   \e[0m = "1;95"  \e[1;105m PURPLE \e[0m = "1;105"
-\e[1;36m AQUA   \e[0m = "1;36"   \e[1;96m AQUA   \e[0m = "1;96"  \e[1;106m CYAN   \e[0m = "1;106"
-\e[1;37m WHITE  \e[0m = "1;37"   \e[1;97m WHITE  \e[0m = "1;97"  \e[1;107m GRAY   \e[0m = "1;107"
-
-
-# SGR (Select Graphic Rendition)
-\e[0;31m Reset        \e[0m = "0;31"
-\e[1;31m Bold         \e[0m = "1;31"
-\e[2;31m Faint        \e[0m = "2;31"
-\e[3;31m Italic       \e[0m = "3;31"
-\e[4;31m Underline    \e[0m = "4;31"
-\e[5;31m Slow Blink   \e[0m = "5;31"
-\e[6;31m Rapid Blink  \e[0m = "6;31"
-\e[7;31m ReverseVideo \e[0m = "7;31"
-\e[8;31m Conceal      \e[0m = "8;31"
-\e[9;31m Crossed Out  \e[0m = "9;31"
+\x1b[0;30m BLACK  \x1b[0m = "0;30"   \x1b[0;90m BLACK  \x1b[0m = "0;90"  \x1b[0;100m BLACK  \x1b[0m = "0;100"
+\x1b[0;31m RED    \x1b[0m = "0;31"   \x1b[0;91m RED    \x1b[0m = "0;91"  \x1b[0;101m RED    \x1b[0m = "0;101"
+\x1b[0;32m GREEN  \x1b[0m = "0;32"   \x1b[0;92m GREEN  \x1b[0m = "0;92"  \x1b[0;102m GREEN  \x1b[0m = "0;102"
+\x1b[0;33m BROWN  \x1b[0m = "0;33"   \x1b[0;93m BROWN  \x1b[0m = "0;93"  \x1b[0;103m BROWN  \x1b[0m = "0;103"
+\x1b[0;34m NAVY   \x1b[0m = "0;34"   \x1b[0;94m NAVY   \x1b[0m = "0;94"  \x1b[0;104m NAVY   \x1b[0m = "0;104"
+\x1b[0;35m PURPLE \x1b[0m = "0;35"   \x1b[0;95m PURPLE \x1b[0m = "0;95"  \x1b[0;105m PURPLE \x1b[0m = "0;105"
+\x1b[0;36m CYAN   \x1b[0m = "0;36"   \x1b[0;96m CYAN   \x1b[0m = "0;96"  \x1b[0;106m CYAN   \x1b[0m = "0;106"
+\x1b[0;37m GRAY   \x1b[0m = "0;37"   \x1b[0;97m GRAY   \x1b[0m = "0;97"  \x1b[0;107m GRAY   \x1b[0m = "0;107"
 
 
 $ cat access.log | color          # all
-$ cat access.log | color keyword  # only keyword
-EOS
+$ cat access.log | color keyword  # only keyword`;
 
-if ARGV[0] == "-h" || STDIN.isatty
-  puts HELP
-  exit 0
-end
+if (process.argv[2] === '-h' || process.stdin.isTTY) {
+  console.log(HELP);
+  process.exit(0);
+}
 
+const LINE_COLORS = [
+  '1;91', '0;96', '1;92', '0;95', '1;93', '0;94', '1;95', '0;92',
+  '1;94', '0;93', '1;96', '0;91', '1;97', '0;97', '1;90', '0;90',
+];
 
-########################################
-# Main
-########################################
-BLACK  = "0;90"
-RED    = "0;91"
-GREEN  = "0;92"
-BROWN  = "0;93"
-NAVY   = "0;94"
-PURPLE = "0;95"
-CYAN   = "0;96"
-GRAY   = "0;97"
-DIM    = "1;90"
-ORANGE = "1;91"
-LIME   = "1;92"
-YELLOW = "1;93"
-BLUE   = "1;94"
-PINK   = "1;95"
-AQUA   = "1;96"
-WHITE  = "1;97"
+const WORD_COLORS = ['1;91', '1;92', '1;93', '1;95', '1;94', '1;96', '1;90'];
 
-@LineColor = [
-  ORANGE,   CYAN,
-  LIME,     PURPLE,
-  YELLOW,   NAVY,
-  PINK,     GREEN,
-  BLUE,     BROWN,
-  AQUA,     RED,
-  WHITE,    GRAY,
-  DIM,      BLACK,
-]
+function colorize(str, code) {
+  return `\x1b[${code}m${str}\x1b[0m`;
+}
 
-@WordColor = [
-  ORANGE,
-  LIME,
-  YELLOW,
-  PINK,
-  BLUE,
-  AQUA,
-  DIM,
-]
+function colorLine(line) {
+  const tokens = [];
+  let token = '';
+  let state = '';
 
-def color(src, color)
-  head = "\e[#{color}m"
-  tail = "\e[0m"
-  "#{head}#{src}#{tail}"
-end
-
-def color_line(line)
-  splitted = []
-  token = ""
-  state = ""
-  line.chars {|c|
-    token << c
-    case c
-    when '"'
-      if state == ""
-        state = '"'
-      elsif state == '"'
-        splitted << token
-        token = ""
-        state = ""
-      end
-    when "[", "("
-      if state == '"'
-        next
-      end
-      state = c
-    when "]", ")"
-      if state == '"'
-        next
-      end
-      splitted << token
-      token = ""
-      state = ""
-    when " ", "\t"
-      if ["[", "(", '"'].include?(state)
-        next
-      end
-
-      splitted << token
-      token = ""
-    end
-  }
-
-  splitted << token
-
-  splitted
-    .zip(@LineColor)
-    .map{|x| color(x[0], x[1])}
-    .join('')
-end
-
-args = ARGV
-while line = STDIN.gets
-  if args.size > 0
-    args.zip(@WordColor).map{|arg|
-      word = arg[0]
-      code = arg[1]
-      reg = Regexp.compile(word, Regexp::IGNORECASE)
-      line = line.gsub(reg) {|match|
-        color(match, code)
-      }
+  for (const c of line) {
+    token += c;
+    if (c === '"') {
+      if (state === '') { state = '"'; }
+      else if (state === '"') { tokens.push(token); token = ''; state = ''; }
+    } else if ((c === '[' || c === '(') && state !== '"') {
+      state = c;
+    } else if ((c === ']' || c === ')') && state !== '"') {
+      tokens.push(token); token = ''; state = '';
+    } else if ((c === ' ' || c === '\t') && !['[', '(', '"'].includes(state)) {
+      tokens.push(token); token = '';
     }
-    STDOUT.print line
-  else
-    STDOUT.print color_line(line)
-  end
-end
+  }
+  if (token) tokens.push(token);
+
+  return tokens.map((t, i) => colorize(t, LINE_COLORS[i % LINE_COLORS.length])).join('');
+}
+
+const keywords = process.argv.slice(2);
+const rl = readline.createInterface({ input: process.stdin });
+
+rl.on('line', line => {
+  if (keywords.length > 0) {
+    let result = line;
+    keywords.forEach((word, i) => {
+      const re = new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      const code = WORD_COLORS[i % WORD_COLORS.length];
+      result = result.replace(re, match => colorize(match, code));
+    });
+    process.stdout.write(result + '\n');
+  } else {
+    process.stdout.write(colorLine(line) + '\n');
+  }
+});

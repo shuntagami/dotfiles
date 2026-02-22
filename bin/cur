@@ -1,82 +1,64 @@
-#!/usr/bin/env ruby
+#!/usr/bin/env node
 
-# frozen_string_literal: true
+const https = require('https');
 
-require 'json'
-require 'net/http'
-require 'uri'
-
-HELP = <<~TEXT
-  Usage: ./cur FROM [TO] AMOUNT
+const HELP = `  Usage: cur FROM [TO] AMOUNT
          (TO を省略すると JPY が既定)
 
   Example:
-      ./cur USD 100         # USD → JPY
-      ./cur EUR GBP 250     # EUR → GBP
-      ./cur AUD USD 300
-TEXT
+      cur USD 100         # USD → JPY
+      cur EUR GBP 250     # EUR → GBP
+      cur AUD USD 300`;
 
-#------------------------------------------------------------
-# 引数パース
-#------------------------------------------------------------
-args = ARGV
-if args.empty? || %w[-h --help].include?(args[0])
-  warn HELP
-  exit 1
-end
+const args = process.argv.slice(2);
+if (!args.length || args[0] === '-h' || args[0] === '--help') {
+  console.error(HELP);
+  process.exit(1);
+}
 
-case args.size
-when 3
-  from, to, amount = args
-when 2
-  from, amount = args
-  to = 'JPY'
-else
-  warn HELP
-  exit 1
-end
+let from, to, amount;
+if (args.length === 3) {
+  [from, to, amount] = args;
+} else if (args.length === 2) {
+  [from, amount] = args;
+  to = 'JPY';
+} else {
+  console.error(HELP);
+  process.exit(1);
+}
 
-amount = Float(amount) rescue (warn 'AMOUNT には数値を指定してください'; exit 1)
+amount = parseFloat(amount);
+if (isNaN(amount)) {
+  console.error('AMOUNT には数値を指定してください');
+  process.exit(1);
+}
+from = from.toUpperCase();
+to = to.toUpperCase();
 
-from = from.upcase
-to   = to.upcase
+function formatNumber(n) {
+  const s = n % 1 === 0 ? String(n) : n.toFixed(2);
+  const [int, dec] = s.split('.');
+  const formatted = int.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return dec ? `${formatted}.${dec}` : formatted;
+}
 
-#------------------------------------------------------------
-# 3 桁区切りフォーマッタ
-#   1234.5  -> "1,234.5"
-#   1000    -> "1,000"
-#------------------------------------------------------------
-def format_number(n)
-  s = format('%.2f', n).sub(/\.00$/, '')        # 小数 0.00 は削除
-  s.reverse.gsub(/(\d{3})(?=\d)/, '\\1,').reverse
-end
-
-#------------------------------------------------------------
-# 為替レート取得
-#------------------------------------------------------------
-def fetch_rate(base, target)
-  uri = URI("https://api.exchangerate-api.com/v4/latest/#{base}")
-  res = Net::HTTP.get_response(uri)
-
-  unless res.is_a?(Net::HTTPSuccess)
-    warn '為替レートの取得に失敗しました'
-    exit 1
-  end
-
-  rate = JSON.parse(res.body)['rates'][target]
-  unless rate
-    warn "Currency code '#{target}' not found."
-    exit 1
-  end
-  rate
-end
-
-#------------------------------------------------------------
-# 変換実行
-#------------------------------------------------------------
-rate   = fetch_rate(from, to)
-result = (amount * rate).round(2)
-
-puts "#{format_number(amount)} #{from} is approximately " \
-     "#{format_number(result)} #{to}."
-
+https.get(`https://api.exchangerate-api.com/v4/latest/${from}`, res => {
+  let data = '';
+  res.on('data', chunk => data += chunk);
+  res.on('end', () => {
+    if (res.statusCode !== 200) {
+      console.error('為替レートの取得に失敗しました');
+      process.exit(1);
+    }
+    const rate = JSON.parse(data).rates[to];
+    if (!rate) {
+      console.error(`Currency code '${to}' not found.`);
+      process.exit(1);
+    }
+    const result = Math.round(amount * rate * 100) / 100;
+    console.log(`${formatNumber(amount)} ${from} is approximately ${formatNumber(result)} ${to}.`);
+  });
+}).on('error', () => {
+  console.error('為替レートの取得に失敗しました');
+  process.exit(1);
+});
