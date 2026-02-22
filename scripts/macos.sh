@@ -502,7 +502,7 @@ sudo scutil --set LocalHostName "Shun-Tagami-MacBook"
 ###############################################################################
 
 # Load preferences from custom folder
-defaults write com.googlecode.iterm2 PrefsCustomFolder -string "~/dotfiles/misc"
+defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$HOME/dotfiles/misc"
 defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
 
 ###############################################################################
