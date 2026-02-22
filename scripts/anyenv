@@ -43,4 +43,22 @@ install-anyenv() {
     [ ! -d "${RBENV_ROOT}"/plugins/rbenv-default-gems ] && git clone -q https://github.com/rbenv/rbenv-default-gems.git "${RBENV_ROOT}"/plugins/rbenv-default-gems
     [ ! -e "${RBENV_ROOT}"/default-gems ] && ln -sf "${DOTFILES}"/misc/default-gems "${RBENV_ROOT}"/.
   fi
+
+  # Install Node version from .node-version and set as global
+  if [ -f "${DOTFILES}/.node-version" ]; then
+    NODE_VERSION=$(cat "${DOTFILES}/.node-version")
+    if [ ! -d "${NODENV_ROOT}/versions/${NODE_VERSION}" ]; then
+      "${NODENV_ROOT}"/bin/nodenv install "${NODE_VERSION}"
+    fi
+    "${NODENV_ROOT}"/bin/nodenv global "${NODE_VERSION}"
+  fi
+
+  # Install Ruby version from .ruby-version and set as global
+  if [ -f "${DOTFILES}/.ruby-version" ]; then
+    RUBY_VERSION=$(cat "${DOTFILES}/.ruby-version")
+    if [ ! -d "${RBENV_ROOT}/versions/${RUBY_VERSION}" ]; then
+      "${RBENV_ROOT}"/bin/rbenv install "${RUBY_VERSION}"
+    fi
+    "${RBENV_ROOT}"/bin/rbenv global "${RUBY_VERSION}"
+  fi
 }
