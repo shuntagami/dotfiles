@@ -23,14 +23,36 @@ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts
 
 ## 🧩 これは何？
 
-エンジニアの開発環境には、何十ものツール・設定・カスタマイズが詰まっています。
-新しいマシンをセットアップするたびに、それを一から手作業でやり直す ── そんな時代は終わりです。
+macOSやLinuxでは、`.zshrc` `.gitconfig`のように「**.**」から始まる設定ファイルが、環境のあらゆる挙動を決めています。
+これらを総称して**dotfiles**と呼びます。
 
-このdotfilesは、**たった1つのコマンドで、自分の理想の開発環境を丸ごと再現する**仕組みです。
+シェル、エディタ、Git、キーボード配列 ── 日々使い込んで育てた設定を、
+マシンを買い替えるたびに一から手作業でやり直す ── そんな時代は終わりです。
+
+このリポジトリは、**たった1つのコマンドで、自分の理想の環境を丸ごと再現する**仕組みです。
 
 ---
 
 ## ✨ 特長
+
+<div align="center">
+
+普段使いのアプリも、開発ツールも、まとめて一発でインストール。
+
+![Google Chrome](https://img.shields.io/badge/Google_Chrome-4285F4?style=flat-square&logo=google-chrome&logoColor=white)
+![Slack](https://img.shields.io/badge/Slack-4A154B?style=flat-square&logo=slack&logoColor=white)
+![Zoom](https://img.shields.io/badge/Zoom-0B5CFF?style=flat-square&logo=zoom&logoColor=white)
+![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat-square&logo=discord&logoColor=white)
+![Spotify](https://img.shields.io/badge/Spotify-1DB954?style=flat-square&logo=spotify&logoColor=white)
+![Dropbox](https://img.shields.io/badge/Dropbox-0061FF?style=flat-square&logo=dropbox&logoColor=white)
+![Figma](https://img.shields.io/badge/Figma-F24E1E?style=flat-square&logo=figma&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
+![Adobe Acrobat](https://img.shields.io/badge/Adobe_Acrobat-EC1C24?style=flat-square&logo=adobe-acrobat-reader&logoColor=white)
+![ChatGPT](https://img.shields.io/badge/ChatGPT-74aa9c?style=flat-square&logo=openai&logoColor=white)
+![Claude](https://img.shields.io/badge/Claude-D4A27F?style=flat-square&logo=anthropic&logoColor=white)
+![GIMP](https://img.shields.io/badge/GIMP-5C5543?style=flat-square&logo=gimp&logoColor=white)
+
+</div>
 
 <table>
 <tr>
@@ -47,7 +69,7 @@ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts
 ### 🖥️ macOSでもUbuntuでも動く
 
 OSの違いを自動で検知し、それぞれに最適なセットアップを実行。
-**WSL2にも対応。** 1つのリポジトリで、どの環境でも同じ体験を。
+**WSL2にも対応。**1つのリポジトリで、どの環境でも同じ体験を。
 
 </td>
 </tr>
@@ -57,7 +79,7 @@ OSの違いを自動で検知し、それぞれに最適なセットアップを
 ### 🔧 25以上の自作ユーティリティ
 
 PDF圧縮、通貨換算、URLデコード、git diffへの行番号付与など、
-「あったら便利」なツールが `bin/` に揃っています。
+「あったら便利」なツールが`bin/`に揃っています。
 
 </td>
 <td width="50%" valign="top">
@@ -74,15 +96,15 @@ rebase、worktree連携まで、Gitが手足のように動きます。
 
 ### 🍎 macOSを隅々まで自動設定
 
-ダークモード、トラックパッド、キーボード、Finder、Dock、Safari ──
-**22KBに及ぶ設定スクリプト**が、macOSを一瞬で仕上げます。
+Finder、Dock、Safari、トラックパッド、キーボードなど
+**数十項目のシステム設定**を一括で適用します。
 
 </td>
 <td width="50%" valign="top">
 
 ### ⌨️ キーボード操作を極限まで最適化
 
-Karabiner-Elements + Hammerspoon による高度なキーリマップと自動化。
+Karabiner-Elements + Hammerspoonによる高度なキーリマップと自動化。
 ウィンドウ操作もショートカットも、**すべてキーボードで完結。**
 
 </td>
@@ -106,8 +128,8 @@ Claude Desktop、Cursor、MCPサーバー設定を含む、**最新のAIツー�
 
 | OS | 必要なもの |
 |:---|:---|
-| 🍎 macOS | XCode Command Line Tools（`xcode-select --install` で取得） |
-| 🐧 Ubuntu | 20.04 以上 |
+| 🍎 macOS | XCode Command Line Tools（`xcode-select --install`で取得） |
+| 🐧 Ubuntu | 20.04以上 |
 
 ### セットアップ（2ステップで完了）
 
@@ -133,7 +155,7 @@ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts
 ~/dotfiles/scripts/install-packages.sh  # パッケージのインストール（Homebrew, anyenvなど）
 ~/dotfiles/scripts/deploy.sh            # dotfilesのシンボリックリンク作成
 ~/dotfiles/scripts/macos.sh             # macOSシステム設定の適用
-~/dotfiles/vscode/setup.sh              # VSCode / Cursor のセットアップ
+~/dotfiles/vscode/setup.sh              # VSCode/Cursorのセットアップ
 ```
 
 </details>
@@ -161,7 +183,7 @@ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts
 
 | 原則 | 説明 |
 |:---|:---|
-| **宣言的** | Brewfile や設定ファイルに書かれた状態が、そのまま環境の正解になる |
+| **宣言的** | Brewfileや設定ファイルに書かれた状態が、そのまま環境の正解になる |
 | **冪等** | 何度実行しても同じ結果になる。壊れない |
 | **モジュラー** | 全体を一括で実行することも、個別に実行することもできる |
 | **クロスプラットフォーム** | OSの差異はスクリプトが吸収する |
