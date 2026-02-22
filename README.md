@@ -30,7 +30,7 @@ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts
 
 ---
 
-## ✨ 何がすごいのか
+## ✨ 特長
 
 <table>
 <tr>
