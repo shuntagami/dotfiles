@@ -636,6 +636,48 @@ with open(path, 'w') as f:
 fi
 
 ###############################################################################
+# Clipy                                                                       #
+###############################################################################
+
+# Set hotkeys (Magnet.KeyCombo format via NSKeyedArchiver)
+# History: Cmd+Option+V (keyCode=9, modifiers=2304)
+# Snippet: Cmd+Shift+B (keyCode=11, modifiers=768)
+python3 -c "
+import plistlib, subprocess
+
+def make_keycombo(key_code, modifiers):
+    return plistlib.dumps({
+        '\$version': 100000,
+        '\$archiver': 'NSKeyedArchiver',
+        '\$top': {'root': plistlib.UID(1)},
+        '\$objects': [
+            '\$null',
+            {
+                '\$class': plistlib.UID(2),
+                'modifiers': modifiers,
+                'keyCode': key_code,
+                'doubledModifiers': False,
+            },
+            {
+                '\$classname': 'Magnet.KeyCombo',
+                '\$classes': ['Magnet.KeyCombo', 'NSObject'],
+            },
+        ],
+    }, fmt=plistlib.FMT_BINARY)
+
+# Write each hotkey
+for key, kc, mod in [
+    ('kCPYHotKeyHistoryKeyCombo', 9, 2304),   # Cmd+Option+V
+    ('kCPYHotKeySnippetKeyCombo', 11, 768),    # Cmd+Shift+B
+]:
+    data = make_keycombo(kc, mod)
+    subprocess.run(['defaults', 'write', 'com.clipy-app.Clipy', key, '-data', data.hex()], check=True)
+"
+
+# Max history size
+defaults write com.clipy-app.Clipy kCPYPrefMaxHistorySizeKey -int 50
+
+###############################################################################
 # Login items (auto-start on boot)                                            #
 ###############################################################################
 
