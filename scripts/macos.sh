@@ -498,14 +498,6 @@ sudo scutil --set ComputerName "Shun-Tagami-MacBook"
 sudo scutil --set LocalHostName "Shun-Tagami-MacBook"
 
 ###############################################################################
-# iTerm2                                                                      #
-###############################################################################
-
-# Load preferences from custom folder
-defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$HOME/dotfiles/misc"
-defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
-
-###############################################################################
 # Kill affected applications                                                  #
 ###############################################################################
 

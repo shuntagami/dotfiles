@@ -38,6 +38,10 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   mkdir -p ~/.config/memo
   ln -sf ~/dotfiles/misc/memo-config.toml ~/.config/memo/config.toml
 
+  # iTerm2: load preferences from custom folder
+  defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$HOME/dotfiles/misc"
+  defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
+
   # The location of the configuration file for karabiner-elements
   # https://karabiner-elements.pqrs.org/docs/manual/misc/configuration-file-path/
   ln -sfn ~/dotfiles/karabiner ~/.config/karabiner
