@@ -37,12 +37,6 @@ $ ~/dotfiles/scripts/macos.sh             # Configure macOS defaults
 $ ~/dotfiles/vscode/setup.sh              # Set up VSCode/Cursor
 ```
 
-### iTerm2
-
-_(Preferences(⌘,)_ → _Preferences_ → check <b>Load preferences from a custom folder or URL</b>, change it to <b>/Users/Username/dotfiles/misc</b>)
-
-![sample](https://user-images.githubusercontent.com/69618840/153607360-dc173d13-c551-4f2c-9ce5-02cbfeb0a120.png)
-
 ## Keywords
 
 - [Zsh](https://www.zsh.org/)([sorin-ionescu/prezto](https://github.com/sorin-ionescu/prezto))
