@@ -636,6 +636,23 @@ with open(path, 'w') as f:
 fi
 
 ###############################################################################
+# Login items (auto-start on boot)                                            #
+###############################################################################
+
+login_apps=(
+  "Aqua Voice"
+  "Hammerspoon"
+  "Karabiner-Elements"
+  "Clipy"
+)
+
+for app in "${login_apps[@]}"; do
+  if [ -d "/Applications/${app}.app" ]; then
+    osascript -e "tell application \"System Events\" to make login item at end with properties {path:\"/Applications/${app}.app\", hidden:false}" 2>/dev/null || true
+  fi
+done
+
+###############################################################################
 # Kill affected applications                                                  #
 ###############################################################################
 
