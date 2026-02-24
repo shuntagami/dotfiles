@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Watch ~/Downloads for new plain text files and copy their contents to clipboard.
+# Requires: fswatch (brew install fswatch)
+
+# launchd doesn't inherit shell PATH, so add Homebrew paths explicitly
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+WATCH_DIR="$HOME/Downloads"
+
+fswatch -0 --event Created "$WATCH_DIR" | while IFS= read -r -d '' file; do
+  # Wait for the file to be fully written
+  sleep 1
+  [ -f "$file" ] || continue
+
+  mime=$(file --brief --mime-type "$file")
+  if [[ "$mime" == text/* ]]; then
+    pbcopy < "$file"
+    osascript -e "display notification \"Copied: $(basename "$file")\" with title \"Clipboard\""
+  fi
+done

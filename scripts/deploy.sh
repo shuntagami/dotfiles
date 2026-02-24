@@ -38,6 +38,13 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   mkdir -p ~/.config/memo
   ln -sf ~/dotfiles/misc/memo-config.toml ~/.config/memo/config.toml
 
+  # watch-downloads-copy: auto-copy plain text files from Downloads to clipboard
+  chmod +x ~/dotfiles/bin/watch-downloads-copy
+  mkdir -p ~/Library/LaunchAgents
+  sed "s|__HOME__|$HOME|g" ~/dotfiles/misc/com.user.watch-downloads.plist > ~/Library/LaunchAgents/com.user.watch-downloads.plist
+  launchctl unload ~/Library/LaunchAgents/com.user.watch-downloads.plist 2>/dev/null
+  launchctl load ~/Library/LaunchAgents/com.user.watch-downloads.plist
+
   # iTerm2: load preferences from custom folder
   defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$HOME/dotfiles/misc"
   defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
