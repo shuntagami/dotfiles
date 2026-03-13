@@ -194,13 +194,13 @@ defaults write com.apple.screencapture disable-shadow -bool true
 # 28: Save picture of screen as a file (⇧⌘3) → disabled
 # 29: Copy picture of screen to clipboard (⌃⇧⌘3) → disabled
 # 30: Save picture of selected area as a file (⇧⌘4) → disabled
-# 31: Copy picture of selected area to clipboard (⇧⌘4) → enabled
-# 184: Screenshot and recording options (⇧⌘5) → enabled
+# 31: Copy picture of selected area to clipboard (⇧⌘4) → disabled
+# 184: Screenshot and recording options (⇧⌘5) → disabled
 defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 28 '{ enabled = 0; value = { parameters = (51, 20, 131072); type = standard; }; }'
 defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 29 '{ enabled = 0; value = { parameters = (51, 20, 393216); type = standard; }; }'
 defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 30 '{ enabled = 0; value = { parameters = (52, 21, 131072); type = standard; }; }'
-defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 31 '{ enabled = 1; value = { parameters = (52, 21, 393216); type = standard; }; }'
-defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 184 '{ enabled = 1; value = { parameters = (53, 23, 131072); type = standard; }; }'
+defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 31 '{ enabled = 0; value = { parameters = (52, 21, 393216); type = standard; }; }'
+defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 184 '{ enabled = 0; value = { parameters = (53, 23, 131072); type = standard; }; }'
 
 # Enable subpixel font rendering on non-Apple LCDs
 # Reference: https://github.com/kevinSuttle/macOS-Defaults/issues/17#issuecomment-266633501

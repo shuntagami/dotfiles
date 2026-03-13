@@ -2,5 +2,8 @@
 node_modules
 .env
 .envrc
+.env.local
 __pycache__/
 .pnpm-store
+.next
+next-env.d.ts
