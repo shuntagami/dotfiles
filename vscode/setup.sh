@@ -2,6 +2,26 @@
 
 set -eux
 
+# Load profile: env var > ~/.dotfiles-profile > interactive prompt
+if [[ -z "${DOTFILES_PROFILE:-}" ]]; then
+  if [[ -f "${HOME}/.dotfiles-profile" ]]; then
+    DOTFILES_PROFILE=$(cat "${HOME}/.dotfiles-profile")
+  else
+    echo ""
+    echo "Select a profile:"
+    echo "  1) full    - All settings (default)"
+    echo "  2) minimal - Without Vim extension, Karabiner, Hammerspoon"
+    echo ""
+    read -p "Enter choice [1]: " profile_choice
+    case "${profile_choice}" in
+      2|minimal) DOTFILES_PROFILE="minimal" ;;
+      *)         DOTFILES_PROFILE="full" ;;
+    esac
+    echo "${DOTFILES_PROFILE}" > "${HOME}/.dotfiles-profile"
+  fi
+fi
+export DOTFILES_PROFILE
+
 DOTFILES=$HOME/dotfiles
 
 # 環境判定関数
@@ -92,17 +112,28 @@ main() {
   # 設定ディレクトリの取得
   get_setting_dirs
 
+  # Determine settings file based on profile
+  local settings_file="settings.json"
+  if [[ "${DOTFILES_PROFILE:-full}" == "minimal" ]]; then
+    settings_file="settings.minimal.json"
+  fi
+
   # 設定ファイルのリスト
   local config_files=(
-    "settings.json"
     "keybindings.json"
     "tsconfig.json"
   )
 
   # WSL環境での処理
   if is_wsl; then
+    cp -R "${DOTFILES}/vscode/${settings_file}" "${VSCODE_SETTING_DIR}/settings.json"
     copy_config_files "$VSCODE_SETTING_DIR" "${config_files[@]}"
   else
+    # settings.json のシンボリックリンク作成（プロファイルに応じたファイルを使用）
+    for editor_dir in "$VSCODE_SETTING_DIR" "$CURSOR_SETTING_DIR"; do
+      ln -sf "${DOTFILES}/vscode/${settings_file}" "${editor_dir}/settings.json"
+    done
+
     # その他の環境での処理
     create_config_symlinks "$VSCODE_SETTING_DIR" "$CURSOR_SETTING_DIR" "${config_files[@]}"
 

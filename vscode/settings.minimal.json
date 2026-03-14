@@ -4,7 +4,6 @@
   // ===================
   "editor.tabSize": 2,
   "editor.guides.bracketPairs": true,
-  "editor.cursorStyle": "block",
   "editor.fontFamily": "SourceHanCodeJP-Regular, Menlo, Monaco, 'Courier New', monospace",
   "editor.fontSize": 15,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -67,44 +66,6 @@
   // ===================
   "git.openRepositoryInParentFolders": "always",
 
-  // ===================
-  // Vim
-  // ===================
-  "vim.statusBarColorControl": false,
-  "vim.statusBarColors.normal": ["#8ac6f2", "#444444"],
-  "vim.statusBarColors.insert": ["#95e454", "#444444"],
-  "vim.statusBarColors.visual": ["#f2c68a", "#444444"],
-  "vim.statusBarColors.visualline": ["#f2c68a", "#444444"],
-  "vim.statusBarColors.visualblock": ["#f2c68a", "#444444"],
-  "vim.statusBarColors.replace": ["#e5786d", "#444444"],
-  "vim.useSystemClipboard": true,
-  "vim.mouseSelectionGoesIntoVisualMode": false,
-  "vim.autoSwitchInputMethod.enable": false,
-  "vim.surround": true,
-  "vim.hlsearch": true,
-  "vim.ignorecase": true,
-  "vim.smartcase": true,
-  "vim.incsearch": true,
-  "vim.normalModeKeyBindingsNonRecursive": [
-    { "before": ["u"], "commands": ["undo"] },
-    { "before": ["ctrl+r"], "commands": ["redo"] },
-    { "before": ["<Esc>", "<Esc>"], "commands": [":nohl"] },
-    { "before": ["x"], "after": ["\"", "_", "x"] },
-    { "before": ["X"], "after": ["\"", "_", "X"] },
-    { "before": ["c"], "after": ["\"", "_", "c"] },
-    { "before": ["c", "c"], "after": ["\"", "_", "c", "c"] },
-    { "before": ["C"], "after": ["\"", "_", "C"] },
-  ],
-  "vim.visualModeKeyBindingsNonRecursive": [
-    { "before": ["c"], "after": ["\"", "_", "c"] },
-  ],
-  "vim.handleKeys": {
-    "<C-f>": false,
-    "<C-a>": false,
-    "<C-w>": false,
-    "<C-p>": false,
-    "<C-b>": false,
-  },
   // ===================
   // Prettier / JavaScript / TypeScript
   // ===================
