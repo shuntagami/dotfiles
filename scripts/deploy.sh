@@ -2,6 +2,26 @@
 
 set -eux
 
+# Load profile: env var > ~/.dotfiles-profile > interactive prompt
+if [[ -z "${DOTFILES_PROFILE:-}" ]]; then
+  if [[ -f "${HOME}/.dotfiles-profile" ]]; then
+    DOTFILES_PROFILE=$(cat "${HOME}/.dotfiles-profile")
+  else
+    echo ""
+    echo "Select a profile:"
+    echo "  1) full    - All settings (default)"
+    echo "  2) minimal - Without Vim extension, Karabiner, Hammerspoon"
+    echo ""
+    read "profile_choice?Enter choice [1]: "
+    case "${profile_choice}" in
+      2|minimal) DOTFILES_PROFILE="minimal" ;;
+      *)         DOTFILES_PROFILE="full" ;;
+    esac
+    echo "${DOTFILES_PROFILE}" > "${HOME}/.dotfiles-profile"
+  fi
+fi
+export DOTFILES_PROFILE
+
 if [ ! -d ${HOME}/.zprezto ]; then
   git clone --recursive https://github.com/sorin-ionescu/prezto.git "${ZDOTDIR:-$HOME}/.zprezto"
 fi
@@ -32,7 +52,9 @@ if [ ! -d ${HOME}/.ssh ]; then
 fi
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
-  ln -sfn ~/dotfiles/hammerspoon ~/.hammerspoon
+  if [[ "${DOTFILES_PROFILE:-full}" != "minimal" ]]; then
+    ln -sfn ~/dotfiles/hammerspoon ~/.hammerspoon
+  fi
   mkdir -p ~/Library/Application\ Support/Claude
   ln -sf ~/dotfiles/misc/claude_desktop_config.json ~/Library/Application\ Support/Claude/claude_desktop_config.json
   mkdir -p ~/.config/memo
@@ -40,10 +62,26 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 
   # watch-downloads-copy: auto-copy plain text files from Downloads to clipboard
   chmod +x ~/dotfiles/bin/watch-downloads-copy
-  mkdir -p ~/Library/LaunchAgents
-  sed "s|__HOME__|$HOME|g" ~/dotfiles/misc/com.user.watch-downloads.plist > ~/Library/LaunchAgents/com.user.watch-downloads.plist
   launchctl unload ~/Library/LaunchAgents/com.user.watch-downloads.plist 2>/dev/null
-  launchctl load ~/Library/LaunchAgents/com.user.watch-downloads.plist
+  rm -f ~/Library/LaunchAgents/com.user.watch-downloads.plist
+  mkdir -p ~/Library/Scripts/Folder\ Action\ Scripts
+  osacompile -o ~/Library/Scripts/Folder\ Action\ Scripts/Copy\ Downloaded\ Text.scpt \
+    ~/dotfiles/misc/Copy\ Downloaded\ Text.scpt.applescript
+  # Enable Folder Actions and attach script to Downloads
+  osascript -e 'tell application "System Events" to set folder actions enabled to true'
+  osascript -e '
+    tell application "System Events"
+      set downloadsPath to (POSIX path of (path to downloads folder))
+      try
+        set fa to folder action downloadsPath
+      on error
+        set fa to make new folder action with properties {name:downloadsPath, path:downloadsPath}
+      end try
+      try
+        make new script at fa with properties {name:"Copy Downloaded Text.scpt", path:(POSIX path of (path to home folder) & "Library/Scripts/Folder Action Scripts/Copy Downloaded Text.scpt")}
+      end try
+    end tell
+  '
 
   # iTerm2: load preferences from custom folder
   defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$HOME/dotfiles/misc"
@@ -51,11 +89,13 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 
   # The location of the configuration file for karabiner-elements
   # https://karabiner-elements.pqrs.org/docs/manual/misc/configuration-file-path/
-  ln -sfn ~/dotfiles/karabiner ~/.config/karabiner
-  if launchctl print gui/$(id -u)/org.pqrs.service.agent.karabiner_console_user_server &>/dev/null; then
-    launchctl kickstart -k gui/$(id -u)/org.pqrs.service.agent.karabiner_console_user_server
-  else
-    open -a "Karabiner-Elements"
+  if [[ "${DOTFILES_PROFILE:-full}" != "minimal" ]]; then
+    ln -sfn ~/dotfiles/karabiner ~/.config/karabiner
+    if launchctl print gui/$(id -u)/org.pqrs.service.agent.karabiner_console_user_server &>/dev/null; then
+      launchctl kickstart -k gui/$(id -u)/org.pqrs.service.agent.karabiner_console_user_server
+    else
+      open -a "Karabiner-Elements"
+    fi
   fi
 fi
 

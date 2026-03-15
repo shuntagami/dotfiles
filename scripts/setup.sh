@@ -6,6 +6,27 @@ DOTFILES="${HOME}/dotfiles"
 
 echo "Starting dotfiles setup..."
 
+# Profile selection: "full" (default) or "minimal" (non-engineer)
+# Can be set via environment variable: DOTFILES_PROFILE=minimal ./setup.sh
+# The choice is saved to ~/.dotfiles-profile so individual scripts can read it.
+PROFILE_FILE="${HOME}/.dotfiles-profile"
+
+if [[ -z "${DOTFILES_PROFILE:-}" ]]; then
+  echo ""
+  echo "Select a profile:"
+  echo "  1) full    - All settings (default)"
+  echo "  2) minimal - Without Vim extension, Karabiner, Hammerspoon"
+  echo ""
+  read -p "Enter choice [1]: " profile_choice
+  case "${profile_choice}" in
+    2|minimal) export DOTFILES_PROFILE="minimal" ;;
+    *)         export DOTFILES_PROFILE="full" ;;
+  esac
+fi
+
+echo "${DOTFILES_PROFILE}" > "${PROFILE_FILE}"
+echo "==> Using profile: ${DOTFILES_PROFILE} (saved to ${PROFILE_FILE})"
+
 # Ask for the administrator password upfront (once)
 sudo -v
 # Keep-alive: update existing sudo time stamp until setup has finished
