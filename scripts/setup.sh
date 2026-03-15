@@ -41,12 +41,12 @@ echo "==> Deploying dotfiles..."
 zsh "${DOTFILES}/scripts/deploy.sh"
 
 # Phase 3: macOS / editor settings (macOS only)
-if [[ "$(uname)" == "Darwin" ]]; then
-  echo "==> Configuring macOS defaults..."
-  bash "${DOTFILES}/scripts/macos.sh"
+# if [[ "$(uname)" == "Darwin" ]]; then
+  # echo "==> Configuring macOS defaults..."
+  # bash "${DOTFILES}/scripts/macos.sh"
 
-  echo "==> Setting up VSCode/Cursor..."
-  DOTFILES_AUTO=1 bash "${DOTFILES}/vscode/setup.sh"
-fi
+  # echo "==> Setting up VSCode/Cursor..."
+  # DOTFILES_AUTO=1 bash "${DOTFILES}/vscode/setup.sh"
+# fi
 
 echo "Setup complete! Run 'exec \$SHELL -l' to reload your shell."
