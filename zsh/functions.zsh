@@ -122,6 +122,35 @@ has () {
   type "$1" > /dev/null 2>&1
 }
 
+set-git-user-from-gh() {
+  if ! has gh; then
+    echo "gh command not found. Install GitHub CLI first."
+    return 1
+  fi
+
+  if ! gh auth status >/dev/null 2>&1; then
+    echo "Not logged in to GitHub CLI. Run: gh auth login"
+    return 1
+  fi
+
+  local name email
+  name="$(gh api user --jq '.name // .login')" || return 1
+  email="$(gh api user --jq '.email // empty')" || return 1
+
+  if [[ -z "$email" ]]; then
+    email="$(gh api user --jq '"\(.id)+\(.login)@users.noreply.github.com"')" || return 1
+  fi
+
+  git config --global user.name "$name"
+  git config --global user.email "$email"
+
+  echo "Configured global Git identity:"
+  echo "  user.name  = $(git config --global --get user.name)"
+  echo "  user.email = $(git config --global --get user.email)"
+}
+
+alias git-user-sync='set-git-user-from-gh'
+
 init-repo() {
   # ── Git 初期化・コミット
   git init || return 1
