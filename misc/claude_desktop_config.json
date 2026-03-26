@@ -12,7 +12,9 @@
   },
   "preferences": {
     "quickEntryShortcut": "off",
-    "coworkScheduledTasksEnabled": false,
-    "sidebarMode": "chat"
+    "coworkScheduledTasksEnabled": true,
+    "sidebarMode": "task",
+    "coworkWebSearchEnabled": true,
+    "ccdScheduledTasksEnabled": true
   }
 }
