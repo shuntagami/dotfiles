@@ -678,6 +678,31 @@ for key, kc, mod in [
 defaults write com.clipy-app.Clipy kCPYPrefMaxHistorySizeKey -int 50
 
 ###############################################################################
+# MonitorControl                                                               #
+###############################################################################
+
+if [ -d "/Applications/MonitorControl.app" ]; then
+  # Use custom volume shortcuts to avoid conflicts with macOS media keys.
+  defaults write app.monitorcontrol.MonitorControl keyboardVolume -int 1
+  # Apply volume changes to all displays instead of pointer-position targeting.
+  defaults write app.monitorcontrol.MonitorControl multiKeyboardVolume -int 1
+
+  # Volume Up: Cmd+Option+Up
+  defaults write app.monitorcontrol.MonitorControl KeyboardShortcuts_volumeUp -string '{"carbonKeyCode":126,"carbonModifiers":2304}'
+  # Volume Down: Cmd+Option+Down
+  defaults write app.monitorcontrol.MonitorControl KeyboardShortcuts_volumeDown -string '{"carbonKeyCode":125,"carbonModifiers":2304}'
+  # Mute: Cmd+Option+M
+  defaults write app.monitorcontrol.MonitorControl KeyboardShortcuts_mute -string '{"carbonKeyCode":46,"carbonModifiers":2304}'
+
+  # Reload app so settings are effective immediately.
+  if pgrep -x MonitorControl > /dev/null; then
+    osascript -e 'tell application "MonitorControl" to quit' || true
+    sleep 1
+    open -a MonitorControl || true
+  fi
+fi
+
+###############################################################################
 # Login items (auto-start on boot)                                            #
 ###############################################################################
 
