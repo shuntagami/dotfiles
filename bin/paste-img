@@ -1,0 +1,86 @@
+#!/bin/bash
+# クリップボードの画像を保存し、Markdown参照をクリップボードにコピー
+#
+# Usage:
+#   paste-img <name>           → ./docs/images/<name>.png (docs/imagesがあれば)
+#   paste-img <name>           → ./<name>.png (なければカレントに)
+#   paste-img -d <dir> <name>  → <dir>/<name>.png (ディレクトリ指定)
+#   paste-img -w 800 <name>    → 幅800pxにリサイズ (デフォルト: 800)
+#   paste-img --raw <name>     → リサイズなし
+
+WIDTH=800
+DIR=""
+NAME=""
+RAW=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -d|--dir)
+      DIR="$2"
+      shift 2
+      ;;
+    -w|--width)
+      WIDTH="$2"
+      shift 2
+      ;;
+    --raw)
+      RAW=true
+      shift
+      ;;
+    -h|--help)
+      echo "Usage: paste-img [-d <dir>] [-w <width>] [--raw] <name>"
+      echo ""
+      echo "Options:"
+      echo "  -d <dir>    保存先ディレクトリを指定"
+      echo "  -w <width>  リサイズ幅を指定 (デフォルト: 800)"
+      echo "  --raw       リサイズしない"
+      echo ""
+      echo "ディレクトリ未指定の場合:"
+      echo "  docs/images/ があればそこに保存"
+      echo "  なければカレントディレクトリに保存"
+      exit 0
+      ;;
+    *)
+      NAME="$1"
+      shift
+      ;;
+  esac
+done
+
+NAME="${NAME:-$(date +%Y%m%d_%H%M%S)}"
+
+if [ -z "$DIR" ]; then
+  if [ -d "docs/images" ]; then
+    DIR="docs/images"
+  else
+    DIR="."
+  fi
+fi
+
+mkdir -p "$DIR"
+
+FILEPATH="$DIR/${NAME}.png"
+
+if ! pngpaste "$FILEPATH" 2>/dev/null; then
+  echo "✗ クリップボードに画像がありません"
+  exit 1
+fi
+
+# リサイズ（元画像が指定幅より大きい場合のみ縮小）
+if [ "$RAW" = false ]; then
+  CURRENT_WIDTH=$(sips -g pixelWidth "$FILEPATH" | tail -1 | awk '{print $2}')
+  if [ "$CURRENT_WIDTH" -gt "$WIDTH" ] 2>/dev/null; then
+    sips --resampleWidth "$WIDTH" "$FILEPATH" --out "$FILEPATH" > /dev/null 2>&1
+    echo "✓ リサイズ: ${CURRENT_WIDTH}px → ${WIDTH}px"
+  fi
+fi
+
+# Markdown参照をクリップボードにコピー
+if [[ "$DIR" == "docs/images" ]]; then
+  MD="![${NAME}](images/${NAME}.png)"
+else
+  MD="![${NAME}](${DIR}/${NAME}.png)"
+fi
+echo "$MD" | pbcopy
+echo "✓ 保存: $FILEPATH"
+echo "✓ コピー済み: $MD"
