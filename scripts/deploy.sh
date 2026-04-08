@@ -59,6 +59,8 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   ln -sf ~/dotfiles/misc/claude_desktop_config.json ~/Library/Application\ Support/Claude/claude_desktop_config.json
   mkdir -p ~/.config/memo
   ln -sf ~/dotfiles/misc/memo-config.toml ~/.config/memo/config.toml
+  mkdir -p ~/Library/Application\ Support/ngrok
+  ln -sf ~/dotfiles/misc/ngrok.yml ~/Library/Application\ Support/ngrok/ngrok.yml
 
   # watch-downloads-copy: auto-copy plain text files from Downloads to clipboard
   chmod +x ~/dotfiles/bin/watch-downloads-copy
