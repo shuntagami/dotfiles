@@ -269,6 +269,45 @@ function mkd() {
 	mkdir -p "$@" && cd "$_";
 }
 
+# git worktree wrapper: create worktree + copy .env files + cd into it
+# Usage: gw <branch-or-pr-number>
+gw() {
+  if [[ -z "$1" ]]; then
+    echo 'usage: gw <branch-or-pr-number>'
+    return 1
+  fi
+
+  local origdir="$PWD"
+  local output
+  output=$(git w "$@" 2>&1)
+  local rc=$?
+
+  echo "$output"
+  if [[ $rc -ne 0 ]]; then
+    return $rc
+  fi
+
+  # Extract workdir path from "  cd <path>" line in git w output
+  local workdir
+  workdir=$(echo "$output" | sed -n 's/^  cd //p')
+
+  if [[ -n "$workdir" && -d "$workdir" ]]; then
+    # Copy .env* files from original repo to new worktree
+    local copied=0
+    for envfile in "$origdir"/.env*; do
+      if [[ -f "$envfile" ]]; then
+        cp "$envfile" "$workdir/"
+        copied=$((copied + 1))
+      fi
+    done
+    if (( copied > 0 )); then
+      echo "[gw] copied $copied .env file(s) to $workdir"
+    fi
+
+    cd "$workdir"
+  fi
+}
+
 alias ggrep="git grep -A 5 -B 5"
 
 function gngrep() {
