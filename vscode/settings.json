@@ -9,9 +9,9 @@
   "editor.fontSize": 15,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.find.globalFindClipboard": true,
-  "editor.formatOnSave": false,
-  "editor.formatOnPaste": false,
-  "editor.formatOnType": false,
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.formatOnType": true,
   "editor.quickSuggestions": {
     "comments": "off",
     "strings": "off",
