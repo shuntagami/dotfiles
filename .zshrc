@@ -47,3 +47,6 @@ fi
 fpath=(~/.docker/completions $fpath)
 autoload -Uz compinit
 compinit
+
+# Added by Antigravity
+export PATH="/Users/shun.tagami/.antigravity/antigravity/bin:$PATH"

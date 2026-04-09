@@ -43,7 +43,7 @@ elif [[ `uname` == "Darwin" ]]; then
     brewfile="$HOME/dotfiles/misc/Brewfile"
     if [[ "${DOTFILES_PROFILE:-full}" == "minimal" ]]; then
       tmp_brewfile=$(mktemp)
-      grep -v -E '^cask "hammerspoon"|^cask "karabiner-elements"|^vscode "vscodevim\.vim"' "$brewfile" > "$tmp_brewfile"
+      grep -v '# full-only' "$brewfile" > "$tmp_brewfile"
       brewfile="$tmp_brewfile"
     fi
     brew bundle install --file="$brewfile"

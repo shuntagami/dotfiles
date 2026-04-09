@@ -1,7 +1,7 @@
 tap "aws/tap"
-tap "bufbuild/buf"
-tap "ktr0731/evans"
-tap "oncletom/cpdf"
+tap "bufbuild/buf" # full-only
+tap "ktr0731/evans" # full-only
+tap "oncletom/cpdf" # full-only
 tap "sanemat/font"
 tap "supabase/tap"
 brew "xz"
@@ -15,7 +15,7 @@ brew "openssl@3"
 brew "clingo"
 brew "aspcud"
 brew "awscli"
-brew "axel"
+brew "axel" # full-only
 brew "bat"
 brew "boost"
 brew "btop"
@@ -23,15 +23,15 @@ brew "glib"
 brew "coreutils"
 brew "unbound"
 brew "gnutls"
-brew "emacs"
-brew "cask"
+brew "emacs" # full-only
+brew "cask" # full-only
 brew "libyaml"
 brew "python@3.13"
-brew "cfn-lint"
+brew "cfn-lint" # full-only
 brew "ctop"
 brew "curl"
 brew "deno"
-brew "exiftool"
+brew "exiftool" # full-only
 brew "ffmpeg"
 brew "fswatch"
 brew "gawk"
@@ -44,8 +44,8 @@ brew "gh"
 brew "harfbuzz"
 brew "openjpeg"
 brew "leptonica"
-brew "tesseract"
-brew "ghostscript"
+brew "tesseract" # full-only
+brew "ghostscript" # full-only
 brew "git"
 brew "git-flow"
 brew "git-secrets"
@@ -57,11 +57,11 @@ brew "gpgme"
 brew "netpbm"
 brew "gts"
 brew "librsvg"
-brew "graphviz"
+brew "graphviz" # full-only
 brew "grep"
 brew "guile"
-brew "hdf5"
-brew "hub"
+brew "hdf5" # full-only
+brew "hub" # full-only
 brew "libheif"
 brew "imagemagick"
 brew "jq"
@@ -75,37 +75,37 @@ brew "libpq"
 brew "libraw"
 brew "libspatialite"
 brew "make"
-brew "mint"
+brew "mint" # full-only
 brew "mkcert"
-brew "mp4v2"
-brew "netcdf"
+brew "mp4v2" # full-only
+brew "netcdf" # full-only
 brew "nghttp2"
-brew "open-mpi"
+brew "open-mpi" # full-only
 brew "peco"
-brew "poppler"
-brew "qt@5"
-brew "poppler-qt5"
+brew "poppler" # full-only
+brew "qt@5" # full-only
+brew "poppler-qt5" # full-only
 brew "portaudio"
 brew "postgresql@14", restart_service: :changed
 brew "pstree"
 brew "pygobject3"
-brew "qpdf"
+brew "qpdf" # full-only
 brew "re2"
 brew "ripgrep"
-brew "scrcpy"
+brew "scrcpy" # full-only
 brew "sfcgal"
-brew "tesseract-lang"
+brew "tesseract-lang" # full-only
 brew "vim"
-brew "vips"
+brew "vips" # full-only
 brew "watch"
 brew "wget"
 brew "wxwidgets"
-brew "xcodegen"
-brew "yt-dlp"
+brew "xcodegen" # full-only
+brew "yt-dlp" # full-only
 brew "zsh"
-brew "bufbuild/buf/buf"
-brew "ktr0731/evans/evans"
-brew "oncletom/cpdf/cpdf"
+brew "bufbuild/buf/buf" # full-only
+brew "ktr0731/evans/evans" # full-only
+brew "oncletom/cpdf/cpdf" # full-only
 brew "supabase/tap/supabase"
 cask "adobe-acrobat-reader"
 cask "antigravity"
@@ -125,9 +125,9 @@ cask "fork"
 cask "gcloud-cli"
 cask "gimp"
 cask "google-chrome"
-cask "hammerspoon"
+cask "hammerspoon" # full-only
 cask "iterm2"
-cask "karabiner-elements"
+cask "karabiner-elements" # full-only
 cask "monitorcontrol"
 cask "slack"
 cask "spotify"
@@ -149,7 +149,7 @@ vscode "redhat.vscode-yaml"
 vscode "shd101wyy.markdown-preview-enhanced"
 vscode "simonsiefke.svg-preview"
 vscode "tombonnike.vscode-status-bar-format-toggle"
-vscode "vscodevim.vim"
+vscode "vscodevim.vim" # full-only
 go "github.com/mattn/memo"
 npm "@antfu/ni"
 npm "@anthropic-ai/claude-code"
