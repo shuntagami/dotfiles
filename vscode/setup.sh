@@ -97,6 +97,7 @@ main() {
     "settings.json"
     "keybindings.json"
     "tsconfig.json"
+    "snippets"
   )
 
   # WSL環境での処理
