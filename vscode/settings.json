@@ -27,7 +27,7 @@
   // ===================
   // Workbench
   // ===================
-  "workbench.colorTheme": "Quiet Light",
+  "workbench.colorTheme": "Cursor Light",
   "workbench.startupEditor": "newUntitledFile",
   "workbench.editor.wrapTabs": true,
   "workbench.sideBar.location": "left",
