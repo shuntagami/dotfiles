@@ -45,6 +45,9 @@ ln -sf ~/dotfiles/.zshenv ~/.zshenv
 ln -sf ~/dotfiles/.zshrc ~/.zshrc
 mkdir -p ~/.docker
 ln -sf ~/dotfiles/misc/docker-config.json ~/.docker/config.json
+mkdir -p ~/.local/state/crossnote
+ln -sf ~/dotfiles/misc/crossnote/parser.js ~/.local/state/crossnote/parser.js
+ln -sf ~/dotfiles/misc/crossnote/style.less ~/.local/state/crossnote/style.less
 
 # ssh config
 if [ ! -d ${HOME}/.ssh ]; then

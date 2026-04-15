@@ -2,6 +2,14 @@
 
 各種アプリケーションの設定ファイル。
 
+## crossnote/
+
+Crossnote のカスタム parser / style 設定。
+
+- `parser.js`: `:::memo` などの callout 記法を HTML に変換する
+- `style.less`: preview / PDF 向けの見た目を整える
+- `scripts/deploy.sh` から `~/.local/state/crossnote/` にシンボリックリンクされる
+
 ## gcp-oauth.keys.json
 
 Google Calendar MCP サーバー用の OAuth 認証情報。
