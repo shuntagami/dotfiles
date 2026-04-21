@@ -1,21 +1,19 @@
 tap "aws/tap"
-tap "bufbuild/buf" # full-only
-tap "ktr0731/evans" # full-only
-tap "oncletom/cpdf" # full-only
+tap "bufbuild/buf"
+tap "ktr0731/evans"
+tap "oncletom/cpdf"
 tap "sanemat/font"
 tap "supabase/tap"
-brew "xz"
-brew "zstd"
-brew "little-cms2"
-brew "jpeg-xl"
 brew "aom"
 brew "pycparser"
 brew "lua"
 brew "openssl@3"
+brew "xz"
+brew "zstd"
 brew "clingo"
 brew "aspcud"
 brew "awscli"
-brew "axel" # full-only
+brew "axel"
 brew "bat"
 brew "boost"
 brew "btop"
@@ -23,19 +21,21 @@ brew "glib"
 brew "coreutils"
 brew "unbound"
 brew "gnutls"
-brew "emacs" # full-only
-brew "cask" # full-only
+brew "emacs"
+brew "cask"
 brew "libyaml"
 brew "python@3.13"
-brew "cfn-lint" # full-only
+brew "cfn-lint"
 brew "ctop"
 brew "curl"
+brew "little-cms2"
 brew "deno"
-brew "exiftool" # full-only
+brew "exiftool"
 brew "ffmpeg"
 brew "fswatch"
 brew "gawk"
 brew "gcc"
+brew "jpeg-xl"
 brew "libavif"
 brew "webp"
 brew "gd"
@@ -44,8 +44,8 @@ brew "gh"
 brew "harfbuzz"
 brew "openjpeg"
 brew "leptonica"
-brew "tesseract" # full-only
-brew "ghostscript" # full-only
+brew "tesseract"
+brew "ghostscript"
 brew "git"
 brew "git-flow"
 brew "git-secrets"
@@ -57,11 +57,11 @@ brew "gpgme"
 brew "netpbm"
 brew "gts"
 brew "librsvg"
-brew "graphviz" # full-only
+brew "graphviz"
 brew "grep"
 brew "guile"
-brew "hdf5" # full-only
-brew "hub" # full-only
+brew "hdf5"
+brew "hub"
 brew "libheif"
 brew "imagemagick"
 brew "jq"
@@ -75,37 +75,38 @@ brew "libpq"
 brew "libraw"
 brew "libspatialite"
 brew "make"
-brew "mint" # full-only
+brew "mint"
 brew "mkcert"
-brew "mp4v2" # full-only
-brew "netcdf" # full-only
+brew "mp4v2"
+brew "netcdf"
 brew "nghttp2"
-brew "open-mpi" # full-only
+brew "open-mpi"
 brew "peco"
-brew "poppler" # full-only
-brew "qt@5" # full-only
-brew "poppler-qt5" # full-only
+brew "pngpaste"
+brew "poppler"
+brew "qt@5"
+brew "poppler-qt5"
 brew "portaudio"
 brew "postgresql@14", restart_service: :changed
 brew "pstree"
 brew "pygobject3"
-brew "qpdf" # full-only
+brew "qpdf"
 brew "re2"
 brew "ripgrep"
-brew "scrcpy" # full-only
+brew "scrcpy"
 brew "sfcgal"
-brew "tesseract-lang" # full-only
+brew "tesseract-lang"
 brew "vim"
-brew "vips" # full-only
+brew "vips"
 brew "watch"
 brew "wget"
 brew "wxwidgets"
-brew "xcodegen" # full-only
-brew "yt-dlp" # full-only
+brew "xcodegen"
+brew "yt-dlp"
 brew "zsh"
-brew "bufbuild/buf/buf" # full-only
-brew "ktr0731/evans/evans" # full-only
-brew "oncletom/cpdf/cpdf" # full-only
+brew "bufbuild/buf/buf"
+brew "ktr0731/evans/evans"
+brew "oncletom/cpdf/cpdf"
 brew "supabase/tap/supabase"
 cask "adobe-acrobat-reader"
 cask "antigravity"
@@ -125,9 +126,10 @@ cask "fork"
 cask "gcloud-cli"
 cask "gimp"
 cask "google-chrome"
-cask "hammerspoon" # full-only
+cask "hammerspoon"
 cask "iterm2"
-cask "karabiner-elements" # full-only
+cask "karabiner-elements"
+cask "loom"
 cask "monitorcontrol"
 cask "slack"
 cask "spotify"
@@ -149,7 +151,7 @@ vscode "redhat.vscode-yaml"
 vscode "shd101wyy.markdown-preview-enhanced"
 vscode "simonsiefke.svg-preview"
 vscode "tombonnike.vscode-status-bar-format-toggle"
-vscode "vscodevim.vim" # full-only
+vscode "vscodevim.vim"
 go "github.com/mattn/memo"
 npm "@antfu/ni"
 npm "@anthropic-ai/claude-code"
