@@ -1,0 +1,42 @@
+#!/usr/bin/env node
+
+// Prerequisites:
+//   npm install -g playwright
+//   npx playwright install chromium
+
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const globalModules = require("child_process").execSync("npm root -g").toString().trim();
+const { chromium } = require(globalModules + "/playwright");
+
+const url = process.argv[2];
+if (!url) {
+  console.error("Usage: extract-m3u8 <URL>");
+  process.exit(1);
+}
+
+const m3u8Urls = new Set();
+
+const browser = await chromium.launch();
+const context = await browser.newContext();
+const page = await context.newPage();
+
+page.on("response", (res) => {
+  if (res.url().includes(".m3u8")) {
+    m3u8Urls.add(res.url());
+  }
+});
+
+await page.goto(url, { waitUntil: "networkidle" });
+
+await page.evaluate(async () => {
+  for (let i = 0; i < document.body.scrollHeight; i += 500) {
+    window.scrollTo(0, i);
+    await new Promise((r) => setTimeout(r, 300));
+  }
+});
+
+await page.waitForTimeout(3000);
+await browser.close();
+
+[...m3u8Urls].forEach((u) => console.log(u));
