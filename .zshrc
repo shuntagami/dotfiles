@@ -1,13 +1,5 @@
-# History persistence (previously provided by Prezto's history module)
-HISTFILE="${HOME}/.zsh_history"
-HISTSIZE=10000
-SAVEHIST=10000
-setopt extended_history     # write timestamps to history
-setopt share_history        # share history across sessions
-setopt hist_verify          # show expanded history before executing
-
-# Emacs-style keybindings (was Prezto editor module default)
-bindkey -e
+# Source Prezto
+[[ -s ${ZDOTDIR:-$HOME}/.zprezto/init.zsh ]] && source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
 
 # Exclude trivial commands from history
 zshaddhistory() {
@@ -51,36 +43,10 @@ if [[ -d $DOTFILES/pkg/.anyenv ]]; then
   (( $+commands[anyenv] )) && eval "$(anyenv init - zsh)"
 fi
 
-# Homebrew zsh site-functions (Pure prompt etc.) — must come before compinit
-if [[ -d /opt/homebrew/share/zsh/site-functions ]]; then
-  fpath=(/opt/homebrew/share/zsh/site-functions $fpath)
-elif [[ -d /usr/local/share/zsh/site-functions ]]; then
-  fpath=(/usr/local/share/zsh/site-functions $fpath)
-fi
-
 # Docker completions
 fpath=(~/.docker/completions $fpath)
 autoload -Uz compinit
 compinit
-
-# Completion behavior (replaces Prezto's completion module defaults)
-zstyle ':completion:*' menu select
-zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|=*' 'l:|=* r:|=*'
-zstyle ':completion:*:descriptions' format '%F{yellow}%d%f'
-
-# Pure prompt
-autoload -U promptinit; promptinit
-prompt pure
-
-# zsh-autosuggestions (load before syntax-highlighting per docs)
-for d in /opt/homebrew/share/zsh-autosuggestions /usr/local/share/zsh-autosuggestions; do
-  [[ -f "$d/zsh-autosuggestions.zsh" ]] && source "$d/zsh-autosuggestions.zsh" && break
-done
-
-# zsh-syntax-highlighting (must be sourced last)
-for d in /opt/homebrew/share/zsh-syntax-highlighting /usr/local/share/zsh-syntax-highlighting; do
-  [[ -f "$d/zsh-syntax-highlighting.zsh" ]] && source "$d/zsh-syntax-highlighting.zsh" && break
-done
 
 # Added by Antigravity
 export PATH="/Users/shun.tagami/.antigravity/antigravity/bin:$PATH"
