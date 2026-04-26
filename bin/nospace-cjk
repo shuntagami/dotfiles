@@ -1,0 +1,87 @@
+#!/usr/bin/env node
+//
+// 半角英数字と全角文字（ひらがな／カタカナ／漢字／全角記号）の間に挟まった
+// 半角スペースを除去する。AI が生成したマークダウン等によくある
+// 「YouTube ショート」「月 5 本」「Discord コミュニティ」のような
+// 不要なスペースを除去する用途。
+//
+// 仕様:
+// - マークダウンの構造的スペースは無傷
+//   `# 見出し` / `- 項目` / `* 項目` / `1. 項目` / `> 引用` / `| セル |`
+//   いずれも直前文字（# - * + . > |）が英数字でないため副作用なく素通り
+// - フェンスドコードブロック（``` ～ ```）の中身は無加工
+// - インラインコード（`...`）の内側は無加工
+// - 連続スペース（`5  本`）も `+` 量化子で全部除去
+// - 標準入力対応: `cat foo.md | nospace-cjk` も可
+// - ファイル指定時は in-place 上書き（差分なしなら何もしない）
+// - 再実行しても結果が変わらない（idempotent）
+
+const fs = require('fs');
+const path = require('path');
+
+const FW =
+  '(?:\\p{Script=Hiragana}|\\p{Script=Katakana}|\\p{Script=Han}|[\\u3000-\\u303f\\uff00-\\uffef])';
+const ASCII_TO_FW = new RegExp(`([A-Za-z0-9]) +(${FW})`, 'gu');
+const FW_TO_ASCII = new RegExp(`(${FW}) +([A-Za-z0-9])`, 'gu');
+
+// インラインコードを退避するためのプレースホルダ境界（Private Use Area）
+const PH_OPEN = '';
+const PH_CLOSE = '';
+const PH_REGEX = new RegExp(`${PH_OPEN}(\\d+)${PH_CLOSE}`, 'g');
+
+const stripLine = (line) => {
+  const codeSpans = [];
+  // インラインコード内の半角スペースは保持したいので退避してから処理する
+  const masked = line.replace(/`+[^`\n]*?`+/g, (match) => {
+    const idx = codeSpans.length;
+    codeSpans.push(match);
+    return `${PH_OPEN}${idx}${PH_CLOSE}`;
+  });
+  const replaced = masked
+    .replace(ASCII_TO_FW, '$1$2')
+    .replace(FW_TO_ASCII, '$1$2');
+  return replaced.replace(PH_REGEX, (_match, idx) => codeSpans[Number(idx)]);
+};
+
+const stripAll = (text) => {
+  const lines = text.split('\n');
+  let inCodeBlock = false;
+  return lines
+    .map((line) => {
+      if (line.trim().startsWith('```')) {
+        inCodeBlock = !inCodeBlock;
+        return line;
+      }
+      if (inCodeBlock) return line;
+      return stripLine(line);
+    })
+    .join('\n');
+};
+
+const filePath = process.argv[2];
+
+if (!filePath || filePath === '-') {
+  // stdin → stdout
+  let buf = '';
+  process.stdin.setEncoding('utf8');
+  process.stdin.on('data', (chunk) => (buf += chunk));
+  process.stdin.on('end', () => {
+    process.stdout.write(stripAll(buf));
+  });
+  return;
+}
+
+if (!fs.existsSync(filePath)) {
+  console.error(`File not found: ${filePath}`);
+  process.exit(1);
+}
+
+const original = fs.readFileSync(filePath, 'utf8');
+const result = stripAll(original);
+
+if (result !== original) {
+  fs.writeFileSync(filePath, result, 'utf8');
+  console.log(`Updated: ${filePath}`);
+} else {
+  console.log(`No changes: ${filePath}`);
+}
