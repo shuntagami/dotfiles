@@ -30,7 +30,6 @@ cd $HOME/dotfiles
 
 if [[ `uname` == "Linux" ]]; then
   source $HOME/dotfiles/scripts/apt-get && run-apt
-  source $HOME/dotfiles/scripts/anyenv && install-anyenv
   source $HOME/dotfiles/scripts/gh && install-gh
   source $HOME/dotfiles/scripts/btop && install-btop
 elif [[ `uname` == "Darwin" ]]; then
