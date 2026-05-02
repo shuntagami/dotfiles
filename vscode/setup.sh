@@ -82,7 +82,12 @@ create_config_symlinks() {
 
   for editor_dir in "$vscode_dir" "$cursor_dir"; do
     for file in "${files[@]}"; do
-      ln -sf "${DOTFILES}/vscode/${file}" "${editor_dir}/"
+      local dest="${editor_dir}/${file}"
+      # VS Code / Cursor may create an empty snippets folder; ln cannot replace it.
+      if [[ -d "$dest" ]] && [[ ! -L "$dest" ]] && [[ -z "$(ls -A "$dest" 2>/dev/null)" ]]; then
+        rmdir "$dest"
+      fi
+      ln -sf "${DOTFILES}/vscode/${file}" "$dest"
     done
   done
 }
