@@ -34,13 +34,4 @@ install-anyenv() {
     [ ! -d "${NODENV_ROOT}"/plugins/nodenv-default-packages ] && git clone -q https://github.com/nodenv/nodenv-default-packages.git "${NODENV_ROOT}"/plugins/nodenv-default-packages
     [ ! -e "${NODENV_ROOT}"/default-packages ] && ln -sf "${DOTFILES}"/misc/default-packages "${NODENV_ROOT}"/.
   fi
-
-  # Install Node version from .node-version and set as global
-  if [ -f "${DOTFILES}/.node-version" ]; then
-    NODE_VERSION=$(cat "${DOTFILES}/.node-version")
-    if [ ! -d "${NODENV_ROOT}/versions/${NODE_VERSION}" ]; then
-      "${NODENV_ROOT}"/bin/nodenv install "${NODE_VERSION}"
-    fi
-    "${NODENV_ROOT}"/bin/nodenv global "${NODE_VERSION}"
-  fi
 }
