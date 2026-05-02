@@ -36,13 +36,6 @@ done
 [[ -d $DOTFILES/bin ]] && addToPath $DOTFILES/bin
 [[ -d $DOTFILES/bin/private ]] && addToPath $DOTFILES/bin/private
 
-# anyenv
-if [[ -d $DOTFILES/pkg/.anyenv ]]; then
-  export ANYENV_ROOT="$DOTFILES/pkg/.anyenv"
-  addToPath $ANYENV_ROOT/bin
-  (( $+commands[anyenv] )) && eval "$(anyenv init - zsh)"
-fi
-
 # Docker completions
 fpath=(~/.docker/completions $fpath)
 autoload -Uz compinit

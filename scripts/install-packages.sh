@@ -48,6 +48,5 @@ elif [[ `uname` == "Darwin" ]]; then
     fi
     brew bundle install --file="$brewfile"
     eval "$(/opt/homebrew/bin/brew shellenv)"
-    source $HOME/dotfiles/scripts/anyenv && install-anyenv
   fi
 fi
