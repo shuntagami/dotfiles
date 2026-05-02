@@ -104,10 +104,9 @@
 	# Add all, commit with "update", and push
 	up = "!git add -A && git commit -m 'update' && git push"
 
-	# Claude にステージ済みの変更からコミットメッセージを作らせて commit させる
-	# `git ccc` : 既にステージ済みのものを対象に commit
-	# `git ccc -a` : 追跡中ファイルを git add -u してから commit
-	ccc = "!f() { if [ \"$1\" = \"-a\" ]; then git add -u; fi; claude -p \"ステージされた変更を確認して適切なコミットメッセージを日本語で作成し、git commit してください。レスポンスは日本語でお願いします\"; }; f"
+	# Claude に変更内容をよしなに分割して commit までさせる
+	# ステージ済み・未ステージ・未追跡すべてを対象に、論理単位ごとに add → commit を繰り返す
+	ccc = "!claude -p \"作業ディレクトリの変更内容（ステージ済み・未ステージ・未追跡すべて）を確認し、論理的にまとまった単位でファイルをステージして日本語のコミットメッセージで commit する作業を、変更が無くなるまで繰り返してください。1コミットに無関係な変更を混ぜないこと。秘密情報を含むファイル（.env など）はコミットしないこと。レスポンスは日本語でお願いします\""
 
 [apply]
 	# Detect whitespace errors when applying a patch.
