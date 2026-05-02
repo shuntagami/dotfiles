@@ -14,8 +14,8 @@ export AWS_DEFAULT_REGION='ap-northeast-1'
 export AWS_ASSUME_ROLE_TTL='12h'
 export AWS_SESSION_TOKEN_TTL='12h'
 
-# Locale
-[[ -z $LANG ]] && eval "$(locale)"
+# Locale (static default avoids forking /usr/bin/locale on every shell start)
+export LANG=${LANG:-en_US.UTF-8}
 
 # OS-specific env (PATH lives in .zprofile)
 if [[ $OSTYPE == darwin* ]]; then
