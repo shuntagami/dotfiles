@@ -104,6 +104,11 @@
 	# Add all, commit with "update", and push
 	up = "!git add -A && git commit -m 'update' && git push"
 
+	# Claude にステージ済みの変更からコミットメッセージを作らせて commit させる
+	# `git ccc` : 既にステージ済みのものを対象に commit
+	# `git ccc -a` : 追跡中ファイルを git add -u してから commit
+	ccc = "!f() { if [ \"$1\" = \"-a\" ]; then git add -u; fi; claude -p \"ステージされた変更を確認して適切なコミットメッセージを日本語で作成し、git commit してください。レスポンスは日本語でお願いします\"; }; f"
+
 [apply]
 	# Detect whitespace errors when applying a patch.
 	whitespace = fix
