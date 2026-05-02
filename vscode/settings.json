@@ -108,7 +108,6 @@
   // ===================
   // Prettier / JavaScript / TypeScript
   // ===================
-  "prettier.prettierPath": "~/dotfiles/pkg/.anyenv/envs/nodenv/versions/24.9.0/lib/node_modules/prettier",
   "prettier.proseWrap": "preserve",
   "prettier.singleQuote": true,
   "prettier.jsxSingleQuote": true,
