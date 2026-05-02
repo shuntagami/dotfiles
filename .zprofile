@@ -14,6 +14,7 @@ fi
 
 path=(
   $GOPATH/bin(N)
+  $HOME/.local/bin(N)
   $DOTFILES/bin(N)
   $DOTFILES/bin/private(N)
   $path
