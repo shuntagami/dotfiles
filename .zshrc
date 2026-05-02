@@ -1,3 +1,6 @@
+# fpath additions must precede prezto's completion module (it runs compinit)
+fpath=(~/.docker/completions $fpath)
+
 # Source Prezto
 [[ -s ${ZDOTDIR:-$HOME}/.zprezto/init.zsh ]] && source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"
 
@@ -32,7 +35,3 @@ for f in common docker-aliases extra functions http-status-codes; do
   [[ -f $DOTFILES/zsh/$f.zsh ]] && source $DOTFILES/zsh/$f.zsh
 done
 
-# Docker completions
-fpath=(~/.docker/completions $fpath)
-autoload -Uz compinit
-compinit
