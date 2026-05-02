@@ -32,14 +32,7 @@ for f in common docker-aliases extra functions http-status-codes; do
   [[ -f $DOTFILES/zsh/$f.zsh ]] && source $DOTFILES/zsh/$f.zsh
 done
 
-# PATH additions
-[[ -d $DOTFILES/bin ]] && addToPath $DOTFILES/bin
-[[ -d $DOTFILES/bin/private ]] && addToPath $DOTFILES/bin/private
-
 # Docker completions
 fpath=(~/.docker/completions $fpath)
 autoload -Uz compinit
 compinit
-
-# Added by Antigravity
-export PATH="/Users/shun.tagami/.antigravity/antigravity/bin:$PATH"
