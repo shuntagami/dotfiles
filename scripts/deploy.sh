@@ -50,6 +50,21 @@ mkdir -p ~/.local/state/crossnote
 ln -sf ~/dotfiles/misc/crossnote/parser.js ~/.local/state/crossnote/parser.js
 ln -sf ~/dotfiles/misc/crossnote/style.less ~/.local/state/crossnote/style.less
 
+# Per-machine git identity (~/.gitconfig.local is included from ~/.gitconfig)
+if [[ ! -f "${HOME}/.gitconfig.local" ]]; then
+  echo ""
+  echo "Setting up per-machine git identity (~/.gitconfig.local)"
+  set +u
+  read "git_user_name?  Git user.name: "
+  read "git_user_email?  Git user.email: "
+  set -u
+  {
+    echo "[user]"
+    echo "	name = ${git_user_name}"
+    echo "	email = ${git_user_email}"
+  } > "${HOME}/.gitconfig.local"
+fi
+
 # ssh config
 if [ ! -d ${HOME}/.ssh ]; then
   mkdir -p ~/.ssh && chmod 700 ~/.ssh && touch ~/.ssh/config && chmod 600 ~/.ssh/config
