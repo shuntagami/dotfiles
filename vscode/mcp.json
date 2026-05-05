@@ -1,19 +1,24 @@
 {
   "mcpServers": {
-    "Figma": {
-      "url": "https://mcp.figma.com/mcp",
-      "headers": {}
-    },
     "next-devtools": {
+      "type": "stdio",
       "command": "npx",
       "args": [
         "-y",
         "next-devtools-mcp@latest"
       ]
     },
-    "supabase": {
-      "url": "https://mcp.supabase.com/mcp",
-      "headers": {}
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ]
+    },
+    "slack": {
+      "type": "stdio",
+      "command": "/Users/shun.tagami/dotfiles/bin/slack-mcp-wrapper"
     }
   }
 }
