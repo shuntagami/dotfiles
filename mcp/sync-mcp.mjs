@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 const home = os.homedir();
 const dotfiles = path.join(home, "dotfiles");
 const sourcePath = path.join(dotfiles, "mcp", "servers.json");
-const cursorPath = path.join(dotfiles, "vscode", "mcp.json");
+const cursorPath = path.join(dotfiles, "mcp", "generated", "cursor.mcp.json");
 const cursorGlobalPath = path.join(home, ".cursor", "mcp.json");
 const codexConfigPath = path.join(home, ".codex", "config.toml");
 

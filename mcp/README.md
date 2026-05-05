@@ -15,7 +15,7 @@ is available.
 
 This syncs the canonical list to:
 
-- Cursor: `~/dotfiles/vscode/mcp.json` and `~/.cursor/mcp.json`
+- Cursor: `~/dotfiles/mcp/generated/cursor.mcp.json` and `~/.cursor/mcp.json`
 - Codex: `~/.codex/config.toml`
 - Claude Code: user-scope MCP entries in `~/.claude.json`
 
