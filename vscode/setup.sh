@@ -118,7 +118,7 @@ main() {
       local cursor_mcp_file="${cursor_mcp_dir}/mcp.json"
 
       mkdir -p "$cursor_mcp_dir"
-      create_symlink_safe "${DOTFILES}/vscode/mcp.json" "$cursor_mcp_file"
+      create_symlink_safe "${DOTFILES}/mcp/generated/cursor.mcp.json" "$cursor_mcp_file"
     fi
   fi
 }

@@ -1,0 +1,52 @@
+{
+  "mcpServers": {
+    "Figma": {
+      "enabled": false,
+      "type": "http",
+      "url": "https://mcp.figma.com/mcp",
+      "headers": {}
+    },
+    "next-devtools": {
+      "enabled": true,
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "next-devtools-mcp@latest"
+      ]
+    },
+    "playwright": {
+      "enabled": true,
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ],
+      "codex": {
+        "tools": {
+          "browser_click": {
+            "approval_mode": "approve"
+          },
+          "browser_navigate": {
+            "approval_mode": "approve"
+          },
+          "browser_run_code_unsafe": {
+            "approval_mode": "approve"
+          }
+        }
+      }
+    },
+    "slack": {
+      "enabled": true,
+      "type": "stdio",
+      "command": "/Users/shun.tagami/dotfiles/bin/slack-mcp-wrapper"
+    },
+    "supabase": {
+      "enabled": false,
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp",
+      "headers": {}
+    }
+  }
+}

@@ -1,0 +1,35 @@
+#!/usr/bin/env zsh
+set -euo pipefail
+
+ENV_FILE="${SLACK_MCP_ENV_FILE:-${HOME}/.config/mcp/slack.env}"
+
+if [[ -f "$ENV_FILE" ]]; then
+  set -a
+  source "$ENV_FILE"
+  set +a
+fi
+
+if [[ -z "${SLACK_BOT_TOKEN:-}" ]]; then
+  echo "SLACK_BOT_TOKEN is not set. Create $ENV_FILE or export SLACK_BOT_TOKEN." >&2
+  exit 1
+fi
+
+export SLACK_BOT_TOKEN
+
+if [[ -z "${SLACK_TEAM_ID:-}" ]]; then
+  SLACK_TEAM_ID="$(
+    curl -fsS -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" https://slack.com/api/auth.test |
+      /usr/bin/python3 -c 'import json, sys
+data = json.load(sys.stdin)
+if not data.get("ok"):
+    raise SystemExit("Slack auth.test failed: " + data.get("error", "unknown"))
+team_id = data.get("team_id")
+if not team_id:
+    raise SystemExit("Slack auth.test did not return team_id")
+print(team_id)'
+  )"
+fi
+
+export SLACK_TEAM_ID
+
+exec npx -y @modelcontextprotocol/server-slack

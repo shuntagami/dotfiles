@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "next-devtools": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "next-devtools-mcp@latest"
+      ]
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ]
+    },
+    "slack": {
+      "type": "stdio",
+      "command": "/Users/shun.tagami/dotfiles/bin/slack-mcp-wrapper"
+    }
+  }
+}

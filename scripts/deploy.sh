@@ -50,6 +50,13 @@ mkdir -p ~/.local/state/crossnote
 ln -sf ~/dotfiles/misc/crossnote/parser.js ~/.local/state/crossnote/parser.js
 ln -sf ~/dotfiles/misc/crossnote/style.less ~/.local/state/crossnote/style.less
 
+# MCP: sync canonical dotfiles config to Cursor, Codex, and Claude Code.
+if command -v node >/dev/null 2>&1; then
+  ~/dotfiles/mcp/sync-mcp.mjs
+else
+  echo "Skipping MCP sync: node is not installed."
+fi
+
 # Per-machine git identity (~/.gitconfig.local is included from ~/.gitconfig)
 if [[ ! -f "${HOME}/.gitconfig.local" ]]; then
   echo ""
