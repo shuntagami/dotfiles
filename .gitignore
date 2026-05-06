@@ -7,3 +7,4 @@ __pycache__/
 private.ahk
 gcp-oauth.keys.json
 ngrok.yml
+mcp/slack.env

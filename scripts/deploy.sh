@@ -49,6 +49,14 @@ ln -sf ~/dotfiles/misc/docker-config.json ~/.docker/config.json
 mkdir -p ~/.local/state/crossnote
 ln -sf ~/dotfiles/misc/crossnote/parser.js ~/.local/state/crossnote/parser.js
 ln -sf ~/dotfiles/misc/crossnote/style.less ~/.local/state/crossnote/style.less
+mkdir -p ~/.config/mcp
+if [[ -f ~/.config/mcp/slack.env && ! -L ~/.config/mcp/slack.env && ! -f ~/dotfiles/mcp/slack.env ]]; then
+  mv ~/.config/mcp/slack.env ~/dotfiles/mcp/slack.env
+fi
+ln -sf ~/dotfiles/mcp/slack.env ~/.config/mcp/slack.env
+if [[ -f ~/dotfiles/mcp/slack.env ]]; then
+  chmod 600 ~/dotfiles/mcp/slack.env
+fi
 
 # MCP: sync canonical dotfiles config to Cursor, Codex, and Claude Code.
 if command -v node >/dev/null 2>&1; then
