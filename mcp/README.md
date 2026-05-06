@@ -19,12 +19,13 @@ This syncs the canonical list to:
 - Codex: `~/.codex/config.toml`
 - Claude Code: user-scope MCP entries in `~/.claude.json`
 
-Secrets are not stored in dotfiles. Local secret files live under `~/.config/mcp`.
+Secrets are not committed. Local secret files live in `~/dotfiles/mcp` and are
+symlinked into `~/.config/mcp`.
 
 For Slack:
 
 ```sh
-mkdir -p ~/.config/mcp
-cp ~/dotfiles/mcp/slack.env.example ~/.config/mcp/slack.env
-chmod 600 ~/.config/mcp/slack.env
+cp ~/dotfiles/mcp/slack.env.example ~/dotfiles/mcp/slack.env
+chmod 600 ~/dotfiles/mcp/slack.env
+~/dotfiles/scripts/deploy.sh
 ```
