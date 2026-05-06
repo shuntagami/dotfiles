@@ -100,14 +100,17 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   osascript -e '
     tell application "System Events"
       set downloadsPath to (POSIX path of (path to downloads folder))
-      try
-        set fa to folder action downloadsPath
-      on error
-        set fa to make new folder action with properties {name:downloadsPath, path:downloadsPath}
-      end try
-      try
-        make new script at fa with properties {name:"Copy Downloaded Text.scpt", path:(POSIX path of (path to home folder) & "Library/Scripts/Folder Action Scripts/Copy Downloaded Text.scpt")}
-      end try
+      set scriptName to "Copy Downloaded Text.scpt"
+      set scriptPath to ((path to home folder as text) & "Library:Scripts:Folder Action Scripts:" & scriptName)
+
+      if not (exists folder action downloadsPath) then
+        make new folder action at end of folder actions with properties {name:downloadsPath, path:downloadsPath, enabled:true}
+      end if
+
+      set fa to folder action downloadsPath
+      set enabled of fa to true
+      if exists script scriptName of fa then delete script scriptName of fa
+      make new script at end of scripts of fa with properties {name:scriptName, path:scriptPath, enabled:true}
     end tell
   '
 
