@@ -19,6 +19,10 @@
     "slack": {
       "type": "stdio",
       "command": "/Users/shun.tagami/dotfiles/bin/slack-mcp-wrapper"
+    },
+    "notion": {
+      "type": "http",
+      "url": "https://mcp.notion.com/mcp"
     }
   }
 }
