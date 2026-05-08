@@ -7,7 +7,7 @@
       "headers": {}
     },
     "next-devtools": {
-      "enabled": true,
+      "enabled": false,
       "type": "stdio",
       "command": "npx",
       "args": [
@@ -48,7 +48,7 @@
       "url": "https://mcp.notion.com/mcp"
     },
     "supabase": {
-      "enabled": false,
+      "enabled": true,
       "type": "http",
       "url": "https://mcp.supabase.com/mcp",
       "headers": {}

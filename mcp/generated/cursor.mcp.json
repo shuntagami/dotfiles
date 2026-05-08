@@ -1,13 +1,5 @@
 {
   "mcpServers": {
-    "next-devtools": {
-      "type": "stdio",
-      "command": "npx",
-      "args": [
-        "-y",
-        "next-devtools-mcp@latest"
-      ]
-    },
     "playwright": {
       "type": "stdio",
       "command": "npx",
@@ -23,6 +15,11 @@
     "notion": {
       "type": "http",
       "url": "https://mcp.notion.com/mcp"
+    },
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp",
+      "headers": {}
     }
   }
 }
