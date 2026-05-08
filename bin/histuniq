@@ -2,9 +2,15 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
-const filename = path.join(process.env.HOME, '.zsh_history');
+const filename = path.join(os.homedir(), '.zsh_history');
 const lines = [];
+
+if (!fs.existsSync(filename)) {
+  console.log(`${filename} not found`);
+  process.exit(0);
+}
 
 const raw = fs.readFileSync(filename, 'utf8').split('\n');
 for (const rawLine of raw) {

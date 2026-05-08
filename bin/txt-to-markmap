@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { copy } = require('./lib/clipboard');
 
 const inputFile = process.argv[2];
 if (!inputFile) {
@@ -30,8 +30,7 @@ for (let i = 1; i < lines.length; i++) {
 const content = output.join('\n') + '\n';
 fs.writeFileSync(outputFile, content);
 
-try {
-  execSync('pbcopy', { input: content });
-} catch {}
+const copied = copy(content);
 
-console.log(`変換が完了しました。ファイル '${outputFile}' が作成されました。（クリップボードにコピー済み）`);
+const suffix = copied ? '（クリップボードにコピー済み）' : '（クリップボードへのコピーはスキップ）';
+console.log(`変換が完了しました。ファイル '${outputFile}' が作成されました。${suffix}`);

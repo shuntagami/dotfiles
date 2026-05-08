@@ -1,86 +1,176 @@
-#!/bin/bash
-# クリップボードの画像を保存し、Markdown参照をクリップボードにコピー
-#
-# Usage:
-#   paste-img <name>           → ./docs/images/<name>.png (docs/imagesがあれば)
-#   paste-img <name>           → ./<name>.png (なければカレントに)
-#   paste-img -d <dir> <name>  → <dir>/<name>.png (ディレクトリ指定)
-#   paste-img -w 800 <name>    → 幅800pxにリサイズ (デフォルト: 800)
-#   paste-img --raw <name>     → リサイズなし
+#!/usr/bin/env node
 
-WIDTH=800
-DIR=""
-NAME=""
-RAW=false
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const { copy } = require('./lib/clipboard');
 
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    -d|--dir)
-      DIR="$2"
-      shift 2
-      ;;
-    -w|--width)
-      WIDTH="$2"
-      shift 2
-      ;;
-    --raw)
-      RAW=true
-      shift
-      ;;
-    -h|--help)
-      echo "Usage: paste-img [-d <dir>] [-w <width>] [--raw] <name>"
-      echo ""
-      echo "Options:"
-      echo "  -d <dir>    保存先ディレクトリを指定"
-      echo "  -w <width>  リサイズ幅を指定 (デフォルト: 800)"
-      echo "  --raw       リサイズしない"
-      echo ""
-      echo "ディレクトリ未指定の場合:"
-      echo "  docs/images/ があればそこに保存"
-      echo "  なければカレントディレクトリに保存"
-      exit 0
-      ;;
-    *)
-      NAME="$1"
-      shift
-      ;;
-  esac
-done
+function showHelp() {
+  console.log(`Usage: paste-img [-d <dir>] [-w <width>] [--raw] <name>
 
-NAME="${NAME:-$(date +%Y%m%d_%H%M%S)}"
+Options:
+  -d <dir>    保存先ディレクトリを指定
+  -w <width>  リサイズ幅を指定 (デフォルト: 800)
+  --raw       リサイズしない
 
-if [ -z "$DIR" ]; then
-  if [ -d "docs/images" ]; then
-    DIR="docs/images"
-  else
-    DIR="."
-  fi
-fi
+ディレクトリ未指定の場合:
+  docs/images/ があればそこに保存
+  なければカレントディレクトリに保存`);
+}
 
-mkdir -p "$DIR"
+function timestampName() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
 
-FILEPATH="$DIR/${NAME}.png"
+function pasteWithPngpaste(filePath, width, raw) {
+  const pasted = spawnSync('pngpaste', [filePath], { stdio: 'ignore', windowsHide: true });
+  if (pasted.error || pasted.status !== 0) return { ok: false };
 
-if ! pngpaste "$FILEPATH" 2>/dev/null; then
-  echo "✗ クリップボードに画像がありません"
-  exit 1
-fi
+  if (!raw) {
+    const info = spawnSync('sips', ['-g', 'pixelWidth', filePath], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      windowsHide: true,
+    });
+    const match = info.stdout && info.stdout.match(/pixelWidth:\s*(\d+)/);
+    const currentWidth = match ? Number(match[1]) : 0;
+    if (currentWidth > width) {
+      spawnSync('sips', ['--resampleWidth', String(width), filePath, '--out', filePath], {
+        stdio: 'ignore',
+        windowsHide: true,
+      });
+      return { ok: true, resizedFrom: currentWidth };
+    }
+  }
 
-# リサイズ（元画像が指定幅より大きい場合のみ縮小）
-if [ "$RAW" = false ]; then
-  CURRENT_WIDTH=$(sips -g pixelWidth "$FILEPATH" | tail -1 | awk '{print $2}')
-  if [ "$CURRENT_WIDTH" -gt "$WIDTH" ] 2>/dev/null; then
-    sips --resampleWidth "$WIDTH" "$FILEPATH" --out "$FILEPATH" > /dev/null 2>&1
-    echo "✓ リサイズ: ${CURRENT_WIDTH}px → ${WIDTH}px"
-  fi
-fi
+  return { ok: true };
+}
 
-# Markdown参照をクリップボードにコピー
-if [[ "$DIR" == "docs/images" ]]; then
-  MD="![${NAME}](images/${NAME}.png)"
-else
-  MD="![${NAME}](${DIR}/${NAME}.png)"
-fi
-echo "$MD" | pbcopy
-echo "✓ 保存: $FILEPATH"
-echo "✓ コピー済み: $MD"
+function pasteWithWindowsClipboard(filePath, width, raw) {
+  const script = `
+param([string]$Path, [int]$Width, [string]$RawFlag)
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+$Raw = $RawFlag -eq "true"
+$Image = [System.Windows.Forms.Clipboard]::GetImage()
+if ($null -eq $Image) { exit 2 }
+$Graphics = $null
+$Bitmap = $null
+try {
+  if (-not $Raw -and $Image.Width -gt $Width) {
+    $Height = [int][Math]::Round($Image.Height * ($Width / $Image.Width))
+    $Bitmap = New-Object System.Drawing.Bitmap -ArgumentList $Width, $Height
+    $Graphics = [System.Drawing.Graphics]::FromImage($Bitmap)
+    $Graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+    $Graphics.DrawImage($Image, 0, 0, $Width, $Height)
+    $Bitmap.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
+    Write-Output "RESIZED:$($Image.Width)"
+  } else {
+    $Image.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
+  }
+} finally {
+  if ($Graphics) { $Graphics.Dispose() }
+  if ($Bitmap) { $Bitmap.Dispose() }
+  if ($Image) { $Image.Dispose() }
+}
+`;
+
+  const result = spawnSync('powershell.exe', [
+    '-NoProfile',
+    '-STA',
+    '-ExecutionPolicy',
+    'Bypass',
+    '-Command',
+    script,
+    filePath,
+    String(width),
+    String(raw),
+  ], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+    windowsHide: true,
+  });
+
+  if (result.error || result.status !== 0) return { ok: false };
+  const match = result.stdout.match(/RESIZED:(\d+)/);
+  return { ok: true, resizedFrom: match ? Number(match[1]) : undefined };
+}
+
+function pasteWithXclip(filePath) {
+  const result = spawnSync('xclip', ['-selection', 'clipboard', '-t', 'image/png', '-o'], {
+    stdio: ['ignore', 'pipe', 'ignore'],
+    windowsHide: true,
+  });
+  if (result.error || result.status !== 0 || !result.stdout.length) return { ok: false };
+  fs.writeFileSync(filePath, result.stdout);
+  return { ok: true };
+}
+
+let width = 800;
+let dir = '';
+let name = '';
+let raw = false;
+
+const args = process.argv.slice(2);
+for (let i = 0; i < args.length; i++) {
+  switch (args[i]) {
+    case '-d':
+    case '--dir':
+      dir = args[++i];
+      break;
+    case '-w':
+    case '--width':
+      width = Number(args[++i]);
+      break;
+    case '--raw':
+      raw = true;
+      break;
+    case '-h':
+    case '--help':
+      showHelp();
+      process.exit(0);
+      break;
+    default:
+      name = args[i];
+  }
+}
+
+if (!Number.isFinite(width) || width <= 0) {
+  console.error('width must be a positive number');
+  process.exit(1);
+}
+
+name = name || timestampName();
+
+if (!dir) {
+  dir = fs.existsSync(path.join('docs', 'images')) ? path.join('docs', 'images') : '.';
+}
+
+fs.mkdirSync(dir, { recursive: true });
+
+const filePath = path.join(dir, `${name}.png`);
+const result = process.platform === 'win32'
+  ? pasteWithWindowsClipboard(filePath, width, raw)
+  : process.platform === 'darwin'
+    ? pasteWithPngpaste(filePath, width, raw)
+    : pasteWithXclip(filePath);
+
+if (!result.ok) {
+  console.error('✗ クリップボードに画像がありません');
+  process.exit(1);
+}
+
+if (result.resizedFrom) {
+  console.log(`✓ リサイズ: ${result.resizedFrom}px → ${width}px`);
+}
+
+const markdownPath = dir === path.join('docs', 'images')
+  ? `images/${name}.png`
+  : path.join(dir, `${name}.png`).split(path.sep).join('/');
+const markdown = `![${name}](${markdownPath})`;
+
+const copied = copy(markdown);
+console.log(`✓ 保存: ${filePath}`);
+console.log(copied ? `✓ コピー済み: ${markdown}` : `✓ Markdown: ${markdown}`);

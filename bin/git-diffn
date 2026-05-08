@@ -151,8 +151,14 @@
 # Be sure to place all args (`"$@"`) AFTER `--color=always` so that if the user passes in
 # `--color=never` or `--no-color` they will override my `--color=always` here, since later
 # options override earlier ones.
+awk_bin="$(command -v gawk 2>/dev/null || command -v awk 2>/dev/null)"
+if [[ -z "$awk_bin" ]]; then
+    echo "git-diffn: awk or gawk is required." >&2
+    exit 127
+fi
+
 git diff --color=always "$@" | \
-gawk \
+"$awk_bin" \
 '
 # -------------------------------
 # Awk Program Start

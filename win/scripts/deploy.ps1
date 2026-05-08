@@ -1,43 +1,54 @@
-if (-not (Test-Path -Path $Profile.AllUsersCurrentHost)) {
-    New-Item -ItemType SymbolicLink -Path $Profile.AllUsersCurrentHost -Target "$HOME\dotfiles\win\Microsoft.PowerShell_profile.ps1"
+$ErrorActionPreference = "Stop"
+
+$Dotfiles = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+
+function New-DotfileLink {
+    param(
+        [string] $Path,
+        [string] $Target
+    )
+
+    if (-not (Test-Path -LiteralPath $Target)) {
+        Write-Warning "Skipping missing target: $Target"
+        return
+    }
+
+    $parent = Split-Path -Parent $Path
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) {
+        New-Item -ItemType Directory -Force -Path $parent | Out-Null
+    }
+
+    if (Test-Path -LiteralPath $Path) {
+        return
+    }
+
+    try {
+        New-Item -ItemType SymbolicLink -Path $Path -Target $Target | Out-Null
+    } catch {
+        Write-Warning "Could not create symlink for $Path. Copying the target instead."
+        Copy-Item -LiteralPath $Target -Destination $Path -Recurse -Force
+    }
 }
 
-if (-not (Test-Path -Path "$HOME\.dein.toml")) {
-    New-Item -ItemType SymbolicLink -Path "$HOME\.dein.toml" -Target "$HOME\dotfiles\.dein.toml"
+New-DotfileLink -Path $Profile.CurrentUserAllHosts -Target (Join-Path $Dotfiles "win\Microsoft.PowerShell_profile.ps1")
+
+$links = @(
+    @{ Path = "$HOME\.dein.toml"; Target = Join-Path $Dotfiles ".dein.toml" },
+    @{ Path = "$HOME\.editorconfig"; Target = Join-Path $Dotfiles ".editorconfig" },
+    @{ Path = "$HOME\.gitconfig"; Target = Join-Path $Dotfiles ".gitconfig" },
+    @{ Path = "$HOME\.gitignore_global"; Target = Join-Path $Dotfiles ".gitignore_global" },
+    @{ Path = "$HOME\.golangci.yml"; Target = Join-Path $Dotfiles ".golangci.yml" },
+    @{ Path = "$HOME\.my.cnf"; Target = Join-Path $Dotfiles ".my.cnf" },
+    @{ Path = "$HOME\.npmrc"; Target = Join-Path $Dotfiles ".npmrc" },
+    @{ Path = "$HOME\.ocamlinit"; Target = Join-Path $Dotfiles ".ocamlinit" },
+    @{ Path = "$HOME\.vimrc"; Target = Join-Path $Dotfiles ".vimrc" },
+    @{ Path = "$HOME\AppData\Roaming\Code\User\settings.json"; Target = Join-Path $Dotfiles "vscode\settings.json" }
+)
+
+foreach ($link in $links) {
+    New-DotfileLink -Path $link.Path -Target $link.Target
 }
 
-if (-not (Test-Path -Path "$HOME\.editorconfig")) {
-    New-Item -ItemType SymbolicLink -Path "$HOME\.editorconfig" -Target "$HOME\dotfiles\.editorconfig"
-}
+& (Join-Path $PSScriptRoot "install-bin-shims.ps1")
 
-if (-not (Test-Path -Path "$HOME\.gitconfig")) {
-    New-Item -ItemType SymbolicLink -Path "$HOME\.gitconfig" -Target "$HOME\dotfiles\.gitconfig"
-}
-
-if (-not (Test-Path -Path "$HOME\.gitignore_global")) {
-    New-Item -ItemType SymbolicLink -Path "$HOME\.gitignore_global" -Target "$HOME\dotfiles\.gitignore_global"
-}
-
-if (-not (Test-Path -Path "$HOME\.golangci.yml")) {
-    New-Item -ItemType SymbolicLink -Path "$HOME\.golangci.yml" -Target "$HOME\dotfiles\.golangci.yml"
-}
-
-if (-not (Test-Path -Path "$HOME\.my.cnf")) {
-    New-Item -ItemType SymbolicLink -Path "$HOME\.my.cnf" -Target "$HOME\dotfiles\.my.cnf"
-}
-
-if (-not (Test-Path -Path "$HOME\.npmrc")) {
-    New-Item -ItemType SymbolicLink -Path "$HOME\.npmrc" -Target "$HOME\dotfiles\.npmrc"
-}
-
-if (-not (Test-Path -Path "$HOME\.ocamlinit")) {
-    New-Item -ItemType SymbolicLink -Path "$HOME\.ocamlinit" -Target "$HOME\dotfiles\.ocamlinit"
-}
-
-if (-not (Test-Path -Path "$HOME\.vimrc")) {
-    New-Item -ItemType SymbolicLink -Path "$HOME\.vimrc" -Target "$HOME\dotfiles\.vimrc"
-}
-
-if (-not (Test-Path -Path "$HOME\AppData\Roaming\Code\User\settings.json")) {
-    New-Item -ItemType SymbolicLink -Path "$HOME\AppData\Roaming\Code\User\settings.json" -Target "$HOME\dotfiles\vscode\settings.json"
-}
+Write-Host "Windows deploy complete. Restart PowerShell or run 'Refresh-Environment' to reload PATH."

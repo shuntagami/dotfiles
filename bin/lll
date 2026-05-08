@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { execSync } = require('child_process');
 
 function colorize(code, str) {
@@ -19,6 +20,11 @@ const gidCache = new Map();
 
 function getUsername(uid) {
   if (!uidCache.has(uid)) {
+    if (process.platform === 'win32') {
+      uidCache.set(uid, os.userInfo().username);
+      return uidCache.get(uid);
+    }
+
     try {
       uidCache.set(uid, execSync(`id -un ${uid}`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim());
     } catch { uidCache.set(uid, String(uid)); }
@@ -28,12 +34,27 @@ function getUsername(uid) {
 
 function getGroupname(gid) {
   if (!gidCache.has(gid)) {
+    if (process.platform === 'win32') {
+      gidCache.set(gid, '-');
+      return gidCache.get(gid);
+    }
+
     try {
-      const out = execSync(`dscl . -search /Groups PrimaryGroupID ${gid}`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
-      gidCache.set(gid, out.split(/\s+/)[0] || String(gid));
+      const cmd = process.platform === 'darwin'
+        ? `dscl . -search /Groups PrimaryGroupID ${gid}`
+        : `getent group ${gid}`;
+      const out = execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+      gidCache.set(gid, out.split(/[:\s]+/)[0] || String(gid));
     } catch { gidCache.set(gid, String(gid)); }
   }
   return gidCache.get(gid);
+}
+
+function isWindowsExecutable(filePath) {
+  const pathExt = (process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD;.PS1')
+    .split(';')
+    .map(ext => ext.toLowerCase());
+  return pathExt.includes(path.extname(filePath).toLowerCase());
 }
 
 function modeStr(mode) {
@@ -68,12 +89,14 @@ class Node {
 
   get isDir() { return this.stat.isDirectory(); }
   get isSym() { return this.stat.isSymbolicLink(); }
-  get isExec() { return !!(this.stat.mode & 0o111); }
   get isPipe() { return this.stat.isFIFO(); }
   get isSocket() { return this.stat.isSocket(); }
   get isBlock() { return this.stat.isBlockDevice(); }
   get isChar() { return this.stat.isCharacterDevice(); }
-
+  get isExec() {
+    if (process.platform === 'win32') return isWindowsExecutable(this.fullPath);
+    return !!(this.stat.mode & 0o111);
+  }
   get level() {
     if (this.isDir) return 1;
     if (this.isPipe) return 2;
