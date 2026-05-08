@@ -161,5 +161,6 @@
     "searchAndCompare": true,
     "launchpad": false
   },
-  "editor.largeFileOptimizations": false
+  "editor.largeFileOptimizations": false,
+  "window.autoDetectColorScheme": false
 }
