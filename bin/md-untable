@@ -1,0 +1,88 @@
+#!/usr/bin/env node
+//
+// Google ドキュメントから貼り付けた「1セルだけのテーブル」を
+// フェンスドコードブロックに変換する。
+//
+// 例: LINE 配信メッセージなど、本文が改行込みでセルに入った状態の
+//     Markdown を読み返しやすい形に直す。
+//
+// 仕様:
+// - 連続する2行が以下のパターンに一致したらコードブロックに置換:
+//     | 本文 |
+//     | :--- |   （区切り行: 左寄せ/中央/右寄せいずれも可）
+// - 上記の連続行の塊（複数データ行がある通常のテーブル）はそのまま残す
+// - 既にコードブロック内にある内容には触らない
+// - 標準入力対応: `cat foo.md | md-untable` も可
+// - ファイル指定時は in-place 上書き（差分なしなら何もしない）
+// - 再実行しても結果が変わらない（idempotent）
+
+const fs = require('fs');
+
+const ROW_RE = /^\|\s(.*)\s\|\s*$/;
+// 区切り行: `| :--- |` `| :---: |` `| ---: |` `| --- |` 等の単一カラム
+const SEP_RE = /^\|\s:?-{3,}:?\s\|\s*$/;
+
+const convert = (text) => {
+  const lines = text.split('\n');
+  const out = [];
+  let inFence = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.trim().startsWith('```')) {
+      inFence = !inFence;
+      out.push(line);
+      continue;
+    }
+
+    if (!inFence && i + 1 < lines.length) {
+      const m = line.match(ROW_RE);
+      const next = lines[i + 1];
+      if (m && SEP_RE.test(next)) {
+        // 2行先がさらにテーブル行なら通常テーブル → 触らない
+        const after = lines[i + 2];
+        if (after !== undefined && /^\|.*\|\s*$/.test(after)) {
+          out.push(line);
+          continue;
+        }
+        out.push('```');
+        out.push(m[1]);
+        out.push('```');
+        i += 1; // 区切り行をスキップ
+        continue;
+      }
+    }
+
+    out.push(line);
+  }
+
+  return out.join('\n');
+};
+
+const filePath = process.argv[2];
+
+if (!filePath || filePath === '-') {
+  let buf = '';
+  process.stdin.setEncoding('utf8');
+  process.stdin.on('data', (chunk) => (buf += chunk));
+  process.stdin.on('end', () => {
+    process.stdout.write(convert(buf));
+  });
+  return;
+}
+
+if (!fs.existsSync(filePath)) {
+  console.error(`File not found: ${filePath}`);
+  process.exit(1);
+}
+
+const original = fs.readFileSync(filePath, 'utf8');
+const result = convert(original);
+
+if (result !== original) {
+  fs.writeFileSync(filePath, result, 'utf8');
+  console.log(`Updated: ${filePath}`);
+} else {
+  console.log(`No changes: ${filePath}`);
+}
