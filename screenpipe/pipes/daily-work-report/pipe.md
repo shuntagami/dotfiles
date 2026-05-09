@@ -2,7 +2,7 @@
 schedule: '55 23 * * *'
 enabled: true
 preset:
-- screenpipe-cloud
+- gemini-3.1-pro
 connections:
 - slack
 title: 日次ワークレポート

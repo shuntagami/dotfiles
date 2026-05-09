@@ -2,7 +2,7 @@
 schedule: every 10m
 enabled: true
 preset:
-- screenpipe-cloud
+- gemini-3.1-pro
 source_slug: focus-assistant
 installed_version: 1
 source_hash: 4d2149f31a49426d
