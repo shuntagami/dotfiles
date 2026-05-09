@@ -29,6 +29,8 @@ ScreenpipeのローカルAPIは、このPipeが動いている端末の記録だ
 
 Slack投稿には必ず端末名を入れ、どの端末上の1時間レポートなのか分かるようにしてください。
 
+`~/.screenpipe/work-state/breaks.jsonl` に休憩ログがある場合は、直近1時間に含まれる休憩時間を作業時間から除外してください。
+
 # 基本方針
 
 - まず `/activity-summary` を使う。
@@ -91,6 +93,7 @@ Slackには次の形式で投稿してください。
 ```text
 *フォーカスワーク深掘り: 直近1時間*
 • 端末: ...
+• 休憩: ...
 • 時間の使い道: ...
 • 進んだこと: ...
 • 作業対象: ...
@@ -102,6 +105,7 @@ Slackには次の形式で投稿してください。
 
 - 各行は短く具体的にする。
 - 「端末」は、ステップ1で取得した端末名を書く。
+- 「休憩」は、直近1時間に含まれる休憩時間を書く。休憩がなければ「なし」と書く。
 - 「時間の使い道」は、主要な作業を時間の大きい順にまとめる。
 - 「進んだこと」は、成果・決定・完了・作成・設定変更などを書く。
 - 「集中メモ」は、脱線がなければ「目立った脱線なし」または集中していた根拠を書く。
@@ -119,6 +123,68 @@ import { hostname } from "os";
 const KEY = process.env.SCREENPIPE_LOCAL_API_KEY;
 const headers = { Authorization: `Bearer ${KEY}` };
 const device = process.env.SCREENPIPE_DEVICE_NAME ?? hostname();
+const now = new Date();
+const rangeStart = new Date(now.getTime() - 60 * 60 * 1000);
+
+const breaksFile = `${process.env.HOME}/.screenpipe/work-state/breaks.jsonl`;
+
+function readBreakEvents() {
+  if (!fs.existsSync(breaksFile)) return [];
+  return fs
+    .readFileSync(breaksFile, "utf8")
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((line) => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
+function summarizeBreaks(start, end) {
+  const events = readBreakEvents();
+  let currentStart = null;
+  let totalMs = 0;
+  const intervals = [];
+
+  for (const event of events) {
+    if (event.type === "break_start") {
+      currentStart = new Date(event.at);
+      continue;
+    }
+
+    if (event.type === "break_end" && currentStart) {
+      const breakEnd = new Date(event.at);
+      const overlapStart = new Date(Math.max(currentStart.getTime(), start.getTime()));
+      const overlapEnd = new Date(Math.min(breakEnd.getTime(), end.getTime()));
+      if (overlapEnd > overlapStart) {
+        totalMs += overlapEnd.getTime() - overlapStart.getTime();
+        intervals.push({ start: overlapStart.toISOString(), end: overlapEnd.toISOString() });
+      }
+      currentStart = null;
+    }
+  }
+
+  if (currentStart) {
+    const overlapStart = new Date(Math.max(currentStart.getTime(), start.getTime()));
+    const overlapEnd = end;
+    if (overlapEnd > overlapStart) {
+      totalMs += overlapEnd.getTime() - overlapStart.getTime();
+      intervals.push({ start: overlapStart.toISOString(), end: "ongoing" });
+    }
+  }
+
+  return {
+    minutes: Math.round(totalMs / 60000),
+    active: Boolean(currentStart),
+    intervals,
+  };
+}
+
+const breaks = summarizeBreaks(rangeStart, now);
 
 const r = await fetch(
   "http://localhost:3030/activity-summary?start_time=1h%20ago&end_time=now",
@@ -141,7 +207,7 @@ const windows = (data?.windows ?? []).slice(0, 24).map((w) => ({
   text: String(w.key_text ?? w.text ?? "").slice(0, 180),
 }));
 
-console.log(JSON.stringify({ device, apps, windows }, null, 2));
+console.log(JSON.stringify({ device, breaks, apps, windows }, null, 2));
 ```
 
 この結果からSlack投稿の内容を組み立てる。主な作業内容が不明な場合のみステップ2へ進む。

@@ -13,4 +13,5 @@ screenpipe/**/logs/
 screenpipe/**/*.sqlite
 screenpipe/**/*.db
 screenpipe/**/.env
+screenpipe/**/config.env
 screenpipe/**/connections.json
