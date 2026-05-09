@@ -2,7 +2,7 @@
 schedule: every 1h
 enabled: true
 preset:
-- screenpipe-cloud
+- gemini-3.1-pro
 connections:
 - slack
 title: フォーカスワーク深掘り

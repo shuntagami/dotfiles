@@ -2,7 +2,7 @@
 schedule: every 1h
 enabled: false
 preset:
-- screenpipe-cloud
+- gemini-3.1-pro
 source_slug: todo-list-assistant
 installed_version: 1
 source_hash: a4ceb8ac9c927319

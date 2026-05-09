@@ -2,7 +2,7 @@
 schedule: '*/15 8-20 * * *'
 enabled: false
 preset:
-- opus
+- gemini-3.1-pro
 connections:
 - toggl
 source_slug: toggl-time-tracker
