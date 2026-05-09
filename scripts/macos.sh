@@ -135,7 +135,7 @@ defaults write -g KeyRepeat -int 1 # normal minimum is 2 (30 ms)
 # Energy saving                                                               #
 ###############################################################################
 
-IS_LAPTOP=$([[ $(sysctl -n hw.model) == *"Book"* ]] && echo true || echo false)
+IS_LAPTOP=$(pmset -g batt 2>/dev/null | grep -q InternalBattery && echo true || echo false)
 
 # Restart automatically on power loss
 sudo pmset -a autorestart 1
