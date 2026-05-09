@@ -10,6 +10,24 @@ Crossnote のカスタム parser / style 設定。
 - `style.less`: preview / PDF 向けの見た目を整える
 - `scripts/deploy.sh` から `~/.local/state/crossnote/` にシンボリックリンクされる
 
+## oura-morning-report.env.example
+
+Oura Ring の朝レポート通知用サンプル設定。
+
+- 実体は `~/.config/oura-morning-report/config.env` に置く
+- `OURA_API_KEY` と `OURA_SLACK_WEBHOOK_URL` はdotfilesに入れない
+- コマンド本体は `bin/oura-morning-report`
+- rawデータと正規化済みレポートは `~/.local/state/personal-data/oura/` に保存される
+
+```bash
+mkdir -p ~/.config/oura-morning-report
+cp ~/dotfiles/misc/oura-morning-report.env.example ~/.config/oura-morning-report/config.env
+$EDITOR ~/.config/oura-morning-report/config.env
+
+oura-morning-report --dry-run
+oura-morning-report install
+```
+
 ## gcp-oauth.keys.json
 
 Google Calendar MCP サーバー用の OAuth 認証情報。
