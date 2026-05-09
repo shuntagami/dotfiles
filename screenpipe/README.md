@@ -1,10 +1,11 @@
 # Screenpipe設定
 
-このディレクトリでは、ScreenpipeのPipeプロンプトだけを管理する。
+このディレクトリでは、ScreenpipeのPipeプロンプトと、実行時に使われる標準スキルの参照スナップショットを管理する。
 
 管理するもの:
 
 - `pipes/*/pipe.md`
+- `runtime-skills/*/SKILL.md`
 
 管理しないもの:
 
@@ -12,14 +13,26 @@
 - 録画、OCR、音声、文字起こしデータ
 - Pipeの実行ログ
 - Pipeの出力ファイル
-- Pipe配下の `.pi/skills/*/SKILL.md`
-- `~/.screenpipe/pi-chat/.pi/skills/*/SKILL.md`
+- `~/.screenpipe/pipes/*/.pi/skills/*/SKILL.md` の上書きやリンク化
+- `~/.screenpipe/pi-chat/.pi/skills/*/SKILL.md` の上書きやリンク化
 - `~/.screenpipe/pi-agent/node_modules/`
 - Slack webhookやAPIキーなどの接続情報
 
 `~/dotfiles/scripts/deploy.sh` を実行すると、各 `pipe.md` が `~/.screenpipe/pipes/*/pipe.md` へシンボリックリンクされる。
 
-`.pi/skills` 配下の `SKILL.md` は、Screenpipe/Pi AgentがPipe実行時に使う標準スキルとして複製される。ユーザーが編集するプロンプト本体ではないため、dotfilesでは管理しない。
+`.pi/skills` 配下の `SKILL.md` は、Screenpipe/Pi AgentがPipe実行時に使う標準スキルとして複製するファイルです。実体把握のために `runtime-skills/` にユニークな内容だけを保存しますが、Screenpipe側の実行ファイルは上書きもリンク化もしません。
+
+## 実行時スキル
+
+現在確認できている `SKILL.md` は、内容としては次の3種類です。
+
+| dotfiles側 | 元の配置 | SHA-256 |
+|---|---|---|
+| `runtime-skills/screenpipe-api-basic/SKILL.md` | `~/.screenpipe/pi-chat/.pi/skills/screenpipe-api/SKILL.md`、`~/.screenpipe/pipes/toggl-time-tracker/.pi/skills/screenpipe-api/SKILL.md` | `1f24a35f5de36b60261859f4b3f3c118381bd8392bd75c8a8a45fec7ae38aa13` |
+| `runtime-skills/screenpipe-api-memory/SKILL.md` | `~/.screenpipe/pipes/focus-assistant/.pi/skills/screenpipe-api/SKILL.md`、`~/.screenpipe/pipes/hourly-work-report/.pi/skills/screenpipe-api/SKILL.md`、`~/.screenpipe/pipes/todo-list-assistant/.pi/skills/screenpipe-api/SKILL.md` | `3ebf6710bb3edfb77977d58ae74bd24bcc8dc93fc0656b42e16dce5877f4a888` |
+| `runtime-skills/screenpipe-cli/SKILL.md` | `~/.screenpipe/pi-chat/.pi/skills/screenpipe-cli/SKILL.md`、`~/.screenpipe/pipes/*/.pi/skills/screenpipe-cli/SKILL.md` | `8868c91499a65803222653b8ea66339f7b2eba22ae63cde8a8cab0f25bb3662d` |
+
+`~/.screenpipe/pi-agent/node_modules/.../SKILL.md` は依存パッケージ内のサンプルなので、管理対象に含めません。
 
 ## 複数端末で使う場合
 
