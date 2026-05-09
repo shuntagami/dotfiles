@@ -174,8 +174,41 @@ _sync_cursor_extensions() {
   fi
 }
 
+# brew bundle dump does not emit npm entries, so restore them after dumping.
+_sync_global_npm_packages_to_brewfile() {
+  local brewfile=$1
+  local fallback_file=$2
+  local npm_packages_file=$(mktemp)
+  local tmp_brewfile=$(mktemp)
+  local npm_packages=
+  local npm_packages_loaded=false
+
+  if command -v npm >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+    npm_packages=$(npm ls -g --depth=0 --json 2>/dev/null \
+      | jq -r '.dependencies // {} | keys[] | select(. != "npm") | @json | "npm " + .')
+    if [[ $? -eq 0 ]]; then
+      npm_packages_loaded=true
+      if [[ -n "$npm_packages" ]]; then
+        printf "%s\n" "$npm_packages" > "$npm_packages_file"
+      fi
+    fi
+  fi
+
+  if [[ "$npm_packages_loaded" == false && -n "$fallback_file" && -s "$fallback_file" ]]; then
+    cp "$fallback_file" "$npm_packages_file"
+  fi
+
+  grep -v '^npm ' "$brewfile" > "$tmp_brewfile"
+  if [[ -s "$npm_packages_file" ]]; then
+    cat "$npm_packages_file" >> "$tmp_brewfile"
+  fi
+  mv "$tmp_brewfile" "$brewfile"
+  rm -f "$npm_packages_file"
+}
+
 update-brew-env() {
   MODE=$1 # 引数: from-brewfile or from-system
+  local brewfile=$HOME/dotfiles/misc/Brewfile
 
   export HOMEBREW_CASK_OPTS="--no-quarantine"
   cd ~/dotfiles/misc
@@ -183,14 +216,23 @@ update-brew-env() {
 
   if [[ "$MODE" == "from-brewfile" ]]; then
     # Brewfile を正として同期（不要なものを削除 → インストール → lock 更新）
-    brew bundle cleanup --force --file=$HOME/dotfiles/misc/Brewfile
-    brew bundle install --file=$HOME/dotfiles/misc/Brewfile
+    brew bundle cleanup --force --file="$brewfile"
+    brew bundle install --file="$brewfile"
     # Cursor も同期
     _sync_cursor_extensions from-brewfile
   elif [[ "$MODE" == "from-system" ]]; then
+    local existing_npm_packages_file=$(mktemp)
+    grep '^npm ' "$brewfile" > "$existing_npm_packages_file"
+
     # システムを正として同期（Brewfile 更新 → lock 更新）
-    brew bundle dump --force --file=$HOME/dotfiles/misc/Brewfile
-    brew bundle install --file=$HOME/dotfiles/misc/Brewfile
+    if ! brew bundle dump --force --file="$brewfile"; then
+      rm -f "$existing_npm_packages_file"
+      return 1
+    fi
+    _sync_global_npm_packages_to_brewfile "$brewfile" "$existing_npm_packages_file"
+    rm -f "$existing_npm_packages_file"
+
+    brew bundle install --file="$brewfile"
     # Cursor も同期
     _sync_cursor_extensions from-system
   else
