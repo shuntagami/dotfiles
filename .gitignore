@@ -8,3 +8,9 @@ private.ahk
 gcp-oauth.keys.json
 ngrok.yml
 mcp/slack.env
+screenpipe/**/output/
+screenpipe/**/logs/
+screenpipe/**/*.sqlite
+screenpipe/**/*.db
+screenpipe/**/.env
+screenpipe/**/connections.json

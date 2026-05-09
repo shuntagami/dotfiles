@@ -49,6 +49,18 @@ ln -sf ~/dotfiles/misc/docker-config.json ~/.docker/config.json
 mkdir -p ~/.local/state/crossnote
 ln -sf ~/dotfiles/misc/crossnote/parser.js ~/.local/state/crossnote/parser.js
 ln -sf ~/dotfiles/misc/crossnote/style.less ~/.local/state/crossnote/style.less
+
+# Screenpipe: manage only prompt/config files that are safe to keep in dotfiles.
+# Databases, recordings, logs, outputs, and connection secrets stay under ~/.screenpipe.
+if [[ -d "${HOME}/dotfiles/screenpipe/pipes" ]]; then
+  mkdir -p "${HOME}/.screenpipe/pipes"
+  for pipe_md in "${HOME}"/dotfiles/screenpipe/pipes/*/pipe.md(.N); do
+    pipe_name="${pipe_md:h:t}"
+    mkdir -p "${HOME}/.screenpipe/pipes/${pipe_name}"
+    ln -sf "${pipe_md}" "${HOME}/.screenpipe/pipes/${pipe_name}/pipe.md"
+  done
+fi
+
 mkdir -p ~/.config/mcp
 if [[ -f ~/.config/mcp/slack.env && ! -L ~/.config/mcp/slack.env && ! -f ~/dotfiles/mcp/slack.env ]]; then
   mv ~/.config/mcp/slack.env ~/dotfiles/mcp/slack.env
