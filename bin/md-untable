@@ -15,6 +15,16 @@
 // - 標準入力対応: `cat foo.md | md-untable` も可
 // - ファイル指定時は in-place 上書き（差分なしなら何もしない）
 // - 再実行しても結果が変わらない（idempotent）
+//
+// オプション:
+//   --breaks / -b   コードブロック化したセル本文の半角スペースを
+//                   全て改行に置換する。Google ドキュメントでは
+//                   元の改行がスペース1個に潰されるため、これを使うと
+//                   1行=1思考単位の元レイアウトに近い見た目に戻る。
+//                   ※ 段落区切り（空行）の情報は元から失われているので
+//                     復元できない。「5/26（火） 23:59まで」のような
+//                     CJK と数字の間のスペースも全て改行されるので
+//                     必要に応じて手動で繋ぎ直す。
 
 const fs = require('fs');
 
@@ -22,7 +32,7 @@ const ROW_RE = /^\|\s(.*)\s\|\s*$/;
 // 区切り行: `| :--- |` `| :---: |` `| ---: |` `| --- |` 等の単一カラム
 const SEP_RE = /^\|\s:?-{3,}:?\s\|\s*$/;
 
-const convert = (text) => {
+const convert = (text, { breaks }) => {
   const lines = text.split('\n');
   const out = [];
   let inFence = false;
@@ -46,8 +56,9 @@ const convert = (text) => {
           out.push(line);
           continue;
         }
+        const body = breaks ? m[1].split(/ +/).join('\n') : m[1];
         out.push('```');
-        out.push(m[1]);
+        out.push(body);
         out.push('```');
         i += 1; // 区切り行をスキップ
         continue;
@@ -60,14 +71,24 @@ const convert = (text) => {
   return out.join('\n');
 };
 
-const filePath = process.argv[2];
+const args = process.argv.slice(2);
+const opts = { breaks: false };
+const positional = [];
+for (const a of args) {
+  if (a === '--breaks' || a === '-b') opts.breaks = true;
+  else if (a === '--help' || a === '-h') {
+    console.log('Usage: md-untable [--breaks|-b] [file|-]');
+    process.exit(0);
+  } else positional.push(a);
+}
+const filePath = positional[0];
 
 if (!filePath || filePath === '-') {
   let buf = '';
   process.stdin.setEncoding('utf8');
   process.stdin.on('data', (chunk) => (buf += chunk));
   process.stdin.on('end', () => {
-    process.stdout.write(convert(buf));
+    process.stdout.write(convert(buf, opts));
   });
   return;
 }
@@ -78,7 +99,7 @@ if (!fs.existsSync(filePath)) {
 }
 
 const original = fs.readFileSync(filePath, 'utf8');
-const result = convert(original);
+const result = convert(original, opts);
 
 if (result !== original) {
   fs.writeFileSync(filePath, result, 'utf8');
