@@ -7,7 +7,7 @@
 if [[ $OSTYPE == darwin* ]]; then
   path=(
     ~/.antigravity/antigravity/bin(N)
-    $HOMEBREW_PREFIX/opt/ruby/bin(N)
+    $HOMEBREW_PREFIX/opt/ruby@3.4/bin(N)
     $path
   )
 fi
