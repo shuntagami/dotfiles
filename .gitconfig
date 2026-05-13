@@ -106,7 +106,7 @@
 
 	# Claude に変更内容をよしなに分割して commit + push までさせる
 	# ステージ済み・未ステージ・未追跡すべてを対象に、論理単位ごとに add → commit を繰り返し、最後に push する
-	ccc = "!claude -p \"作業ディレクトリの変更内容（ステージ済み・未ステージ・未追跡すべて）を確認し、論理的にまとまった単位でファイルをステージして日本語のコミットメッセージで commit する作業を、変更が無くなるまで繰り返してください。1コミットに無関係な変更を混ぜないこと。秘密情報を含むファイル（.env など）はコミットしないこと。すべての commit が終わったら現在のブランチを origin に push してください（push.autoSetupRemote が有効なので初回でも git push でOK）。レスポンスは日本語でお願いします\""
+	ccc = "!claude --model claude-sonnet-4-6 -p \"作業ディレクトリの変更内容（ステージ済み・未ステージ・未追跡すべて）を確認し、論理的にまとまった単位でファイルをステージして日本語のコミットメッセージで commit する作業を、変更が無くなるまで繰り返してください。1コミットに無関係な変更を混ぜないこと。秘密情報を含むファイル（.env など）はコミットしないこと。すべての commit が終わったら現在のブランチを origin に push してください（push.autoSetupRemote が有効なので初回でも git push でOK）。レスポンスは日本語でお願いします\""
 	review-requests = "!gh pr list \\\n  --search \"review-requested:@me\" \\\n  --json number,title,author,url,updatedAt \\\n  --template \"{{range .}}#{{.number}} {{.title}} by {{.author.login}} {{.url}}{{\\\"\\n\\\"}}{{end}}\""
 
 [apply]
