@@ -1,17 +1,36 @@
 #!/usr/bin/env node
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
+
+const CONFIG_FILE = path.join(os.homedir(), '.config', 'upload_image', 'config.env');
 
 const HELP = `Upload an image to pixeldrain.com and get the URL
 
 Usage: upload_image path/to/your/image.jpg
 
-Required env: PIXELDRAIN_API_KEY
-  1. https://pixeldrain.com にサインアップ
-  2. https://pixeldrain.com/user/api_keys で発行
-  3. export PIXELDRAIN_API_KEY=...
+Configuration:
+  Copy misc/upload_image.env.example to ${CONFIG_FILE}
+  and set PIXELDRAIN_API_KEY. The env var overrides the file.
+
+  Issue an API key at https://pixeldrain.com/user/api_keys
 `;
+
+function readConfig() {
+  const config = {};
+  if (!fs.existsSync(CONFIG_FILE)) return config;
+  for (const rawLine of fs.readFileSync(CONFIG_FILE, 'utf8').split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const idx = line.indexOf('=');
+    if (idx === -1) continue;
+    const key = line.slice(0, idx).trim();
+    const value = line.slice(idx + 1).trim().replace(/^['"]|['"]$/g, '');
+    config[key] = value;
+  }
+  return config;
+}
 
 const arg = process.argv[2];
 
@@ -20,9 +39,9 @@ if (!arg || arg === '-h' || arg === '--help') {
   process.exit(arg ? 0 : 1);
 }
 
-const apiKey = process.env.PIXELDRAIN_API_KEY;
+const apiKey = process.env.PIXELDRAIN_API_KEY || readConfig().PIXELDRAIN_API_KEY;
 if (!apiKey) {
-  console.error('PIXELDRAIN_API_KEY が未設定です。`upload_image -h` を参照してください。');
+  console.error(`PIXELDRAIN_API_KEY が未設定です。${CONFIG_FILE} を作成するか env を設定してください。\n詳細は \`upload_image -h\``);
   process.exit(1);
 }
 
