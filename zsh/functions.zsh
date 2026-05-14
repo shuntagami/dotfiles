@@ -277,35 +277,70 @@ gw() {
     return 1
   fi
 
-  local origdir="$PWD"
-  local output
+  # Source for .env copies is the main worktree, not necessarily $PWD —
+  # this lets `gw` work when invoked from inside an existing linked worktree.
+  local source_root
+  source_root=$(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}')
+  if [[ -z "$source_root" ]]; then
+    source_root="$PWD"
+  fi
+
+  local output rc
   output=$(git w "$@" 2>&1)
-  local rc=$?
+  rc=$?
 
   echo "$output"
   if [[ $rc -ne 0 ]]; then
     return $rc
   fi
 
-  # Extract workdir path from "  cd <path>" line in git w output
   local workdir
   workdir=$(echo "$output" | sed -n 's/^  cd //p')
 
   if [[ -n "$workdir" && -d "$workdir" ]]; then
-    # Copy .env* files from original repo to new worktree
-    local copied=0
-    for envfile in "$origdir"/.env*; do
-      if [[ -f "$envfile" ]]; then
-        cp "$envfile" "$workdir/"
-        copied=$((copied + 1))
-      fi
-    done
+    local copied=0 envfile rel dest
+    while IFS= read -r envfile; do
+      rel="${envfile#$source_root/}"
+      dest="$workdir/$rel"
+      mkdir -p "$(dirname "$dest")"
+      cp "$envfile" "$dest"
+      copied=$((copied + 1))
+    done < <(find "$source_root" \
+        \( -name node_modules -o -name .git -o -name dist -o -name build \
+           -o -name .next -o -name target -o -name vendor -o -name .venv \) -prune -o \
+        -type f \( -name '.env' -o -name '.env.*' \) -print)
+
     if (( copied > 0 )); then
       echo "[gw] copied $copied .env file(s) to $workdir"
     fi
 
     cd "$workdir"
   fi
+}
+
+# Companion to gw: delete a worktree + its branch. If invoked from inside a
+# linked worktree, cd back to the main worktree first so `git wd`'s relative
+# resolution is correct and `git worktree remove` cannot evict the caller.
+# Usage: gwd <branch-or-pr-number>
+gwd() {
+  if [[ -z "$1" ]]; then
+    echo 'usage: gwd <branch-or-pr-number>'
+    return 1
+  fi
+
+  local toplevel main_worktree
+  toplevel=$(git rev-parse --show-toplevel 2>/dev/null) || {
+    echo '[gwd] not inside a git repository'
+    return 1
+  }
+  main_worktree=$(git worktree list --porcelain | awk '/^worktree /{print $2; exit}')
+
+  if [[ -n "$main_worktree" && "$main_worktree" != "$toplevel" ]]; then
+    echo "[gwd] cd to main worktree: $main_worktree"
+    cd "$main_worktree" || return 1
+  fi
+
+  git wd "$@"
 }
 
 alias ggrep="git grep -A 5 -B 5"
