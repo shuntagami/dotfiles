@@ -318,6 +318,90 @@ gw() {
   fi
 }
 
+# Promote uncommitted work in the main worktree to a fresh worktree.
+# Useful when you started Claude/coding directly in the main checkout and
+# realized you want isolation. Stashes (incl. untracked), creates the
+# worktree, pops the stash there, and copies the latest Claude session
+# jsonl so `claude --resume` in the new worktree shows the conversation.
+# Usage: gwp <branch-or-pr-number>
+gwp() {
+  if [[ -z "$1" ]]; then
+    echo 'usage: gwp <branch-or-pr-number>'
+    return 1
+  fi
+
+  local toplevel main_worktree
+  toplevel=$(git rev-parse --show-toplevel 2>/dev/null) || {
+    echo '[gwp] not inside a git repository'
+    return 1
+  }
+  main_worktree=$(git worktree list --porcelain | awk '/^worktree /{print $2; exit}')
+
+  if [[ "$toplevel" != "$main_worktree" ]]; then
+    echo "[gwp] must be run from the main worktree ($main_worktree)" >&2
+    echo "[gwp] you are in: $toplevel" >&2
+    return 1
+  fi
+
+  if [[ -z "$(git status --porcelain)" ]]; then
+    echo "[gwp] no uncommitted changes to promote; use 'gw' instead" >&2
+    return 1
+  fi
+
+  local source_dir="$toplevel"
+  local stash_msg="gwp: promote to worktree '$1'"
+
+  echo "[gwp] stashing uncommitted changes (including untracked)..."
+  if ! git stash push -u -m "$stash_msg" >/dev/null; then
+    echo '[gwp] stash failed' >&2
+    return 1
+  fi
+
+  local output rc workdir
+  output=$(git w "$@" 2>&1)
+  rc=$?
+  echo "$output"
+  if [[ $rc -ne 0 ]]; then
+    echo '[gwp] worktree creation failed; restoring stash' >&2
+    git stash pop >/dev/null 2>&1
+    return $rc
+  fi
+  workdir=$(echo "$output" | sed -n 's/^  cd //p')
+  if [[ -z "$workdir" || ! -d "$workdir" ]]; then
+    echo '[gwp] could not determine new worktree path; restoring stash' >&2
+    git stash pop >/dev/null 2>&1
+    return 1
+  fi
+
+  cd "$workdir" || return 1
+
+  echo "[gwp] applying stash in $workdir..."
+  if ! git stash pop; then
+    echo '[gwp] stash pop had conflicts — resolve manually (stash entry preserved)' >&2
+  fi
+
+  # Copy the most recent Claude Code session jsonl to the new project dir so
+  # `claude --resume` here can pick up the conversation. Encoding: `/` and `.`
+  # in the cwd both become `-` in the project dir name.
+  local encoded_source encoded_target src_proj dst_proj latest
+  encoded_source=$(printf '%s' "$source_dir" | tr '/.' '--')
+  encoded_target=$(printf '%s' "$workdir"   | tr '/.' '--')
+  src_proj="$HOME/.claude/projects/$encoded_source"
+  dst_proj="$HOME/.claude/projects/$encoded_target"
+
+  if [[ -d "$src_proj" ]]; then
+    latest=$(ls -t "$src_proj"/*.jsonl 2>/dev/null | head -1)
+    if [[ -n "$latest" ]]; then
+      mkdir -p "$dst_proj"
+      cp "$latest" "$dst_proj/"
+      echo "[gwp] copied Claude session: $(basename "$latest")"
+      echo "[gwp] resume here with:  claude --resume"
+    else
+      echo "[gwp] no Claude session jsonl found in $src_proj"
+    fi
+  fi
+}
+
 # Companion to gw: delete a worktree + its branch. If invoked from inside a
 # linked worktree, cd back to the main worktree first so `git wd`'s relative
 # resolution is correct and `git worktree remove` cannot evict the caller.
