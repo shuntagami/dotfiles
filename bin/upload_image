@@ -3,9 +3,14 @@
 const fs = require('fs');
 const path = require('path');
 
-const HELP = `Upload an image to catbox.moe and get the URL
+const HELP = `Upload an image to pixeldrain.com and get the URL
 
 Usage: upload_image path/to/your/image.jpg
+
+Required env: PIXELDRAIN_API_KEY
+  1. https://pixeldrain.com にサインアップ
+  2. https://pixeldrain.com/user/api_keys で発行
+  3. export PIXELDRAIN_API_KEY=...
 `;
 
 const arg = process.argv[2];
@@ -13,6 +18,12 @@ const arg = process.argv[2];
 if (!arg || arg === '-h' || arg === '--help') {
   process.stdout.write(HELP);
   process.exit(arg ? 0 : 1);
+}
+
+const apiKey = process.env.PIXELDRAIN_API_KEY;
+if (!apiKey) {
+  console.error('PIXELDRAIN_API_KEY が未設定です。`upload_image -h` を参照してください。');
+  process.exit(1);
 }
 
 (async () => {
@@ -23,17 +34,21 @@ if (!arg || arg === '-h' || arg === '--help') {
   }
 
   const form = new FormData();
-  form.append('reqtype', 'fileupload');
   const blob = new Blob([fs.readFileSync(filePath)]);
-  form.append('fileToUpload', blob, path.basename(filePath));
+  form.append('file', blob, path.basename(filePath));
 
-  const res = await fetch('https://catbox.moe/user/api.php', { method: 'POST', body: form });
-  const body = (await res.text()).trim();
+  const res = await fetch('https://pixeldrain.com/api/file', {
+    method: 'POST',
+    body: form,
+    headers: { Authorization: 'Basic ' + Buffer.from(':' + apiKey).toString('base64') },
+  });
+  const text = await res.text();
 
   if (!res.ok) {
-    console.error(`Failed to upload image: ${res.status} ${body}`);
+    console.error(`Failed to upload image: ${res.status} ${text}`);
     process.exit(1);
   }
 
-  process.stdout.write(body + '\n');
+  const { id } = JSON.parse(text);
+  process.stdout.write(`https://pixeldrain.com/u/${id}\n`);
 })();
