@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# git w <branch>     : create worktree at ../<repo>-<sanitized-branch>
+# git w <pr-number>  : create worktree at ../<repo>-pr-<N> tracking the PR's head branch
+#
+# Notes:
+#   - Worktree path lives next to the main checkout (parent of main worktree).
+#   - For branch mode: fetches origin/<default> first so new branches start from latest.
+#   - For PR mode: uses the PR's actual branch name locally and configures upstream
+#     tracking the same way `gh pr checkout` does, so `git push` from the worktree
+#     pushes back to the PR.
+#   - Refuses to create a worktree for the repository's default branch.
+
+set -euo pipefail
+
+usage() {
+  echo 'usage: git w <branch-or-pr-number>' >&2
+  exit 1
+}
+
+[[ $# -eq 1 ]] || usage
+arg="$1"
+
+main_worktree=$(git worktree list --porcelain | awk '/^worktree /{print $2; exit}')
+if [[ -z "$main_worktree" ]]; then
+  echo '[git w] could not determine main worktree' >&2
+  exit 1
+fi
+repo=$(basename "$main_worktree")
+parent=$(dirname "$main_worktree")
+
+default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || true)
+
+if [[ "$arg" =~ ^[0-9]+$ ]]; then
+  pr="$arg"
+  branch=$(gh pr view "$pr" --json headRefName -q .headRefName 2>/dev/null || true)
+  if [[ -z "$branch" ]]; then
+    echo "[git w] Error: cannot fetch PR #$pr" >&2
+    exit 1
+  fi
+
+  workdir="$parent/$repo-pr-$pr"
+  if [[ -d "$workdir" ]]; then
+    echo "[git w] worktree already exists:"
+    echo "  cd $workdir"
+    exit 0
+  fi
+
+  echo "[git w] creating PR worktree for #$pr (branch: $branch)..."
+  # Fetch into local branch with the original name so push refspecs line up.
+  git fetch origin "$branch:$branch" --update-head-ok
+  git worktree add "$workdir" "$branch"
+
+  # Configure upstream the same way `gh pr checkout` does.
+  git -C "$workdir" config "branch.$branch.remote" origin
+  git -C "$workdir" config "branch.$branch.merge" "refs/heads/$branch"
+
+  echo "  cd $workdir"
+  exit 0
+fi
+
+branch="$arg"
+sanitized=${branch//\//-}
+workdir="$parent/$repo-$sanitized"
+
+if [[ -n "$default_branch" && "$branch" == "$default_branch" ]]; then
+  echo "[git w] refusing to create a worktree for the default branch '$branch'." >&2
+  echo "[git w] the main checkout already tracks it: $main_worktree" >&2
+  exit 1
+fi
+
+if [[ -d "$workdir" ]]; then
+  echo "[git w] worktree already exists:"
+  echo "  cd $workdir"
+  exit 0
+fi
+
+if [[ -n "$default_branch" ]]; then
+  echo "[git w] fetching origin/$default_branch..."
+  git fetch origin "$default_branch" >/dev/null
+fi
+
+if ! git rev-parse --verify "$branch" >/dev/null 2>&1; then
+  if [[ -z "$default_branch" ]]; then
+    echo "[git w] cannot determine default branch to base '$branch' on" >&2
+    exit 1
+  fi
+  git branch "$branch" "origin/$default_branch"
+fi
+
+echo "[git w] creating worktree for branch '$branch'..."
+git worktree add "$workdir" "$branch"
+echo "  cd $workdir"

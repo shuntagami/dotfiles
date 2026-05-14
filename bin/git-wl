@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# git wl : list worktrees in a compact PATH / BRANCH / HEAD table.
+
+set -euo pipefail
+
+printf 'PATH\tBRANCH\tHEAD\n'
+git worktree list --porcelain | awk '
+  /^worktree /   { path = $2 }
+  /^branch /     { sub("refs/heads/", "", $2); branch = $2 }
+  /^HEAD /       { head = $2 }
+  /^detached$/   { branch = "(detached)" }
+  /^$/           { printf "%s\t%s\t%s\n", path, branch, head; branch = ""; head = "" }
+  END            { if (path != "" && head != "") printf "%s\t%s\t%s\n", path, branch, head }
+'

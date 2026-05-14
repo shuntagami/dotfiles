@@ -88,16 +88,8 @@
 
 	show-merge = "!sh -c 'merge=$(git find-merge $0 $1) && [ -n \"$merge\" ] && git show $merge'"
 
-	# ===== Unified worktree entrypoint =====
-	# git w <branch> : ../repo-<branch> に worktree 作成 or 既存案内
-	# git w <number> : PR #<number> 用に ../repo-pr-<number> を作成 or 既存案内
-	w = "!f() { arg=\"$1\"; repo=$(basename \"$(pwd)\"); if [ -z \"$arg\" ]; then echo 'usage: git w <branch-or-pr-number>'; exit 1; fi; if printf '%s' \"$arg\" | grep -Eq '^[0-9]+$'; then pr=\"$arg\"; branch=$(gh pr view \"$pr\" --json headRefName -q .headRefName 2>/dev/null); if [ -z \"$branch\" ]; then echo \"[git w] Error: cannot fetch PR #$pr\"; exit 1; fi; workdir=\"../$repo-pr-$pr\"; localbranch=\"pr-$pr\"; if [ -d \"$workdir\" ]; then echo \"[git w] worktree already exists:\"; echo \"  cd $workdir\"; exit 0; fi; echo \"[git w] creating PR worktree for #$pr (branch: $branch)...\"; git fetch origin \"$branch\":\"$localbranch\" --update-head-ok; git worktree add \"$workdir\" \"$localbranch\"; echo \"  cd $workdir\"; exit 0; fi; branch=\"$arg\"; workdir=\"../$repo-$branch\"; if [ -d \"$workdir\" ]; then echo \"[git w] worktree already exists:\"; echo \"  cd $workdir\"; exit 0; fi; default_branch=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'); if ! git rev-parse --verify \"$branch\" >/dev/null 2>&1; then git branch \"$branch\" \"origin/$default_branch\"; fi; echo \"[git w] creating worktree for branch '$branch'...\"; git worktree add \"$workdir\" \"$branch\"; echo \"  cd $workdir\"; }; f"
-
-	# List worktrees in a compact table
-	wl = "!f() { echo 'PATH\\tBRANCH\\tHEAD'; git worktree list --porcelain | awk '/^worktree/ {path=$2} /^branch/ {gsub(\"refs/heads/\", \"\", $2); branch=$2} /^HEAD/ {head=$2} /^$/ {printf \"%s\\t%s\\t%s\\n\", path, branch, head}'; }; f"
-
-	# Delete worktree + local branch (PR number or branch name)
-	wd = "!f() { arg=\"$1\"; repo=$(basename \"$(pwd)\"); if [ -z \"$arg\" ]; then echo 'usage: git wd <branch-or-pr-number>'; exit 1; fi; if printf '%s' \"$arg\" | grep -Eq '^[0-9]+$'; then pr=\"$arg\"; branch=\"pr-$pr\"; workdir=\"../$repo-pr-$pr\"; else branch=\"$arg\"; workdir=\"../$repo-$branch\"; fi; if [ ! -d \"$workdir\" ]; then echo \"[git wd] no such worktree dir: $workdir\"; exit 1; fi; echo \"[git wd] removing worktree: $workdir\"; git worktree remove \"$workdir\" || exit 1; if git rev-parse --verify \"$branch\" >/dev/null 2>&1; then echo \"[git wd] deleting branch '$branch'\"; git branch -D \"$branch\"; else echo \"[git wd] branch '$branch' not found (maybe already deleted)\"; fi; }; f"
+	# Worktree helpers: `git w`, `git wl`, `git wd` are implemented as
+	# scripts in $DOTFILES/bin (auto-discovered via PATH).
 
 	empty-push = "!f() { branch=$(git branch --show-current); git commit --allow-empty -m \"empty commit for deploy\" && git push origin $branch; }; f"
 

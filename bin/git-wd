@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# git wd <branch-or-pr-number> : remove worktree at ../<repo>-<sanitized> + delete its branch.
+#
+# Refuses to:
+#   - delete a worktree for the repository's default branch
+#   - delete the worktree the caller is currently inside (use `gwd` zsh wrapper
+#     to auto-cd out first, or cd out manually)
+
+set -euo pipefail
+
+usage() {
+  echo 'usage: git wd <branch-or-pr-number>' >&2
+  exit 1
+}
+
+[[ $# -eq 1 ]] || usage
+arg="$1"
+
+main_worktree=$(git worktree list --porcelain | awk '/^worktree /{print $2; exit}')
+if [[ -z "$main_worktree" ]]; then
+  echo '[git wd] could not determine main worktree' >&2
+  exit 1
+fi
+repo=$(basename "$main_worktree")
+parent=$(dirname "$main_worktree")
+
+if [[ "$arg" =~ ^[0-9]+$ ]]; then
+  workdir="$parent/$repo-pr-$arg"
+else
+  sanitized=${arg//\//-}
+  workdir="$parent/$repo-$sanitized"
+fi
+
+if [[ ! -d "$workdir" ]]; then
+  echo "[git wd] no such worktree dir: $workdir" >&2
+  exit 1
+fi
+
+branch=$(git -C "$workdir" rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+
+default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || true)
+if [[ -n "$default_branch" && "$branch" == "$default_branch" ]]; then
+  echo "[git wd] refusing to delete worktree on default branch '$branch'." >&2
+  exit 1
+fi
+
+current_toplevel=$(git rev-parse --show-toplevel 2>/dev/null || true)
+workdir_abs=$(cd "$workdir" && pwd)
+if [[ -n "$current_toplevel" && "$current_toplevel" == "$workdir_abs" ]]; then
+  echo "[git wd] refusing to delete the worktree you are currently in: $workdir_abs" >&2
+  echo "[git wd] cd elsewhere (e.g. cd $main_worktree) and retry, or use the gwd zsh wrapper." >&2
+  exit 1
+fi
+
+echo "[git wd] removing worktree: $workdir"
+git worktree remove "$workdir"
+
+if [[ -n "$branch" ]] && git rev-parse --verify "$branch" >/dev/null 2>&1; then
+  echo "[git wd] deleting branch '$branch'"
+  git branch -D "$branch"
+else
+  echo "[git wd] branch '$branch' not found (maybe already deleted)"
+fi
