@@ -132,6 +132,12 @@ claude --resume
 - Syncthing GUI で該当フォルダをクリックして "Last Scan" の時刻を確認、`Rescan` ボタンで強制再スキャン
 - 片方だけ Ignore Patterns 入れている場合、整合性が取れない。両機で同じパターンを揃える
 
+**初回同期で `*.sync-conflict-<日付>-<デバイス>.<拡張子>` ができた**
+- 両機が独立にファイルを変更していた状態で初めて出会った時に発生する一回限りのアーティファクト。Syncthing が「どちらを優先するか判断できない」場合に両方残す挙動
+- 中身を `diff` で比較し、必要なら merge して片方を残す。`work.jsonl` のような append-only ログは時系列順に連結すれば完全な履歴になる
+- `config.env` のように同じキーで違う値が入っている時は、コード側のフォールバック順を確認してから統合（例：`SLACK_WEBHOOK_URL` 1 本にまとめれば work/break 両方の fallback に効く）
+- 解決後はコンフリクトファイルを削除。`.stversions/` に旧版が残るので焦らず
+
 ## 関連ファイル
 
 - `misc/Brewfile` — `syncthing` formula、`tailscale-app` cask
