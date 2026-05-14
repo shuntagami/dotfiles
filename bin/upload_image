@@ -11,8 +11,8 @@ const HELP = `Upload an image to pixeldrain.com and get the URL
 Usage: upload_image path/to/your/image.jpg
 
 Configuration:
-  Copy misc/upload_image.env.example to ${CONFIG_FILE}
-  and set PIXELDRAIN_API_KEY. The env var overrides the file.
+  PIXELDRAIN_API_KEY env > ${CONFIG_FILE}
+  If neither is set and stdin is a TTY, the key is prompted and saved.
 
   Issue an API key at https://pixeldrain.com/user/api_keys
 `;
@@ -32,6 +32,53 @@ function readConfig() {
   return config;
 }
 
+function saveApiKey(key) {
+  fs.mkdirSync(path.dirname(CONFIG_FILE), { recursive: true, mode: 0o700 });
+  let content = fs.existsSync(CONFIG_FILE) ? fs.readFileSync(CONFIG_FILE, 'utf8') : '';
+  const newLine = `PIXELDRAIN_API_KEY="${key}"`;
+  if (/^PIXELDRAIN_API_KEY\s*=.*/m.test(content)) {
+    content = content.replace(/^PIXELDRAIN_API_KEY\s*=.*/m, newLine);
+  } else if (content.length === 0) {
+    content = `# pixeldrain.com API key — get at https://pixeldrain.com/user/api_keys\n${newLine}\n`;
+  } else {
+    if (!content.endsWith('\n')) content += '\n';
+    content += newLine + '\n';
+  }
+  fs.writeFileSync(CONFIG_FILE, content, { mode: 0o600 });
+}
+
+const CTRL_C = String.fromCharCode(3);
+const EOT = String.fromCharCode(4);
+const DEL = String.fromCharCode(127);
+
+function promptSecret(question) {
+  return new Promise((resolve) => {
+    const { stdin, stderr } = process;
+    stderr.write(question);
+    stdin.resume();
+    stdin.setRawMode(true);
+    let value = '';
+    const onData = (chunk) => {
+      const ch = chunk.toString('utf8');
+      if (ch === '\n' || ch === '\r' || ch === EOT) {
+        stdin.setRawMode(false);
+        stdin.pause();
+        stdin.removeListener('data', onData);
+        stderr.write('\n');
+        resolve(value);
+      } else if (ch === CTRL_C) {
+        stderr.write('\n');
+        process.exit(130);
+      } else if (ch === DEL || ch === '\b') {
+        value = value.slice(0, -1);
+      } else {
+        value += ch;
+      }
+    };
+    stdin.on('data', onData);
+  });
+}
+
 const arg = process.argv[2];
 
 if (!arg || arg === '-h' || arg === '--help') {
@@ -39,13 +86,22 @@ if (!arg || arg === '-h' || arg === '--help') {
   process.exit(arg ? 0 : 1);
 }
 
-const apiKey = process.env.PIXELDRAIN_API_KEY || readConfig().PIXELDRAIN_API_KEY;
-if (!apiKey) {
-  console.error(`PIXELDRAIN_API_KEY が未設定です。${CONFIG_FILE} を作成するか env を設定してください。\n詳細は \`upload_image -h\``);
-  process.exit(1);
-}
-
 (async () => {
+  let apiKey = process.env.PIXELDRAIN_API_KEY || readConfig().PIXELDRAIN_API_KEY;
+  if (!apiKey) {
+    if (!process.stdin.isTTY) {
+      console.error(`PIXELDRAIN_API_KEY が未設定です。${CONFIG_FILE} を作成するか env を設定してください。\n詳細は \`upload_image -h\``);
+      process.exit(1);
+    }
+    apiKey = (await promptSecret('PIXELDRAIN_API_KEY (issue at https://pixeldrain.com/user/api_keys): ')).trim();
+    if (!apiKey) {
+      console.error('No key entered.');
+      process.exit(1);
+    }
+    saveApiKey(apiKey);
+    console.error(`✓ Saved to ${CONFIG_FILE}`);
+  }
+
   const filePath = path.resolve(arg);
   if (!fs.existsSync(filePath)) {
     console.error(`File not found: ${arg}`);
