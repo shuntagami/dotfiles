@@ -269,6 +269,28 @@ function mkd() {
 	mkdir -p "$@" && cd "$_";
 }
 
+# git w wrapper: run git-w, then enter the worktree it reports.
+git() {
+  if [[ "$1" != "w" ]]; then
+    command git "$@"
+    return $?
+  fi
+
+  local output rc workdir
+  output=$(command git "$@" 2>&1)
+  rc=$?
+
+  echo "$output"
+  if [[ $rc -ne 0 ]]; then
+    return $rc
+  fi
+
+  workdir=$(echo "$output" | sed -n 's/^  cd //p')
+  if [[ -n "$workdir" && -d "$workdir" ]]; then
+    cd "$workdir"
+  fi
+}
+
 # git worktree wrapper: create worktree + copy .env files + cd into it
 # Usage: gw <branch-or-pr-number>
 gw() {
