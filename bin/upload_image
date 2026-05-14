@@ -1,0 +1,37 @@
+#!/usr/bin/env ruby
+
+require 'uri'
+require 'net/http'
+
+########################################
+# HELP
+########################################
+HELP = <<~EOS
+  Upload an image to 0x0.st and get the URL
+
+  Usage: upload_image path/to/your/image.jpg
+EOS
+
+if ARGV[0] == '-h' || ARGV.empty?
+  puts HELP
+  exit 0
+end
+
+def upload_image(image_path)
+  uri = URI.parse('https://0x0.st')
+  request = Net::HTTP::Post.new(uri)
+  form_data = [['file', File.open(image_path)]]
+  request.set_form form_data, 'multipart/form-data'
+
+  response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: uri.scheme == 'https') do |http|
+    http.request(request)
+  end
+
+  if response.is_a?(Net::HTTPSuccess)
+    puts response.body
+  else
+    puts "Failed to upload image: #{response.code}"
+  end
+end
+
+upload_image(ARGV[0])
