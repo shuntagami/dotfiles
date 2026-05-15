@@ -90,6 +90,7 @@ brew "pngpaste"
 brew "poppler"
 brew "qt@5"
 brew "poppler-qt5"
+brew "pam-reattach"
 brew "portaudio"
 brew "postgresql@14", restart_service: :changed
 brew "pstree"
