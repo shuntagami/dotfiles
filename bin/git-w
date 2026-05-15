@@ -17,6 +17,31 @@ usage() {
   exit 1
 }
 
+copy_env_files() {
+  local source_root="$1"
+  local dest_root="$2"
+  local copied=0 envfile rel dest
+
+  [[ -d "$source_root" && -d "$dest_root" ]] || return 0
+
+  while IFS= read -r -d '' envfile; do
+    rel="${envfile#"$source_root"/}"
+    [[ "$rel" != "$envfile" ]] || continue
+
+    dest="$dest_root/$rel"
+    mkdir -p "$(dirname "$dest")"
+    cp -p "$envfile" "$dest"
+    copied=$((copied + 1))
+  done < <(find "$source_root" \
+      \( -name node_modules -o -name .git -o -name dist -o -name build \
+         -o -name .next -o -name target -o -name vendor -o -name .venv \) -prune -o \
+      -type f \( -name '.env' -o -name '.env.*' \) -print0)
+
+  if (( copied > 0 )); then
+    echo "[git w] copied $copied .env file(s) to $dest_root"
+  fi
+}
+
 [[ $# -eq 1 ]] || usage
 arg="$1"
 
@@ -41,6 +66,7 @@ if [[ "$arg" =~ ^[0-9]+$ ]]; then
   workdir="$parent/$repo-pr-$pr"
   if [[ -d "$workdir" ]]; then
     echo "[git w] worktree already exists:"
+    copy_env_files "$main_worktree" "$workdir"
     echo "  cd $workdir"
     exit 0
   fi
@@ -53,6 +79,8 @@ if [[ "$arg" =~ ^[0-9]+$ ]]; then
   # Configure upstream the same way `gh pr checkout` does.
   git -C "$workdir" config "branch.$branch.remote" origin
   git -C "$workdir" config "branch.$branch.merge" "refs/heads/$branch"
+
+  copy_env_files "$main_worktree" "$workdir"
 
   echo "  cd $workdir"
   exit 0
@@ -70,6 +98,7 @@ fi
 
 if [[ -d "$workdir" ]]; then
   echo "[git w] worktree already exists:"
+  copy_env_files "$main_worktree" "$workdir"
   echo "  cd $workdir"
   exit 0
 fi
@@ -89,4 +118,5 @@ fi
 
 echo "[git w] creating worktree for branch '$branch'..."
 git worktree add "$workdir" "$branch"
+copy_env_files "$main_worktree" "$workdir"
 echo "  cd $workdir"

@@ -291,20 +291,12 @@ git() {
   fi
 }
 
-# git worktree wrapper: create worktree + copy .env files + cd into it
+# git worktree wrapper: create worktree + cd into it
 # Usage: gw <branch-or-pr-number>
 gw() {
   if [[ -z "$1" ]]; then
     echo 'usage: gw <branch-or-pr-number>'
     return 1
-  fi
-
-  # Source for .env copies is the main worktree, not necessarily $PWD —
-  # this lets `gw` work when invoked from inside an existing linked worktree.
-  local source_root
-  source_root=$(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}')
-  if [[ -z "$source_root" ]]; then
-    source_root="$PWD"
   fi
 
   local output rc
@@ -320,22 +312,6 @@ gw() {
   workdir=$(echo "$output" | sed -n 's/^  cd //p')
 
   if [[ -n "$workdir" && -d "$workdir" ]]; then
-    local copied=0 envfile rel dest
-    while IFS= read -r envfile; do
-      rel="${envfile#$source_root/}"
-      dest="$workdir/$rel"
-      mkdir -p "$(dirname "$dest")"
-      cp "$envfile" "$dest"
-      copied=$((copied + 1))
-    done < <(find "$source_root" \
-        \( -name node_modules -o -name .git -o -name dist -o -name build \
-           -o -name .next -o -name target -o -name vendor -o -name .venv \) -prune -o \
-        -type f \( -name '.env' -o -name '.env.*' \) -print)
-
-    if (( copied > 0 )); then
-      echo "[gw] copied $copied .env file(s) to $workdir"
-    fi
-
     cd "$workdir"
   fi
 }
