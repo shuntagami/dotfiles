@@ -41,6 +41,11 @@ echo "==> Deploying dotfiles..."
 zsh "${DOTFILES}/scripts/deploy.sh"
 
 # Phase 3: macOS / editor settings (macOS only)
+if [[ "$(uname)" == "Darwin" ]]; then
+  echo "==> Configuring sudo Touch ID..."
+  bash "${DOTFILES}/scripts/sudo-touch-id.sh"
+fi
+
 # if [[ "$(uname)" == "Darwin" ]]; then
   # echo "==> Configuring macOS defaults..."
   # bash "${DOTFILES}/scripts/macos.sh"
