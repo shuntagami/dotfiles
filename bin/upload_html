@@ -1,0 +1,185 @@
+#!/usr/bin/env node
+
+const childProcess = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+const DEFAULT_NETLIFY_SITE_NAME = 'shun-tagami-html-uploads';
+
+const HELP = `Upload an HTML file to Netlify and print the public URL
+
+Usage:
+  upload_html path/to/report.html
+  upload_html --anonymous path/to/report.html
+
+Passwordless mode:
+  By default this deploys to:
+    ${DEFAULT_NETLIFY_SITE_NAME}
+
+  Run netlify login once before using passwordless mode.
+  Override the target with --site or --site-name when needed.
+
+Anonymous mode:
+  upload_html --anonymous path/to/report.html
+
+  This does not need login, but Netlify returns a temporary password-protected URL.
+`;
+
+function parseArgs(argv) {
+  const options = {
+    anonymous: false,
+    siteId: '',
+    siteName: '',
+    auth: '',
+    help: false,
+    file: '',
+  };
+
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === '-h' || arg === '--help') {
+      options.help = true;
+    } else if (arg === '--anonymous') {
+      options.anonymous = true;
+    } else if (arg === '--site') {
+      options.siteId = argv[++i] || '';
+    } else if (arg === '--site-name') {
+      options.siteName = argv[++i] || '';
+    } else if (arg === '--auth') {
+      options.auth = argv[++i] || '';
+    } else if (!options.file) {
+      options.file = arg;
+    } else {
+      throw new Error(`Unexpected argument: ${arg}`);
+    }
+  }
+
+  return options;
+}
+
+function requireHtmlFile(filePath) {
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`File not found: ${filePath}`);
+  }
+  const stat = fs.statSync(filePath);
+  if (!stat.isFile()) {
+    throw new Error(`Not a file: ${filePath}`);
+  }
+  if (!/\.(html|htm)$/i.test(filePath)) {
+    throw new Error(`Expected an .html or .htm file: ${filePath}`);
+  }
+}
+
+function extractJson(stdout) {
+  const trimmed = stdout.trim();
+  const start = trimmed.indexOf('{');
+  if (start === -1) {
+    throw new Error('Netlify did not return JSON output.');
+  }
+  return JSON.parse(trimmed.slice(start));
+}
+
+function preferHttps(url) {
+  return typeof url === 'string' ? url.replace(/^http:\/\//, 'https://') : '';
+}
+
+function setupHint() {
+  return [
+    '',
+    'Passwordless setup:',
+    '  1. Run: npm_config_ignore_scripts=true npm exec --yes --package netlify-cli -- netlify login',
+    `  2. Run: upload_html report.html`,
+    '',
+    `Default site: ${DEFAULT_NETLIFY_SITE_NAME}`,
+    'Override with --site, --site-name, or NETLIFY_AUTH_TOKEN when needed.',
+  ].join('\n');
+}
+
+(async () => {
+  let options;
+  try {
+    options = parseArgs(process.argv.slice(2));
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+
+  if (options.help || !options.file) {
+    process.stdout.write(HELP);
+    process.exit(options.help ? 0 : 1);
+  }
+
+  const filePath = path.resolve(options.file);
+
+  try {
+    requireHtmlFile(filePath);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+
+  const siteId = options.siteId || process.env.UPLOAD_HTML_NETLIFY_SITE_ID || process.env.NETLIFY_SITE_ID || '';
+  const siteName = options.siteName || process.env.UPLOAD_HTML_NETLIFY_SITE_NAME || process.env.NETLIFY_SITE_NAME || DEFAULT_NETLIFY_SITE_NAME;
+  const auth = options.auth || process.env.NETLIFY_AUTH_TOKEN || '';
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'upload_html.'));
+  fs.copyFileSync(filePath, path.join(tmpDir, 'index.html'));
+
+  try {
+    const args = [
+      'exec',
+      '--yes',
+      '--package',
+      'netlify-cli',
+      '--',
+      'netlify',
+      'deploy',
+      '--dir',
+      tmpDir,
+      '--no-build',
+      '--json',
+    ];
+
+    if (options.anonymous) {
+      args.push('--allow-anonymous');
+    } else {
+      args.push('--prod');
+      if (siteId) {
+        args.push('--site', siteId);
+      } else {
+        args.push('--site-name', siteName);
+      }
+      if (auth) args.push('--auth', auth);
+    }
+
+    const result = childProcess.spawnSync('npm', args, {
+      encoding: 'utf8',
+      env: { ...process.env, npm_config_ignore_scripts: 'true' },
+    });
+
+    if (result.status !== 0) {
+      process.stderr.write(result.stderr || result.stdout || 'Netlify deploy failed.\n');
+      if (!options.anonymous) process.stderr.write(setupHint() + '\n');
+      process.exit(result.status || 1);
+    }
+
+    const output = extractJson(result.stdout);
+    const url = preferHttps(output.url || output.ssl_url || output.deploy_ssl_url || output.deploy_url || output.site_url);
+    if (!url) {
+      console.error('Netlify deploy succeeded, but no URL was found in the response.');
+      process.exit(1);
+    }
+
+    if (options.anonymous && output.password) {
+      console.error(`Password: ${output.password}`);
+      if (output.claim_url) console.error(`Claim URL: ${output.claim_url}`);
+    }
+    process.stdout.write(`${url}\n`);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+})();
