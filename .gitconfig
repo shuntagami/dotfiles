@@ -88,7 +88,7 @@
 
 	show-merge = "!sh -c 'merge=$(git find-merge $0 $1) && [ -n \"$merge\" ] && git show $merge'"
 
-	# Worktree helpers: `git w`, `git wl`, `git wd` are implemented as
+	# Worktree helpers: `git w`, `git wl`, `git wf`, `git wd`, `git wclean` are implemented as
 	# scripts in $DOTFILES/bin (auto-discovered via PATH).
 
 	empty-push = "!f() { branch=$(git branch --show-current); git commit --allow-empty -m \"empty commit for deploy\" && git push origin $branch; }; f"
