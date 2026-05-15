@@ -37,6 +37,15 @@
         }
       }
     },
+    "screenpipe": {
+      "enabled": true,
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "screenpipe-mcp"
+      ]
+    },
     "slack": {
       "enabled": true,
       "type": "stdio",

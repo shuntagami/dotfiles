@@ -8,6 +8,14 @@
         "@playwright/mcp@latest"
       ]
     },
+    "screenpipe": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "screenpipe-mcp"
+      ]
+    },
     "slack": {
       "type": "stdio",
       "command": "/Users/shun.tagami/dotfiles/bin/slack-mcp-wrapper"
