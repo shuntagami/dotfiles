@@ -16,11 +16,11 @@ block_begin="# dotfiles: begin sudo Touch ID"
 block_end="# dotfiles: end sudo Touch ID"
 brew_prefix=""
 reattach_module=""
-auth_block=""
+auth_block_file="$(mktemp)"
 existing_config="$(mktemp)"
 new_config="$(mktemp)"
 
-trap 'rm -f "${existing_config}" "${new_config}"' EXIT
+trap 'rm -f "${auth_block_file}" "${existing_config}" "${new_config}"' EXIT
 
 if command -v brew >/dev/null 2>&1; then
   brew_prefix="$(brew --prefix 2>/dev/null || true)"
@@ -30,14 +30,14 @@ if [[ -n "${brew_prefix}" ]]; then
   reattach_module="${brew_prefix}/lib/pam/pam_reattach.so"
 fi
 
-auth_block="${block_begin}"$'\n'
+printf '%s\n' "${block_begin}" > "${auth_block_file}"
 if [[ -n "${reattach_module}" && -f "${reattach_module}" ]]; then
-  auth_block+="auth       optional       ${reattach_module} ignore_ssh"$'\n'
+  printf 'auth       optional       %s ignore_ssh\n' "${reattach_module}" >> "${auth_block_file}"
 else
   echo "Skipping pam_reattach: install pam-reattach to make Touch ID work inside tmux/screen."
 fi
-auth_block+="auth       sufficient     pam_tid.so"$'\n'
-auth_block+="${block_end}"
+printf 'auth       sufficient     pam_tid.so\n' >> "${auth_block_file}"
+printf '%s\n' "${block_end}" >> "${auth_block_file}"
 
 if [[ -f "${sudo_local}" ]]; then
   awk -v block_begin="${block_begin}" -v block_end="${block_end}" '
@@ -57,10 +57,17 @@ else
   echo "# sudo_local: local config file which survives system update and is included for sudo" > "${existing_config}"
 fi
 
-awk -v auth_block="${auth_block}" '
+awk -v auth_block_file="${auth_block_file}" '
+  function print_auth_block(line) {
+    while ((getline line < auth_block_file) > 0) {
+      print line
+    }
+    close(auth_block_file)
+  }
+
   {
     if (!inserted && $0 !~ /^[[:space:]]*(#.*)?$/) {
-      print auth_block
+      print_auth_block()
       print ""
       inserted = 1
     }
@@ -74,7 +81,7 @@ awk -v auth_block="${auth_block}" '
       if (saw_nonempty) {
         print ""
       }
-      print auth_block
+      print_auth_block()
     }
   }
 ' "${existing_config}" > "${new_config}"
