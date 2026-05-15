@@ -20,6 +20,33 @@
 
 `~/dotfiles/scripts/deploy.sh` を実行すると、各 `pipe.md` が `~/.screenpipe/pipes/*/pipe.md` へシンボリックリンクされる。
 
+## 会議コーチ
+
+`pipes/meeting-coach/pipe.md` は、Screenpipeの `meeting_ended` イベントで起動し、直近で終了した会議の文字起こし、画面コンテキスト、必要に応じて画面動画を使って話し方改善フィードバックを作成する。
+
+実処理は `~/dotfiles/bin/screenpipe-meeting-coach` に置く。秘密情報はdotfilesで管理しない。Geminiで動画分析まで行う場合は端末ごとに次を作成する。
+
+```bash
+mkdir -p ~/.screenpipe/pipes/meeting-coach
+chmod 700 ~/.screenpipe/pipes/meeting-coach
+cat > ~/.screenpipe/pipes/meeting-coach/.env <<'EOF'
+GEMINI_API_KEY=...
+# 手動実行でScreenpipe APIが403になる端末だけ設定する。
+# Pipe実行時は通常Screenpipeがこの値を環境変数として注入する。
+# SCREENPIPE_LOCAL_API_KEY=sp-...
+# 任意:
+# GEMINI_MODEL=gemini-3-flash-preview
+# MEETING_COACH_VIDEO=1
+# MEETING_COACH_REQUIRE_VIDEO=1
+# MEETING_COACH_VIDEO_FPS=1
+# MEETING_COACH_PROMPT_CORE=~/projects/egt/prompts/ビジネス会話添削prompt.md
+# MEETING_COACH_SELF_DESCRIPTION=黒い眼鏡、黒い服、センターパートの男性
+EOF
+chmod 600 ~/.screenpipe/pipes/meeting-coach/.env
+```
+
+`GEMINI_API_KEY` がない場合でも、入力 bundle と分析 prompt は `~/.screenpipe/pipes/meeting-coach/output/` に作成され、Pipeの実行モデルでテキストのみのフィードバックを作る。
+
 `.pi/skills` 配下の `SKILL.md` は、Screenpipe/Pi AgentがPipe実行時に使う標準スキルとして複製するファイルです。実体把握のために `runtime-skills/` にユニークな内容だけを保存しますが、Screenpipe側の実行ファイルは上書きもリンク化もしません。
 
 ## 実行時スキル
