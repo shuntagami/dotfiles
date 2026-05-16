@@ -29,3 +29,6 @@ cp ~/dotfiles/mcp/slack.env.example ~/dotfiles/mcp/slack.env
 chmod 600 ~/dotfiles/mcp/slack.env
 ~/dotfiles/scripts/deploy.sh
 ```
+
+`SLACK_APP_TOKEN` is optional for MCP, but required when running
+`screenpipe-daily-goals-slack-bot` via Slack Socket Mode.

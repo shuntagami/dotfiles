@@ -93,6 +93,83 @@ work-end 明日はCTA調査から  # メモ付きで作業終了
 
 作業中に `break-start` したまま `work-end` すると、未終了の休憩は自動で終了する。
 
+## 今日の宣言タスク
+
+1日の最初に「今日やること」を記録しておくと、`daily-work-report` が23:55の投稿で達成度を可視化する。
+
+```bash
+today new                   # 今日のタスクをMarkdownで新規作成/編集
+today n                     # today new の短縮
+today edit                  # 既存のタスクMarkdownを選んで編集
+today e                     # today edit の短縮
+today edit 2026-05-16       # 日付を指定して編集
+today                       # 今日の宣言タスクを確認
+today list                  # タスクMarkdownの日付一覧
+today add 追加で調査すること # 途中で追加
+today done 1                # 完了を手動記録
+today undo 1                # 完了を取り消し
+today cancel 2              # 今日の対象外にする
+```
+
+`today new` は今日のMarkdownを開く。`today edit` は `memo edit` と同じように既存のMarkdownを選んで編集する。セレクタは `TODAY_SELECT_CMD`、`SELECTCMD`、`MEMO_SELECT_CMD`、`peco`、`fzf` の順に使い、どれもなければ最新の日付を開く。エディタは `$VISUAL`、`$EDITOR`、未設定なら `vim` を使う。Markdownはチェックリスト形式で書く。
+
+```markdown
+# 今日やること: 2026-05-16
+
+- [ ] Screenpipe meeting検出を安定化
+- [x] Slack Botの方針を決める
+- [ ] dotfiles PRを整理する
+```
+
+Markdownは `~/.screenpipe/work-state/daily-goals/YYYY-MM-DD.md`、日次レポート用JSONは同じ場所の `YYYY-MM-DD.json` に保存される。Syncthing対象の `work-state` 配下なので、複数端末でも同じ宣言タスクを共有できる。
+
+日次レポートでは、宣言タスクを次の5段階で判定する。
+
+- `達成`: `today done` 済み、または画面・音声・作業ログから完了の根拠が強い
+- `一部達成`: 主要な前進はあるが、全体完了までは読み取れない
+- `着手済み`: 関連作業には触れているが、成果の根拠が弱い
+- `未着手`: 関連する作業痕跡がほぼない
+- `判定不能`: Screenpipeの記録だけでは判断できない
+
+Slack通知を分けたい場合は、端末ごとにローカル設定を置く。
+
+```bash
+mkdir -p ~/.screenpipe/work-state
+chmod 700 ~/.screenpipe/work-state
+cat > ~/.screenpipe/work-state/config.env <<'EOF'
+DAILY_GOALS_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+EOF
+chmod 600 ~/.screenpipe/work-state/config.env
+```
+
+未設定の場合は、`SLACK_WEBHOOK_URL`、`WORK_SLACK_WEBHOOK_URL`、またはScreenpipeアプリのSlack connectionを利用する。
+
+Slack Botから宣言する場合は、SlackアプリでSocket Modeを有効にし、`SLACK_APP_TOKEN` を `~/.config/mcp/slack.env`（実体は `~/dotfiles/mcp/slack.env`）に追加する。Bot tokenは既存の `SLACK_BOT_TOKEN` を使う。
+
+```bash
+SLACK_BOT_TOKEN=xoxb-...
+SLACK_APP_TOKEN=xapp-...
+```
+
+起動:
+
+```bash
+screenpipe-daily-goals-slack-bot
+```
+
+Slackでは、BotへのDMまたはmentionで次のように使う。
+
+```text
+today
+- Screenpipe meeting検出を安定化
+- Slack Botの方針を決める
+- dotfiles PRを整理する
+
+today done 1
+today status
+today add 追加調査
+```
+
 Slack通知を使う場合は、端末ごとにローカル設定を置く。
 
 ```bash
