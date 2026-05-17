@@ -2,10 +2,10 @@
 schedule: every 1h
 enabled: true
 preset:
-- gemini-3.1-pro
+  - gemini-3.1-pro
 connections:
-- slack
-title: フォーカスワーク深掘り
+  - slack
+title: 作業内容
 description: 直近1時間の作業と進捗をSlackに投稿する
 icon: 🕐
 history: false
@@ -162,7 +162,7 @@ YouTubeは強い脱線シグナルとして扱ってください。
 Slackには次の形式で投稿してください。
 
 ```text
-*フォーカスワーク深掘り: 直近1時間*
+*作業内容: 直近1時間*
 • 端末: ...
 • 休憩: ...
 • 作業対象: ...
