@@ -154,7 +154,6 @@
 
 [pull]
 	rebase = false
-	ff = only
 
 [push]
 	autoSetupRemote = true
