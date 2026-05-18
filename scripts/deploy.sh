@@ -93,8 +93,16 @@ if [[ ! -f "${HOME}/.gitconfig.local" ]]; then
 fi
 
 # ssh config
-if [ ! -d ${HOME}/.ssh ]; then
-  mkdir -p ~/.ssh && chmod 700 ~/.ssh && touch ~/.ssh/config && chmod 600 ~/.ssh/config
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+# Back up a pre-existing real config so it can be merged into config.local by hand.
+if [[ -e ~/.ssh/config && ! -L ~/.ssh/config ]]; then
+  mv ~/.ssh/config ~/.ssh/config.bak.$(date +%Y%m%d%H%M%S)
+fi
+ln -sf ~/dotfiles/misc/ssh/config ~/.ssh/config
+chmod 600 ~/dotfiles/misc/ssh/config
+# Per-machine / sensitive host entries (Include'd by the tracked config, not tracked)
+if [[ ! -f ~/.ssh/config.local ]]; then
+  touch ~/.ssh/config.local && chmod 600 ~/.ssh/config.local
 fi
 
 if [[ "$OSTYPE" == "darwin"* ]]; then

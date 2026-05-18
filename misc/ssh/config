@@ -1,0 +1,11 @@
+# Managed by dotfiles (~/dotfiles/misc/ssh/config -> ~/.ssh/config)
+# Per-machine or sensitive host entries go in ~/.ssh/config.local (not tracked).
+Include config.local
+
+Host macmini
+  HostName 100.81.153.22
+  User shun.tagami
+  PreferredAuthentications password
+  PubkeyAuthentication no
+  # VNC: vnc://100.81.153.22
+  # VNC by name: vnc://shun-tagami-mac-mini
