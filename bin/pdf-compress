@@ -1,95 +1,161 @@
-#!/bin/bash
+#!/usr/bin/env node
 
-show_help() {
-  echo "Usage: pdf-compress [options] <input_pdf> [output_pdf]"
-  echo ""
-  echo "Compresses a PDF file attempting to replicate Acrobat's optimization."
-  echo ""
-  echo "Options:"
-  echo "  -s, --screen     Screen-quality (72 dpi) - Aggressive size reduction"
-  echo "  -e, --ebook      Ebook-quality (150 dpi) - Balanced (Default)"
-  echo "  -p, --printer    Printer-quality (300 dpi) - High quality"
-  echo "  --flatten        Force re-distill (PDF->PS->PDF). Use if normal compression fails."
-  echo "                   (Warning: Can remove/alter links, forms, tags, structure)"
-  echo "  --grayscale      Convert to grayscale"
-  echo "  -h, --help       Show this help"
-  echo ""
+const fs = require('fs');
+const { spawnSync } = require('child_process');
+
+function showHelp() {
+  console.log(`Usage: pdf-compress [options] <input_pdf> [output_pdf]
+
+Compresses a PDF file attempting to replicate Acrobat's optimization.
+
+Options:
+  -s, --screen     Screen-quality (72 dpi) - Aggressive size reduction
+  -e, --ebook      Ebook-quality (150 dpi) - Balanced (Default)
+  -p, --printer    Printer-quality (300 dpi) - High quality
+  --flatten        Force re-distill (PDF->PS->PDF). Use if normal compression fails.
+                   (Warning: Can remove/alter links, forms, tags, structure)
+  --grayscale      Convert to grayscale
+  -h, --help       Show this help`);
 }
 
-PRESET="/ebook"
-DPI="150"
-GRAYSCALE=false
-FLATTEN=false
+function findCommand(candidates) {
+  for (const command of candidates) {
+    const result = spawnSync(command, ['--version'], {
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    if (!result.error) return command;
+  }
+  return null;
+}
 
-while [[ "$1" =~ ^- ]]; do
-  case "$1" in
-    -s|--screen) PRESET="/screen"; DPI="72"; shift ;;
-    -e|--ebook)  PRESET="/ebook";  DPI="150"; shift ;;
-    -p|--printer)PRESET="/printer";DPI="300"; shift ;;
-    --flatten)   FLATTEN=true; shift ;;
-    --grayscale) GRAYSCALE=true; shift ;;
-    -h|--help)   show_help; exit 0 ;;
-    *) echo "Unknown option: $1"; show_help; exit 1 ;;
-  esac
-done
+function run(command, args) {
+  const result = spawnSync(command, args, {
+    stdio: 'inherit',
+    windowsHide: true,
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) process.exit(result.status);
+}
 
-if [ $# -eq 0 ]; then show_help; exit 0; fi
+let preset = '/ebook';
+let dpi = '150';
+let grayscale = false;
+let flatten = false;
+const positional = [];
 
-input="$1"
-output="${2:-${input%.*}_compressed.${input##*.}}"
+for (const arg of process.argv.slice(2)) {
+  switch (arg) {
+    case '-s':
+    case '--screen':
+      preset = '/screen';
+      dpi = '72';
+      break;
+    case '-e':
+    case '--ebook':
+      preset = '/ebook';
+      dpi = '150';
+      break;
+    case '-p':
+    case '--printer':
+      preset = '/printer';
+      dpi = '300';
+      break;
+    case '--flatten':
+      flatten = true;
+      break;
+    case '--grayscale':
+      grayscale = true;
+      break;
+    case '-h':
+    case '--help':
+      showHelp();
+      process.exit(0);
+      break;
+    default:
+      if (arg.startsWith('-')) {
+        console.error(`Unknown option: ${arg}`);
+        showHelp();
+        process.exit(1);
+      }
+      positional.push(arg);
+  }
+}
 
-command -v gs >/dev/null 2>&1 || { echo "Error: ghostscript not installed. (brew install ghostscript)"; exit 1; }
-command -v qpdf >/dev/null 2>&1 || { echo "Error: qpdf not installed. (brew install qpdf)"; exit 1; }
+if (positional.length === 0) {
+  showHelp();
+  process.exit(0);
+}
 
-echo "Processing $input -> $output"
+const input = positional[0];
+const output = positional[1] || input.replace(/(\.[^.]+)?$/, '_compressed$1');
+const tmpGs = `${output}.gs.pdf`;
+const tmpPs = `${output}.tmp.ps`;
 
-tmp_gs="${output}.gs.pdf"
+if (!fs.existsSync(input)) {
+  console.error(`Input not found: ${input}`);
+  process.exit(1);
+}
 
-if [ "$FLATTEN" = true ]; then
-  command -v pdf2ps >/dev/null 2>&1 || { echo "Error: pdf2ps not found. (brew install ghostscript)"; exit 1; }
-  echo "Mode: Flatten (PDF -> PS -> PDF)"
-  tmp_ps="${output}.tmp.ps"
-  pdf2ps "$input" "$tmp_ps"
+const gs = process.env.GS || findCommand(['gs', 'gswin64c', 'gswin32c']);
+const qpdf = findCommand(['qpdf']);
 
-  gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.5 \
-    -dPDFSETTINGS="$PRESET" \
-    -dNOPAUSE -dBATCH -dQUIET \
-    -dDetectDuplicateImages=true \
-    -dCompressFonts=true -dSubsetFonts=true \
-    -dDownsampleColorImages=true -dColorImageDownsampleType=/Bicubic -dColorImageResolution="$DPI" \
-    -dDownsampleGrayImages=true  -dGrayImageDownsampleType=/Bicubic  -dGrayImageResolution="$DPI" \
-    -dDownsampleMonoImages=true  -dMonoImageDownsampleType=/Subsample -dMonoImageResolution=300 \
-    -dJPEGQ=60 \
-    -sOutputFile="$tmp_gs" \
-    "$tmp_ps"
+if (!gs) {
+  console.error('Error: ghostscript not installed. Install with brew, winget, or scoop.');
+  process.exit(1);
+}
+if (!qpdf) {
+  console.error('Error: qpdf not installed. Install with brew, winget, or scoop.');
+  process.exit(1);
+}
 
-  rm -f "$tmp_ps"
-else
-  echo "Mode: Optimize"
-  GS_OPTS=(
-    "-sDEVICE=pdfwrite"
-    "-dCompatibilityLevel=1.5"
-    "-dPDFSETTINGS=$PRESET"
-    "-dNOPAUSE" "-dBATCH" "-dQUIET"
-    "-dDetectDuplicateImages=true"
-    "-dCompressFonts=true"
-    "-dSubsetFonts=true"
-    "-dDownsampleColorImages=true" "-dColorImageDownsampleType=/Bicubic" "-dColorImageResolution=$DPI"
-    "-dDownsampleGrayImages=true"  "-dGrayImageDownsampleType=/Bicubic"  "-dGrayImageResolution=$DPI"
-    "-dDownsampleMonoImages=true"  "-dMonoImageDownsampleType=/Subsample" "-dMonoImageResolution=300"
-    "-dJPEGQ=60"
-  )
+const gsOptions = [
+  '-sDEVICE=pdfwrite',
+  '-dCompatibilityLevel=1.5',
+  `-dPDFSETTINGS=${preset}`,
+  '-dNOPAUSE',
+  '-dBATCH',
+  '-dQUIET',
+  '-dDetectDuplicateImages=true',
+  '-dCompressFonts=true',
+  '-dSubsetFonts=true',
+  '-dDownsampleColorImages=true',
+  '-dColorImageDownsampleType=/Bicubic',
+  `-dColorImageResolution=${dpi}`,
+  '-dDownsampleGrayImages=true',
+  '-dGrayImageDownsampleType=/Bicubic',
+  `-dGrayImageResolution=${dpi}`,
+  '-dDownsampleMonoImages=true',
+  '-dMonoImageDownsampleType=/Subsample',
+  '-dMonoImageResolution=300',
+  '-dJPEGQ=60',
+];
 
-  if [ "$GRAYSCALE" = true ]; then
-    GS_OPTS+=("-sColorConversionStrategy=Gray" "-dProcessColorModel=/DeviceGray")
-  fi
+if (grayscale) {
+  gsOptions.push('-sColorConversionStrategy=Gray', '-dProcessColorModel=/DeviceGray');
+}
 
-  GS_OPTS+=("-sOutputFile=$tmp_gs" "$input")
-  gs "${GS_OPTS[@]}"
-fi
+console.log(`Processing ${input} -> ${output}`);
 
-# Structure compression (Acrobat-like)
-qpdf --object-streams=generate --compress-streams=y "$tmp_gs" "$output"
-rm -f "$tmp_gs"
+try {
+  if (flatten) {
+    const pdf2ps = findCommand(['pdf2ps']);
+    if (!pdf2ps) {
+      console.error('Error: pdf2ps not found. Install ghostscript.');
+      process.exit(1);
+    }
 
-echo "Done."
+    console.log('Mode: Flatten (PDF -> PS -> PDF)');
+    run(pdf2ps, [input, tmpPs]);
+    run(gs, [...gsOptions, `-sOutputFile=${tmpGs}`, tmpPs]);
+  } else {
+    console.log('Mode: Optimize');
+    run(gs, [...gsOptions, `-sOutputFile=${tmpGs}`, input]);
+  }
+
+  run(qpdf, ['--object-streams=generate', '--compress-streams=y', tmpGs, output]);
+  console.log('Done.');
+} finally {
+  fs.rmSync(tmpGs, { force: true });
+  fs.rmSync(tmpPs, { force: true });
+}

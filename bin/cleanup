@@ -1,11 +1,10 @@
-# remove unused dotfiles at $HOME
+#!/usr/bin/env node
 
-# ignore
-#  .config
-#  .gvfs
-#  .local
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
-target_files="
+const targets = `
 .DS_Store
 .apport-ignore.xml
 .babel.json
@@ -46,21 +45,34 @@ target_files="
 .xsession-errors.old
 canary_debuglog.txt
 tmux-client-*.log
-.ts_node_repl_history
 .bash_history
 .irb_history
-.lesshst
-.node_repl_history
 .nuxtrc
 .viminfo
-.wget-hsts
 .zcompdump
-"
+`.trim().split(/\s+/);
 
-for target in $target_files
-do
-  echo "rm -rf $HOME/$target"
-  rm -rf "$HOME/$target"
-done
+function wildcardToRegExp(pattern) {
+  const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+  return new RegExp(`^${escaped}$`);
+}
 
-cp /dev/null SSLKEYLOGFILE.log
+function matchingTargets(home, pattern) {
+  if (!pattern.includes('*')) return [path.join(home, pattern)];
+
+  const re = wildcardToRegExp(pattern);
+  return fs.readdirSync(home)
+    .filter(name => re.test(name))
+    .map(name => path.join(home, name));
+}
+
+const home = os.homedir();
+
+for (const pattern of targets) {
+  for (const target of matchingTargets(home, pattern)) {
+    console.log(`rm -rf ${target}`);
+    fs.rmSync(target, { force: true, recursive: true });
+  }
+}
+
+fs.writeFileSync(path.join(process.cwd(), 'SSLKEYLOGFILE.log'), '');

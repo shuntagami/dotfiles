@@ -1,35 +1,82 @@
-#!/usr/bin/env zsh
-set -euo pipefail
+#!/usr/bin/env node
 
-ENV_FILE="${SLACK_MCP_ENV_FILE:-${HOME}/.config/mcp/slack.env}"
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { spawn } = require('child_process');
 
-if [[ -f "$ENV_FILE" ]]; then
-  set -a
-  source "$ENV_FILE"
-  set +a
-fi
+function parseEnv(content) {
+  const env = {};
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
 
-if [[ -z "${SLACK_BOT_TOKEN:-}" ]]; then
-  echo "SLACK_BOT_TOKEN is not set. Create $ENV_FILE or export SLACK_BOT_TOKEN." >&2
-  exit 1
-fi
+    const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (!match) continue;
 
-export SLACK_BOT_TOKEN
+    let value = match[2].trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    env[match[1]] = value;
+  }
+  return env;
+}
 
-if [[ -z "${SLACK_TEAM_ID:-}" ]]; then
-  SLACK_TEAM_ID="$(
-    curl -fsS -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" https://slack.com/api/auth.test |
-      /usr/bin/python3 -c 'import json, sys
-data = json.load(sys.stdin)
-if not data.get("ok"):
-    raise SystemExit("Slack auth.test failed: " + data.get("error", "unknown"))
-team_id = data.get("team_id")
-if not team_id:
-    raise SystemExit("Slack auth.test did not return team_id")
-print(team_id)'
-  )"
-fi
+async function fetchTeamId(token) {
+  const res = await fetch('https://slack.com/api/auth.test', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!data.ok) {
+    throw new Error(`Slack auth.test failed: ${data.error || 'unknown'}`);
+  }
+  if (!data.team_id) {
+    throw new Error('Slack auth.test did not return team_id');
+  }
+  return data.team_id;
+}
 
-export SLACK_TEAM_ID
+(async () => {
+  const envFile = process.env.SLACK_MCP_ENV_FILE ||
+    path.join(os.homedir(), '.config', 'mcp', 'slack.env');
 
-exec npx -y @modelcontextprotocol/server-slack
+  if (fs.existsSync(envFile)) {
+    Object.assign(process.env, parseEnv(fs.readFileSync(envFile, 'utf8')));
+  }
+
+  if (!process.env.SLACK_BOT_TOKEN) {
+    console.error(`SLACK_BOT_TOKEN is not set. Create ${envFile} or export SLACK_BOT_TOKEN.`);
+    process.exit(1);
+  }
+
+  if (!process.env.SLACK_TEAM_ID) {
+    process.env.SLACK_TEAM_ID = await fetchTeamId(process.env.SLACK_BOT_TOKEN);
+  }
+
+  const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  const child = spawn(npx, ['-y', '@modelcontextprotocol/server-slack'], {
+    stdio: 'inherit',
+    env: process.env,
+    windowsHide: true,
+  });
+
+  child.on('exit', (code, signal) => {
+    if (signal) {
+      process.kill(process.pid, signal);
+      return;
+    }
+    process.exit(code ?? 0);
+  });
+
+  child.on('error', (error) => {
+    console.error(`Failed to start npx: ${error.message}`);
+    process.exit(1);
+  });
+})().catch((error) => {
+  console.error(error.message);
+  process.exit(1);
+});

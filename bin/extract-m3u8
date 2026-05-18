@@ -4,10 +4,18 @@
 //   npm install -g playwright
 //   npx playwright install chromium
 
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
-const globalModules = require("child_process").execSync("npm root -g").toString().trim();
-const { chromium } = require(globalModules + "/playwright");
+const path = require('path');
+const { execFileSync } = require('child_process');
+
+function loadPlaywright() {
+  try {
+    return require('playwright');
+  } catch {
+    const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+    const globalModules = execFileSync(npm, ['root', '-g'], { encoding: 'utf8' }).trim();
+    return require(path.join(globalModules, 'playwright'));
+  }
+}
 
 const url = process.argv[2];
 if (!url) {
@@ -17,26 +25,32 @@ if (!url) {
 
 const m3u8Urls = new Set();
 
-const browser = await chromium.launch();
-const context = await browser.newContext();
-const page = await context.newPage();
+(async () => {
+  const { chromium } = loadPlaywright();
+  const browser = await chromium.launch();
+  const context = await browser.newContext();
+  const page = await context.newPage();
 
-page.on("response", (res) => {
-  if (res.url().includes(".m3u8")) {
-    m3u8Urls.add(res.url());
-  }
+  page.on("response", (res) => {
+    if (res.url().includes(".m3u8")) {
+      m3u8Urls.add(res.url());
+    }
+  });
+
+  await page.goto(url, { waitUntil: "networkidle" });
+
+  await page.evaluate(async () => {
+    for (let i = 0; i < document.body.scrollHeight; i += 500) {
+      window.scrollTo(0, i);
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  });
+
+  await page.waitForTimeout(3000);
+  await browser.close();
+
+  [...m3u8Urls].forEach((u) => console.log(u));
+})().catch((error) => {
+  console.error(error.message);
+  process.exit(1);
 });
-
-await page.goto(url, { waitUntil: "networkidle" });
-
-await page.evaluate(async () => {
-  for (let i = 0; i < document.body.scrollHeight; i += 500) {
-    window.scrollTo(0, i);
-    await new Promise((r) => setTimeout(r, 300));
-  }
-});
-
-await page.waitForTimeout(3000);
-await browser.close();
-
-[...m3u8Urls].forEach((u) => console.log(u));

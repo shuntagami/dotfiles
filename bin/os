@@ -1,22 +1,24 @@
 #!/usr/bin/env node
 
-const { execSync } = require('child_process');
 const fs = require('fs');
+const os = require('os');
+const { execSync } = require('child_process');
 
 const HELP = `  display os version
 
   $ os
   Ubuntu 17.04 zesty
-  macOS 26.0 Tahoe`;
+  macOS 26.0 Tahoe
+  Windows 11 Pro 10.0.26100`;
 
 if (process.argv[2] === '-h') {
   console.log(HELP);
   process.exit(0);
 }
 
-const uname = execSync('uname', { encoding: 'utf8' }).trim();
+const platform = process.platform;
 
-if (/Linux/.test(uname)) {
+if (platform === 'linux') {
   const relPath = ['/etc/lsb-release', '/etc/os-release'].find(p => fs.existsSync(p));
   if (relPath) {
     const kv = {};
@@ -36,7 +38,7 @@ if (/Linux/.test(uname)) {
   process.exit(0);
 }
 
-if (/Darwin/.test(uname)) {
+if (platform === 'darwin') {
   const productName = execSync('sw_vers -productName', { encoding: 'utf8' }).trim();
   const versionStr = execSync('sw_vers -productVersion', { encoding: 'utf8' }).trim();
   const [major, minor] = versionStr.split('.').map(Number);
@@ -51,6 +53,12 @@ if (/Darwin/.test(uname)) {
   else name = 'Unknown';
 
   console.log(`${productName} ${versionStr} ${name}`);
+  process.exit(0);
+}
+
+if (platform === 'win32') {
+  const version = typeof os.version === 'function' ? os.version() : 'Windows';
+  console.log(`${version} ${os.release()}`);
   process.exit(0);
 }
 

@@ -1,19 +1,39 @@
-#!/bin/bash
+#!/usr/bin/env node
 
-# Copy downloaded plain text files to clipboard.
-# Called by the Folder Action script when new items are added to ~/Downloads.
-# Usage: watch-downloads-copy <file_path>
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const { copy } = require('./lib/clipboard');
 
-file="$1"
-[ -f "$file" ] || exit 0
+const file = process.argv[2];
+if (!file || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+  process.exit(0);
+}
 
-# Skip browser temp files (still downloading)
-case "$file" in
-  *.crdownload|*.part|*.download) exit 0 ;;
-esac
+if (/\.(crdownload|part|download)$/i.test(file)) {
+  process.exit(0);
+}
 
-mime=$(file --brief --mime-type "$file")
-if [[ "$mime" == text/* ]]; then
-  pbcopy < "$file"
-  osascript -e "display notification \"Copied: $(basename "$file")\" with title \"Clipboard\""
-fi
+function isProbablyText(filePath) {
+  const buf = fs.readFileSync(filePath);
+  if (buf.includes(0)) return false;
+  const sample = buf.subarray(0, Math.min(buf.length, 8192));
+  const controls = [...sample].filter(byte => byte < 32 && ![9, 10, 13].includes(byte)).length;
+  return sample.length === 0 || controls / sample.length < 0.02;
+}
+
+function notify(message) {
+  if (process.platform !== 'darwin') return;
+  const safeMessage = message.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  spawnSync('osascript', ['-e', `display notification "${safeMessage}" with title "Clipboard"`], {
+    stdio: 'ignore',
+    windowsHide: true,
+  });
+}
+
+if (isProbablyText(file)) {
+  const text = fs.readFileSync(file, 'utf8');
+  if (copy(text)) {
+    notify(`Copied: ${path.basename(file)}`);
+  }
+}

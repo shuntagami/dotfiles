@@ -1,43 +1,68 @@
-#!/bin/bash
+#!/usr/bin/env node
 
-show_help() {
-    echo "使い方: merge_pdf <original_pdf> <total_pages>"
-    echo "       merge_pdf -h"
-    echo ""
-    echo "オプション:"
-    echo "  -h            このヘルプメッセージを表示"
-    echo ""
-    echo "引数:"
-    echo "  <original_pdf>   元のPDFファイルのパス"
-    echo "  <total_pages>    作成する総ページ数"
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+
+function showHelp() {
+  console.log(`使い方: merge_pdf <original_pdf> <total_pages>
+       merge_pdf -h
+
+オプション:
+  -h            このヘルプメッセージを表示
+
+引数:
+  <original_pdf>   元のPDFファイルのパス
+  <total_pages>    作成する総ページ数`);
 }
 
-if [ $# -ne 2 ] || [ "$1" = "-h" ]; then
-    show_help
-    exit 0
-fi
+const args = process.argv.slice(2);
+if (args.length !== 2 || args[0] === '-h') {
+  showHelp();
+  process.exit(0);
+}
 
-original_pdf=$1
-total_pages=$2
+const originalPdf = path.resolve(args[0]);
+const totalPages = Number(args[1]);
 
-output_directory=$(pwd)
+if (!fs.existsSync(originalPdf)) {
+  console.error(`PDF not found: ${originalPdf}`);
+  process.exit(1);
+}
 
-for i in $(seq 2 $total_pages)
-do
-    new_pdf="${output_directory}/$(basename ${original_pdf%.pdf})_${i}.pdf"
-    cp "$original_pdf" "$new_pdf"
-done
+if (!Number.isInteger(totalPages) || totalPages < 1) {
+  console.error('total_pages must be a positive integer');
+  process.exit(1);
+}
 
-merge_list=$(for i in $(seq 2 $total_pages); do echo -n "${output_directory}/$(basename ${original_pdf%.pdf})_${i}.pdf "; done)
+const outputDirectory = process.cwd();
+const parsed = path.parse(originalPdf);
+const tempFiles = [];
+const inputs = [originalPdf];
 
-merged_output="${output_directory}/$(basename ${original_pdf%.pdf})_${total_pages}page.pdf"
-cpdf $original_pdf $merge_list -o "$merged_output"
+try {
+  for (let i = 2; i <= totalPages; i++) {
+    const newPdf = path.join(outputDirectory, `${parsed.name}_${i}.pdf`);
+    fs.copyFileSync(originalPdf, newPdf);
+    tempFiles.push(newPdf);
+    inputs.push(newPdf);
+  }
 
-for i in $(seq 2 $total_pages)
-do
-    rm "${output_directory}/$(basename ${original_pdf%.pdf})_${i}.pdf"
-done
+  const mergedOutput = path.join(outputDirectory, `${parsed.name}_${totalPages}page.pdf`);
+  const result = spawnSync('cpdf', [...inputs, '-o', mergedOutput], {
+    stdio: 'inherit',
+    windowsHide: true,
+  });
 
-echo "${merged_output} generated"
+  if (result.error) throw result.error;
+  if (result.status !== 0) process.exit(result.status);
 
-
+  console.log(`${mergedOutput} generated`);
+} catch (error) {
+  console.error(`merge_pdf failed: ${error.message}`);
+  process.exitCode = 1;
+} finally {
+  for (const tempFile of tempFiles) {
+    fs.rmSync(tempFile, { force: true });
+  }
+}
