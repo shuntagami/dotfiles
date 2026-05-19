@@ -85,8 +85,12 @@ nnoremap C "_C
 xnoremap c "_c
 
 " 現在のファイルパスをクリップボードにコピー
-command! CopyPath let @+ = expand('%:p')
+command! CopyPath let @+ = fnamemodify(expand('%:p'), ':~')
 command! CopyRelPath let @+ = expand('%')
+command! CopyPathLine let @+ = fnamemodify(expand('%:p'), ':~') . ':' . line('.')
+command! CopyRelPathLine let @+ = expand('%') . ':' . line('.')
+command! CopyDir let @+ = fnamemodify(expand('%:p:h'), ':~')
+command! CopyFileName let @+ = expand('%:t')
 
 " ==============================================================================
 " 外観 (syntax, colorscheme)
@@ -134,6 +138,7 @@ inoremap ( ()<LEFT>
 
 " 現在のファイルのフルパスをコピー
 nnoremap <leader>cp :CopyPath<CR>
+nnoremap <leader>cl :CopyPathLine<CR>
 
 " ==============================================================================
 " 全角スペースの表示
