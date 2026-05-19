@@ -1,0 +1,348 @@
+#!/usr/bin/env -S deno run -A --ext=js
+// @ts-nocheck
+// Google Doc を取り込んで Markdown (.md) に保存する standalone CLI。
+// 鮮度チェック（Doc.modifiedTime vs 既存 .md の git log 時刻）も提供する。
+//
+// Deno で動くため repo 非依存・ローカル node_modules 不要
+// （npm: 依存は Deno のグローバルキャッシュに入る）。
+//
+// Usage:
+//   gdoc2md <google-doc-url> [--out <path>] [--check-only]
+//
+//   URL だけ渡すと、カレントディレクトリに ./<Docタイトル>.md として保存する。
+//   --out を渡せばその場所に保存する。
+//   --check-only は同期せず鮮度チェックの JSON だけ出力する。
+//
+//   （Supabase 経由・タスク名指定の取り込みも一応残してある）
+//   gdoc2md --client <name> --task-title <title> --out <path> [--check-only]
+//   gdoc2md --project-id <uuid> --task-title <title> --out <path> [--check-only]
+//
+// 認証: ~/dotfiles/.env.local の GOOGLE_SERVICE_ACCOUNT_KEY 等を使う。
+//
+// 設計メモ:
+// - 提案モード反映済みの本文を取得（PREVIEW_SUGGESTIONS_ACCEPTED）
+// - viewer 権限しかない Doc では通常モードにフォールバック
+// - Doc → Markdown 変換は ./lib/doc-to-markdown.mjs
+
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { resolve, dirname, isAbsolute } from "node:path";
+import { homedir } from "node:os";
+import { execSync } from "node:child_process";
+import { docToMarkdown, getDocWithSuggestionFallback, extractDocId } from "./lib/doc-to-markdown.mjs";
+
+// 認証情報は ~/dotfiles/.env.local から読む。
+const ENV_PATH = resolve(homedir(), "dotfiles/.env.local");
+if (!existsSync(ENV_PATH)) {
+  console.error(`.env.local が見つかりません: ${ENV_PATH}`);
+  process.exit(1);
+}
+
+// 外部パッケージ解決: Deno なら npm: 指定、node なら bare specifier。
+const NPM = typeof Deno !== "undefined" ? "npm:" : "";
+
+// =================================================================
+// 引数
+// =================================================================
+
+const args = parseArgs(process.argv.slice(2));
+// URL は --doc-url / --url / 第1位置引数 のいずれでも受け付ける
+const directDocUrl = args["doc-url"] || args.url || args._[0];
+
+// URL を渡せば --out は任意（自動解決）。client / project-id 経由は --task-title と --out が必要。
+const usageAndExit = () => {
+  console.error("Usage:");
+  console.error("  gdoc2md <google-doc-url> [--out <path>] [--check-only]");
+  console.error("  gdoc2md --client <name> --task-title <title> --out <path> [--check-only]");
+  console.error("  gdoc2md --project-id <uuid> --task-title <title> --out <path> [--check-only]");
+  console.error("");
+  console.error("URL だけ渡した場合、--out はカレントディレクトリの ./<Docタイトル>.md になります。");
+  process.exit(2);
+};
+if (!directDocUrl && !args.client && !args["project-id"]) usageAndExit();
+if (!directDocUrl && (!args["task-title"] || !args.out)) usageAndExit();
+
+const checkOnly = !!args["check-only"];
+// --out があれば即解決。無ければ Doc メタ取得後に autoResolveOutPath で決める。
+let outPath = args.out ? (isAbsolute(args.out) ? args.out : resolve(process.cwd(), args.out)) : null;
+
+// =================================================================
+// .env.local 読み込み
+// =================================================================
+
+for (const line of readFileSync(ENV_PATH, "utf8").split("\n")) {
+  const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
+  if (!m) continue;
+  let v = m[2];
+  if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1, -1);
+  if (!process.env[m[1]]) process.env[m[1]] = v;
+}
+
+// =================================================================
+// Supabase: project と task の external_url を引く
+// =================================================================
+
+let project;
+let taskTitle = args["task-title"] || "Google Doc";
+let docUrl = directDocUrl;
+
+if (directDocUrl) {
+  project = {
+    id: null,
+    client_name: args.client || "(direct doc url)",
+  };
+} else {
+  const { createClient } = await import(`${NPM}@supabase/supabase-js`);
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+  );
+
+  if (args["project-id"]) {
+    const { data, error } = await supabase
+      .from("projects")
+      .select("id, client_name")
+      .eq("id", args["project-id"])
+      .single();
+    if (error || !data) {
+      console.error(`project_id=${args["project-id"]} のプロジェクトが見つかりません`);
+      process.exit(1);
+    }
+    project = data;
+  } else {
+    const { data, error } = await supabase
+      .from("projects")
+      .select("id, client_name")
+      .ilike("client_name", `%${args.client}%`);
+    if (error) {
+      console.error("Supabase error:", error.message);
+      process.exit(1);
+    }
+    if (!data?.length) {
+      console.error(`"${args.client}" にマッチするプロジェクトが見つかりません`);
+      process.exit(1);
+    }
+    if (data.length > 1) {
+      console.error(`"${args.client}" に複数マッチしました。--project-id で指定してください:`);
+      for (const p of data) console.error(`  - ${p.client_name}  (id=${p.id})`);
+      process.exit(1);
+    }
+    project = data[0];
+  }
+
+  const { data: task, error: taskErr } = await supabase
+    .from("tasks")
+    .select("external_url")
+    .eq("project_id", project.id)
+    .eq("title", taskTitle)
+    .maybeSingle();
+
+  if (taskErr) {
+    console.error("Supabase error (tasks):", taskErr.message);
+    process.exit(1);
+  }
+  if (!task?.external_url) {
+    console.error(`${project.client_name} の "${taskTitle}" タスクに external_url が未設定`);
+    process.exit(1);
+  }
+  docUrl = task.external_url;
+}
+
+const docId = extractDocId(docUrl);
+if (!docId) {
+  console.error(`URL から Doc ID を抽出できません: ${docUrl}`);
+  process.exit(1);
+}
+
+// =================================================================
+// Google API auth
+// =================================================================
+
+const { google } = await import(`${NPM}googleapis`);
+const credentials = JSON.parse(
+  process.env.GOOGLE_SERVICE_ACCOUNT_KEY
+    .replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t"),
+);
+const docsAuth = new google.auth.GoogleAuth({
+  credentials,
+  scopes: ["https://www.googleapis.com/auth/documents"],
+  clientOptions: process.env.GOOGLE_IMPERSONATE_EMAIL
+    ? { subject: process.env.GOOGLE_IMPERSONATE_EMAIL }
+    : undefined,
+});
+const driveAuth = new google.auth.GoogleAuth({
+  credentials,
+  scopes: ["https://www.googleapis.com/auth/drive"],
+  clientOptions: process.env.GOOGLE_IMPERSONATE_EMAIL
+    ? { subject: process.env.GOOGLE_IMPERSONATE_EMAIL }
+    : undefined,
+});
+const docs = google.docs({ version: "v1", auth: docsAuth });
+const drive = google.drive({ version: "v3", auth: driveAuth });
+
+// =================================================================
+// 鮮度チェック
+// =================================================================
+
+const docMeta = await drive.files.get({
+  fileId: docId,
+  fields: "id,name,modifiedTime",
+  supportsAllDrives: true,
+});
+const docModifiedTime = docMeta.data.modifiedTime;
+
+// --out 未指定なら ./<Docタイトル>.md に自動決定
+if (!outPath) {
+  outPath = autoResolveOutPath(docMeta.data.name);
+  console.error(`[out] 自動決定: ${outPath}`);
+}
+const localExists = existsSync(outPath);
+const localCommittedTime = localExists ? getLastCommittedTime(outPath) : null;
+const isStale = computeIsStale(docModifiedTime, localCommittedTime, localExists);
+
+if (checkOnly) {
+  const result = {
+    project: { id: project.id, client_name: project.client_name },
+    task_title: taskTitle,
+    doc_url: docUrl,
+    doc_modified_time: docModifiedTime,
+    local_path: outPath,
+    local_exists: localExists,
+    local_git_committed_time: localCommittedTime,
+    is_stale: isStale,
+    stale_by_seconds: localCommittedTime
+      ? Math.max(0, Math.floor((new Date(docModifiedTime).getTime() - new Date(localCommittedTime).getTime()) / 1000))
+      : null,
+  };
+  console.log(JSON.stringify(result, null, 2));
+  process.exit(0);
+}
+
+// =================================================================
+// 取り込み実行
+// =================================================================
+
+console.error(`[1/3] ${project.client_name} の "${taskTitle}" を取得します`);
+console.error(`      ${docUrl}`);
+
+const docResult = await getDocWithSuggestionFallback(docs, docId);
+if (docResult.fallback) {
+  console.error("      ⚠ 提案モードビュー権限なし → 通常モードで取得（提案中の編集は反映されない可能性）");
+}
+const docTitle = docResult.data.title || "(無題)";
+const bodyMd = docToMarkdown(docResult.data);
+
+console.error(`[2/3] Markdown 変換完了: ${bodyMd.length} 文字`);
+
+// 既存ファイルがあれば diff 表示用に退避
+let diffSummary = "";
+if (localExists) {
+  const oldBodyMd = extractBodyFromOutput(readFileSync(outPath, "utf8"));
+  if (oldBodyMd.trim() === bodyMd.trim()) {
+    diffSummary = "（差分なし）";
+  } else {
+    diffSummary = `（差分あり: 旧 ${oldBodyMd.length}字 → 新 ${bodyMd.length}字）`;
+  }
+}
+
+// 出力
+mkdirSync(dirname(outPath), { recursive: true });
+const finalContent = buildOutput({
+  client: project.client_name,
+  taskTitle,
+  docTitle,
+  docUrl,
+  docModifiedTime,
+  bodyMd,
+  mode: docResult.mode,
+});
+writeFileSync(outPath, finalContent);
+
+console.error(`[3/3] 保存: ${outPath} ${diffSummary}`);
+console.log(JSON.stringify({
+  project: { id: project.id, client_name: project.client_name },
+  task_title: taskTitle,
+  doc_url: docUrl,
+  doc_modified_time: docModifiedTime,
+  local_path: outPath,
+  local_exists_before: localExists,
+  bytes_written: finalContent.length,
+}, null, 2));
+
+// =================================================================
+// helpers
+// =================================================================
+
+function parseArgs(argv) {
+  const out = { _: [] };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (!a.startsWith("--")) {
+      out._.push(a);
+      continue;
+    }
+    const key = a.slice(2);
+    const next = argv[i + 1];
+    if (next && !next.startsWith("--")) {
+      out[key] = next;
+      i++;
+    } else {
+      out[key] = true;
+    }
+  }
+  return out;
+}
+
+// --out 未指定時の出力先: カレントディレクトリの ./<Docタイトル>.md。
+// ファイル名に使えない文字だけ _ に置換する。
+function autoResolveOutPath(docTitle) {
+  const safe = (docTitle || "imported-doc")
+    .replace(/[\/\\:*?"<>|\n\r\t]/g, "_")
+    .trim();
+  return resolve(process.cwd(), `${safe}.md`);
+}
+
+function getLastCommittedTime(filePath) {
+  // git log -1 --format=%aI -- <path> でファイルの最終 commit 時刻を取得
+  // 1度も commit されていない場合は null を返す（ローカル新規ファイル）
+  try {
+    const out = execSync(`git log -1 --format=%aI -- "${filePath}"`, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    return out || null;
+  } catch {
+    return null;
+  }
+}
+
+function computeIsStale(docTimeIso, localTimeIso, localExists) {
+  // ローカルファイルが存在しない: 取り込みが必要なので stale 扱い
+  if (!localExists) return true;
+  // git に commit されていない: 判定不能なので stale 扱い（安全側）
+  if (!localTimeIso) return true;
+  return new Date(docTimeIso).getTime() > new Date(localTimeIso).getTime();
+}
+
+function extractBodyFromOutput(content) {
+  const marker = "\n---\n\n";
+  const markerIndex = content.indexOf(marker);
+  return markerIndex === -1 ? content : content.slice(markerIndex + marker.length);
+}
+
+function buildOutput({ client, taskTitle, docTitle, docUrl, docModifiedTime, bodyMd, mode }) {
+  const modeNote = mode === "PREVIEW_SUGGESTIONS_ACCEPTED"
+    ? "PREVIEW_SUGGESTIONS_ACCEPTED （提案モードでの編集は反映済み）"
+    : "DEFAULT_FOR_CURRENT_ACCESS （viewer 権限のためフォールバック取得・提案中の編集は反映されない可能性）";
+  return `> **source:** ${docUrl}
+> **client:** ${client}
+> **task:** ${taskTitle}
+> **doc title:** ${docTitle}
+> **doc modified at:** ${docModifiedTime}
+> **fetched at:** ${new Date().toISOString()}
+> **suggestionsViewMode:** ${modeNote}
+
+---
+
+${bodyMd}
+`;
+}
