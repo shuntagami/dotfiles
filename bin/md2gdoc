@@ -242,7 +242,7 @@ async function getTab(documentId, tabId) {
 async function getTabEndIndex(documentId, tabId) {
   const tab = await getTab(documentId, tabId);
   const content = tab.documentTab?.body?.content ?? [];
-  return content[content.length - 1].endIndex;
+  return content[content.length - 1]?.endIndex ?? 2;
 }
 
 async function getLastTableLocation(documentId, tabId) {
@@ -251,8 +251,9 @@ async function getLastTableLocation(documentId, tabId) {
   for (let i = content.length - 1; i >= 0; i--) {
     const el = content[i];
     if (el.table) {
-      const cell = el.table.tableRows[0].tableCells[0];
-      const para = cell.content[0];
+      const cell = el.table?.tableRows?.[0]?.tableCells?.[0];
+      const para = cell?.content?.[0];
+      if (typeof el.startIndex !== "number" || typeof para?.startIndex !== "number") continue;
       return { tableStart: el.startIndex, cellStart: para.startIndex };
     }
   }

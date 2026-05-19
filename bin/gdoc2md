@@ -236,11 +236,11 @@ console.error(`[2/3] Markdown 変換完了: ${bodyMd.length} 文字`);
 // 既存ファイルがあれば diff 表示用に退避
 let diffSummary = "";
 if (localExists) {
-  const oldContent = readFileSync(outPath, "utf8");
-  if (oldContent.trim() === bodyMd.trim()) {
+  const oldBodyMd = extractBodyFromOutput(readFileSync(outPath, "utf8"));
+  if (oldBodyMd.trim() === bodyMd.trim()) {
     diffSummary = "（差分なし）";
   } else {
-    diffSummary = `（差分あり: 旧 ${oldContent.length}字 → 新 ${bodyMd.length}字）`;
+    diffSummary = `（差分あり: 旧 ${oldBodyMd.length}字 → 新 ${bodyMd.length}字）`;
   }
 }
 
@@ -321,6 +321,12 @@ function computeIsStale(docTimeIso, localTimeIso, localExists) {
   // git に commit されていない: 判定不能なので stale 扱い（安全側）
   if (!localTimeIso) return true;
   return new Date(docTimeIso).getTime() > new Date(localTimeIso).getTime();
+}
+
+function extractBodyFromOutput(content) {
+  const marker = "\n---\n\n";
+  const markerIndex = content.indexOf(marker);
+  return markerIndex === -1 ? content : content.slice(markerIndex + marker.length);
 }
 
 function buildOutput({ client, taskTitle, docTitle, docUrl, docModifiedTime, bodyMd, mode }) {
