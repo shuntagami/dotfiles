@@ -84,6 +84,10 @@ nnoremap cc "_cc
 nnoremap C "_C
 xnoremap c "_c
 
+" 現在のファイルパスをクリップボードにコピー
+command! CopyPath let @+ = expand('%:p')
+command! CopyRelPath let @+ = expand('%')
+
 " ==============================================================================
 " 外観 (syntax, colorscheme)
 " ==============================================================================
@@ -127,6 +131,9 @@ let g:auto_save = 1
 inoremap { {}<LEFT>
 inoremap [ []<LEFT>
 inoremap ( ()<LEFT>
+
+" 現在のファイルのフルパスをコピー
+nnoremap <leader>cp :CopyPath<CR>
 
 " ==============================================================================
 " 全角スペースの表示
