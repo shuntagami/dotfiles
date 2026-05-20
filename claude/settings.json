@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(npx vite build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(strings ~/Library/Developer/Xcode/DerivedData/MonitorControl-*/Build/Products/Debug/MonitorControl.app/Contents/Resources/Base.lproj/Main.storyboardc/*.nib)",
+      "mcp__Neon__list_projects"
+    ]
+  },
+  "enabledPlugins": {
+    "vercel@claude-plugins-official": true,
+    "slack@claude-plugins-official": true
+  },
+  "effortLevel": "high",
+  "skipDangerousModePermissionPrompt": true,
+  "agentPushNotifEnabled": true
+}

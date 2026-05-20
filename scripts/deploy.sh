@@ -50,6 +50,20 @@ mkdir -p ~/.local/state/crossnote
 ln -sf ~/dotfiles/misc/crossnote/parser.js ~/.local/state/crossnote/parser.js
 ln -sf ~/dotfiles/misc/crossnote/style.less ~/.local/state/crossnote/style.less
 
+# Codex: config.toml includes standard Codex settings such as installed plugins.
+mkdir -p ~/.codex
+if [[ -e ~/.codex/config.toml && ! -L ~/.codex/config.toml ]]; then
+  mv ~/.codex/config.toml ~/.codex/config.toml.bak.$(date +%Y%m%d%H%M%S)
+fi
+ln -sf ~/dotfiles/codex/config.toml ~/.codex/config.toml
+
+# Claude Code: settings.json includes standard Claude Code settings such as enabled plugins.
+mkdir -p ~/.claude
+if [[ -e ~/.claude/settings.json && ! -L ~/.claude/settings.json ]]; then
+  mv ~/.claude/settings.json ~/.claude/settings.json.bak.$(date +%Y%m%d%H%M%S)
+fi
+ln -sf ~/dotfiles/claude/settings.json ~/.claude/settings.json
+
 # Screenpipe: manage only prompt/config files that are safe to keep in dotfiles.
 # Databases, recordings, logs, outputs, and connection secrets stay under ~/.screenpipe.
 if [[ -d "${HOME}/dotfiles/screenpipe/pipes" ]]; then
@@ -59,15 +73,6 @@ if [[ -d "${HOME}/dotfiles/screenpipe/pipes" ]]; then
     mkdir -p "${HOME}/.screenpipe/pipes/${pipe_name}"
     ln -sf "${pipe_md}" "${HOME}/.screenpipe/pipes/${pipe_name}/pipe.md"
   done
-fi
-
-mkdir -p ~/.config/mcp
-if [[ -f ~/.config/mcp/slack.env && ! -L ~/.config/mcp/slack.env && ! -f ~/dotfiles/mcp/slack.env ]]; then
-  mv ~/.config/mcp/slack.env ~/dotfiles/mcp/slack.env
-fi
-ln -sf ~/dotfiles/mcp/slack.env ~/.config/mcp/slack.env
-if [[ -f ~/dotfiles/mcp/slack.env ]]; then
-  chmod 600 ~/dotfiles/mcp/slack.env
 fi
 
 # MCP: sync canonical dotfiles config to Cursor, Codex, and Claude Code.

@@ -6,7 +6,6 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const HOME = os.homedir();
-const MCP_ENV_FILE = process.env.SLACK_MCP_ENV_FILE || path.join(HOME, '.config', 'mcp', 'slack.env');
 const WORK_ENV_FILE = path.join(HOME, '.screenpipe', 'work-state', 'config.env');
 const GOALS_BIN = path.resolve(__dirname, '..', 'screenpipe-daily-goals');
 
@@ -27,7 +26,6 @@ function readEnvFile(file) {
 }
 
 const fileEnv = {
-  ...readEnvFile(MCP_ENV_FILE),
   ...readEnvFile(WORK_ENV_FILE),
 };
 
@@ -39,12 +37,12 @@ const SLACK_BOT_TOKEN = envValue('SLACK_BOT_TOKEN');
 const SLACK_APP_TOKEN = envValue('SLACK_APP_TOKEN');
 
 if (!SLACK_BOT_TOKEN) {
-  console.error(`SLACK_BOT_TOKEN is not set. Configure ${MCP_ENV_FILE}.`);
+  console.error(`SLACK_BOT_TOKEN is not set. Configure ${WORK_ENV_FILE}.`);
   process.exit(1);
 }
 
 if (!SLACK_APP_TOKEN) {
-  console.error(`SLACK_APP_TOKEN is not set. Enable Slack Socket Mode and add it to ${MCP_ENV_FILE}.`);
+  console.error(`SLACK_APP_TOKEN is not set. Enable Slack Socket Mode and add it to ${WORK_ENV_FILE}.`);
   process.exit(1);
 }
 
