@@ -254,10 +254,16 @@ async function getLastTableLocation(documentId, tabId) {
       const cell = el.table?.tableRows?.[0]?.tableCells?.[0];
       const para = cell?.content?.[0];
       if (typeof el.startIndex !== "number" || typeof para?.startIndex !== "number") continue;
-      return { tableStart: el.startIndex, cellStart: para.startIndex };
+      const prev = i > 0 ? content[i - 1] : null;
+      return { tableStart: el.startIndex, cellStart: para.startIndex, prev };
     }
   }
   return null;
+}
+
+function isEmptyParagraph(el) {
+  const elements = el?.paragraph?.elements ?? [];
+  return elements.length === 1 && elements[0].textRun?.content === "\n";
 }
 
 async function batchUpdate(documentId, requests) {
@@ -276,11 +282,13 @@ async function clearTab(documentId, tabId) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// Google Docs「明るいグレー3」: #efefef
-const LIGHT_GRAY_3 = { color: { rgbColor: { red: 239 / 255, green: 239 / 255, blue: 239 / 255 } } };
-const HIDDEN_BORDER = {
-  color: LIGHT_GRAY_3,
-  width: { magnitude: 0, unit: "PT" },
+// Google Docs「明るいグレー2」: #f3f3f3（LINE 配信 Doc の慣習色）
+const CELL_BG = { color: { rgbColor: { red: 0.9529412, green: 0.9529412, blue: 0.9529412 } } };
+// セルボーダーは 1pt 白。テーブルの境目を背景になじませる手法。
+const WHITE = { color: { rgbColor: { red: 1, green: 1, blue: 1 } } };
+const CELL_BORDER = {
+  color: WHITE,
+  width: { magnitude: 1, unit: "PT" },
   dashStyle: "SOLID",
 };
 
@@ -290,35 +298,62 @@ const HEADING_STYLE = { 1: "HEADING_1", 2: "HEADING_2", 3: "HEADING_3" };
 async function appendTable(documentId, tabId, cellText) {
   const end = await getTabEndIndex(documentId, tabId);
   const cursor = end - 1;
+  // insertTable 自体が必要な段落を作るため、追加の改行は入れない。
   await batchUpdate(documentId, [
     { insertTable: { rows: 1, columns: 1, location: { index: cursor, tabId } } },
-    { insertText: { text: "\n", endOfSegmentLocation: { tabId } } },
   ]);
   await sleep(1200);
 
   const loc = await getLastTableLocation(documentId, tabId);
   if (!loc) throw new Error("table not found after insert");
+  if (isEmptyParagraph(loc.prev)) {
+    await batchUpdate(documentId, [
+      {
+        updateParagraphStyle: {
+          range: { startIndex: loc.prev.startIndex, endIndex: loc.prev.startIndex + 1, tabId },
+          paragraphStyle: { namedStyleType: "NORMAL_TEXT", alignment: "START" },
+          fields: "namedStyleType,alignment",
+        },
+      },
+    ]);
+  }
+
   const text = cellText.length ? cellText : " ";
   await batchUpdate(documentId, [
     { insertText: { text, location: { index: loc.cellStart, tabId } } },
     {
       updateParagraphStyle: {
         range: { startIndex: loc.cellStart, endIndex: loc.cellStart + text.length, tabId },
-        paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
-        fields: "namedStyleType",
+        paragraphStyle: { namedStyleType: "NORMAL_TEXT", lineSpacing: 120 },
+        fields: "namedStyleType,lineSpacing",
+      },
+    },
+    {
+      updateTextStyle: {
+        range: { startIndex: loc.cellStart, endIndex: loc.cellStart + text.length, tabId },
+        textStyle: { fontSize: { magnitude: 11, unit: "PT" } },
+        fields: "fontSize",
       },
     },
     {
       updateTableCellStyle: {
         tableStartLocation: { index: loc.tableStart, tabId },
         tableCellStyle: {
-          backgroundColor: LIGHT_GRAY_3,
-          borderTop: HIDDEN_BORDER,
-          borderRight: HIDDEN_BORDER,
-          borderBottom: HIDDEN_BORDER,
-          borderLeft: HIDDEN_BORDER,
+          backgroundColor: CELL_BG,
+          borderTop: CELL_BORDER,
+          borderRight: CELL_BORDER,
+          borderBottom: CELL_BORDER,
+          borderLeft: CELL_BORDER,
         },
         fields: "backgroundColor,borderTop,borderRight,borderBottom,borderLeft",
+      },
+    },
+    {
+      updateTableColumnProperties: {
+        tableStartLocation: { index: loc.tableStart, tabId },
+        columnIndices: [0],
+        tableColumnProperties: { widthType: "EVENLY_DISTRIBUTED" },
+        fields: "widthType",
       },
     },
   ]);
@@ -363,10 +398,22 @@ async function buildTab(documentId, tabId, blocks, state) {
     pending.push({
       updateParagraphStyle: {
         range: { startIndex: start, endIndex: start + 1, tabId },
-        paragraphStyle: { namedStyleType: namedStyle },
-        fields: "namedStyleType",
+        paragraphStyle: {
+          namedStyleType: namedStyle,
+          ...(block.type !== "heading" ? { alignment: "START" } : {}),
+        },
+        fields: block.type !== "heading" ? "namedStyleType,alignment" : "namedStyleType",
       },
     });
+    if (block.type !== "heading") {
+      pending.push({
+        updateTextStyle: {
+          range: { startIndex: start, endIndex: start + text.length, tabId },
+          textStyle: { fontSize: { magnitude: 12, unit: "PT" } },
+          fields: "fontSize",
+        },
+      });
+    }
     for (const r of ranges) {
       if (r.end <= r.start) continue;
       pending.push({
