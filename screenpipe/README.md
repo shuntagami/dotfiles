@@ -144,7 +144,7 @@ chmod 600 ~/.screenpipe/work-state/config.env
 
 未設定の場合は、`SLACK_WEBHOOK_URL`、`WORK_SLACK_WEBHOOK_URL`、またはScreenpipeアプリのSlack connectionを利用する。
 
-Slack Botから宣言する場合は、SlackアプリでSocket Modeを有効にし、`SLACK_APP_TOKEN` を `~/.config/mcp/slack.env`（実体は `~/dotfiles/mcp/slack.env`）に追加する。Bot tokenは既存の `SLACK_BOT_TOKEN` を使う。
+Slack Botから宣言する場合は、SlackアプリでSocket Modeを有効にし、`SLACK_BOT_TOKEN` と `SLACK_APP_TOKEN` を `~/.screenpipe/work-state/config.env` に追加する。
 
 ```bash
 SLACK_BOT_TOKEN=xoxb-...

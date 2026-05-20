@@ -19,16 +19,16 @@ This syncs the canonical list to:
 - Codex: `~/.codex/config.toml`
 - Claude Code: user-scope MCP entries in `~/.claude.json`
 
-Secrets are not committed. Local secret files live in `~/dotfiles/mcp` and are
-symlinked into `~/.config/mcp`.
+Secrets are not committed. Prefer each service's official OAuth connector or
+tool-specific local config over storing tokens for MCP servers in dotfiles.
 
-For Slack:
+Slack is not configured as a local MCP server. Codex uses the official
+`slack@openai-curated` plugin instead, enabled in `~/dotfiles/codex/config.toml`,
+so it can authenticate through the connected Slack app integration rather than a
+local bot-token MCP wrapper.
 
-```sh
-cp ~/dotfiles/mcp/slack.env.example ~/dotfiles/mcp/slack.env
-chmod 600 ~/dotfiles/mcp/slack.env
-~/dotfiles/scripts/deploy.sh
-```
+Claude Code uses official Slack integration paths too:
 
-`SLACK_APP_TOKEN` is optional for MCP, but required when running
-`screenpipe-daily-goals-slack-bot` via Slack Socket Mode.
+- `~/dotfiles/claude/settings.json` enables `slack@claude-plugins-official`
+- the plugin bundles Slack's hosted MCP server at `https://mcp.slack.com/mcp`
+- a connected `claude.ai Slack` MCP can also be used when authenticated

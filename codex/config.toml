@@ -1,0 +1,61 @@
+model = "gpt-5.5"
+model_reasoning_effort = "xhigh"
+
+[projects."/Users/shun.tagami/dotfiles"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/projects/launch-consulting"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/projects/vercel-functions"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/projects/markitdown"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/projects/screenpipe"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/projects/youtube-content-gen"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/projects/l-ai"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/life-design"]
+trust_level = "trusted"
+
+[tui.model_availability_nux]
+"gpt-5.5" = 4
+
+[features]
+goals = true
+
+[notice]
+fast_default_opt_out = true
+
+[plugins."slack@openai-curated"]
+enabled = true
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["-y", "@playwright/mcp@latest"]
+
+[mcp_servers.playwright.tools.browser_click]
+approval_mode = "approve"
+
+[mcp_servers.playwright.tools.browser_navigate]
+approval_mode = "approve"
+
+[mcp_servers.playwright.tools.browser_run_code_unsafe]
+approval_mode = "approve"
+
+[mcp_servers.screenpipe]
+command = "npx"
+args = ["-y", "screenpipe-mcp"]
+
+[mcp_servers.notion]
+url = "https://mcp.notion.com/mcp"
+
+[mcp_servers.supabase]
+url = "https://mcp.supabase.com/mcp"

@@ -46,11 +46,6 @@
         "screenpipe-mcp"
       ]
     },
-    "slack": {
-      "enabled": true,
-      "type": "stdio",
-      "command": "/Users/shun.tagami/dotfiles/bin/slack-mcp-wrapper"
-    },
     "notion": {
       "enabled": true,
       "type": "http",
