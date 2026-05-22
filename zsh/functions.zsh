@@ -532,7 +532,7 @@ video-to-mp3() {
 
 mov-to-mp4() {
   if [[ $# -eq 0 ]]; then
-    echo "使用方法: mov-to-mp4 <MOVファイル> [出力MP4]"
+    echo "使用方法: mov-to-mp4 <動画ファイル> [出力MP4]"
     return 1
   fi
 
@@ -541,12 +541,19 @@ mov-to-mp4() {
 
   if [[ -n "$2" ]]; then
     output_file="$2"
+  elif [[ "${input_file:e:l}" == "mp4" ]]; then
+    output_file="${input_file%.*}_compressed.mp4"
   else
     output_file="${input_file%.*}.mp4"
   fi
 
   if [[ ! -f "$input_file" ]]; then
     echo "エラー: ファイル '$input_file' が見つかりません。"
+    return 1
+  fi
+
+  if [[ "$input_file" == "$output_file" ]]; then
+    echo "エラー: 入力と出力に同じファイルは指定できません。別の出力名を指定してください。"
     return 1
   fi
 
@@ -561,6 +568,18 @@ mov-to-mp4() {
   else
     echo "変換失敗"
   fi
+}
+
+mp4-compress() {
+  if [[ $# -eq 0 ]]; then
+    echo "使用方法: mp4-compress <MP4ファイル> [出力MP4]"
+    return 1
+  fi
+
+  local input_file="$1"
+  local output_file="${2:-${input_file%.*}_compressed.mp4}"
+
+  mov-to-mp4 "$input_file" "$output_file"
 }
 
 pdf2img() {
