@@ -582,6 +582,379 @@ mp4-compress() {
   mov-to-mp4 "$input_file" "$output_file"
 }
 
+_llm_video_compress_usage() {
+  cat <<'EOF'
+使用方法: llm-video-compress [options] <動画ファイル> [出力MP4]
+
+LLM投入向けに、動画のサイズと情報量を落とした MP4 を作成します。
+
+例:
+  llm-video-compress input.mp4
+  llm-video-compress --cheap input.mp4
+  llm-video-compress --fps 0.5 --height 480 input.mp4
+  llm-video-compress --no-audio input.mp4
+  llm-video-compress --start 00:10:00 --end 00:20:00 input.mp4
+
+Options:
+  --profile <name>       balanced | cheap | detail (default: balanced)
+  --cheap                --profile cheap と同じ
+  --detail               --profile detail と同じ
+  --fps <number>         出力動画の FPS。balanced=1, cheap=0.5, detail=2
+  --height <px>          最大高さ。balanced=720, cheap=480, detail=1080
+  --crf <number>         x264 CRF。balanced=30, cheap=32, detail=28
+  --preset <name>        x264 preset (default: medium)
+  --audio-bitrate <rate> AAC 音声ビットレート。balanced=64k, cheap=48k, detail=96k
+  --no-audio             音声を削除する
+  --start <time>         開始位置。例: 75, 01:15, 00:01:15
+  --end <time>           終了位置。--duration とは併用不可
+  --duration <time>      切り出す長さ。--end とは併用不可
+  --dry-run              実行する ffmpeg コマンドだけ表示
+  -h, --help             ヘルプを表示
+
+注意:
+  Gemini でトークン消費を本当に削るには、API 側でも videoMetadata.fps と
+  media_resolution=LOW/MEDIUM を指定してください。このコマンドはアップロード
+  する実ファイルを軽くします。
+EOF
+}
+
+_llm_video_time_to_seconds() {
+  awk -v t="$1" '
+    BEGIN {
+      if (t !~ /^[0-9]+([.][0-9]+)?(:[0-9]+([.][0-9]+)?){0,2}$/) {
+        exit 1
+      }
+      n = split(t, a, ":")
+      if (n == 1) {
+        s = a[1]
+      } else if (n == 2) {
+        s = a[1] * 60 + a[2]
+      } else if (n == 3) {
+        s = a[1] * 3600 + a[2] * 60 + a[3]
+      } else {
+        exit 1
+      }
+      if (s < 0) {
+        exit 1
+      }
+      printf "%.3f", s
+    }
+  '
+}
+
+_llm_video_human_bytes() {
+  awk -v bytes="$1" '
+    BEGIN {
+      split("B KiB MiB GiB TiB", unit, " ")
+      size = bytes + 0
+      idx = 1
+      while (size >= 1024 && idx < 5) {
+        size /= 1024
+        idx++
+      }
+      if (idx == 1) {
+        printf "%d %s", size, unit[idx]
+      } else {
+        printf "%.1f %s", size, unit[idx]
+      }
+    }
+  '
+}
+
+_llm_video_file_bytes() {
+  stat -f%z "$1" 2>/dev/null || stat -c%s "$1" 2>/dev/null
+}
+
+llm-video-compress() {
+  emulate -L zsh
+  setopt LOCAL_OPTIONS NO_GLOB
+
+  local profile="balanced"
+  local fps="" height="" crf="" preset="medium" audio_bitrate=""
+  local keep_audio=1 dry_run=0
+  local start="" end="" duration=""
+  local -a positional
+
+  while (( $# > 0 )); do
+    case "$1" in
+      -h|--help)
+        _llm_video_compress_usage
+        return 0
+        ;;
+      --profile)
+        shift
+        if [[ -z "$1" ]]; then
+          echo "エラー: --profile の値が必要です。" >&2
+          return 2
+        fi
+        profile="$1"
+        ;;
+      --profile=*)
+        profile="${1#*=}"
+        ;;
+      --cheap)
+        profile="cheap"
+        ;;
+      --detail)
+        profile="detail"
+        ;;
+      --fps)
+        shift
+        fps="$1"
+        ;;
+      --fps=*)
+        fps="${1#*=}"
+        ;;
+      --height)
+        shift
+        height="$1"
+        ;;
+      --height=*)
+        height="${1#*=}"
+        ;;
+      --crf)
+        shift
+        crf="$1"
+        ;;
+      --crf=*)
+        crf="${1#*=}"
+        ;;
+      --preset)
+        shift
+        preset="$1"
+        ;;
+      --preset=*)
+        preset="${1#*=}"
+        ;;
+      --audio-bitrate)
+        shift
+        audio_bitrate="$1"
+        ;;
+      --audio-bitrate=*)
+        audio_bitrate="${1#*=}"
+        ;;
+      --no-audio)
+        keep_audio=0
+        ;;
+      --start)
+        shift
+        start="$1"
+        ;;
+      --start=*)
+        start="${1#*=}"
+        ;;
+      --end)
+        shift
+        end="$1"
+        ;;
+      --end=*)
+        end="${1#*=}"
+        ;;
+      --duration)
+        shift
+        duration="$1"
+        ;;
+      --duration=*)
+        duration="${1#*=}"
+        ;;
+      --dry-run)
+        dry_run=1
+        ;;
+      --)
+        shift
+        positional+=("$@")
+        break
+        ;;
+      -*)
+        echo "エラー: 不明なオプションです: $1" >&2
+        _llm_video_compress_usage >&2
+        return 2
+        ;;
+      *)
+        positional+=("$1")
+        ;;
+    esac
+    shift
+  done
+
+  if (( ${#positional[@]} < 1 || ${#positional[@]} > 2 )); then
+    _llm_video_compress_usage >&2
+    return 2
+  fi
+
+  case "$profile" in
+    balanced)
+      [[ -z "$fps" ]] && fps="1"
+      [[ -z "$height" ]] && height="720"
+      [[ -z "$crf" ]] && crf="30"
+      [[ -z "$audio_bitrate" ]] && audio_bitrate="64k"
+      ;;
+    cheap)
+      [[ -z "$fps" ]] && fps="0.5"
+      [[ -z "$height" ]] && height="480"
+      [[ -z "$crf" ]] && crf="32"
+      [[ -z "$audio_bitrate" ]] && audio_bitrate="48k"
+      ;;
+    detail)
+      [[ -z "$fps" ]] && fps="2"
+      [[ -z "$height" ]] && height="1080"
+      [[ -z "$crf" ]] && crf="28"
+      [[ -z "$audio_bitrate" ]] && audio_bitrate="96k"
+      ;;
+    *)
+      echo "エラー: --profile は balanced, cheap, detail のいずれかを指定してください。" >&2
+      return 2
+      ;;
+  esac
+
+  if [[ -n "$end" && -n "$duration" ]]; then
+    echo "エラー: --end と --duration は併用できません。" >&2
+    return 2
+  fi
+
+  if ! awk -v v="$fps" 'BEGIN { exit !((v ~ /^([0-9]+([.][0-9]+)?|[.][0-9]+)$/) && v + 0 > 0) }'; then
+    echo "エラー: --fps には 0 より大きい数値を指定してください。" >&2
+    return 2
+  fi
+
+  if ! awk -v v="$height" 'BEGIN { exit !(v ~ /^[0-9]+$/ && v + 0 > 0) }'; then
+    echo "エラー: --height には 0 より大きい整数を指定してください。" >&2
+    return 2
+  fi
+
+  if ! awk -v v="$crf" 'BEGIN { exit !(v ~ /^[0-9]+$/ && v >= 0 && v <= 51) }'; then
+    echo "エラー: --crf は 0 から 51 の整数を指定してください。" >&2
+    return 2
+  fi
+
+  local input_file="${positional[1]}"
+  local output_file="${positional[2]:-${input_file%.*}_llm.mp4}"
+
+  if [[ ! -f "$input_file" ]]; then
+    echo "エラー: ファイル '$input_file' が見つかりません。" >&2
+    return 1
+  fi
+
+  if [[ "$input_file" == "$output_file" ]]; then
+    echo "エラー: 入力ファイルと出力ファイルが同じです。" >&2
+    return 2
+  fi
+
+  if ! command -v ffmpeg >/dev/null 2>&1; then
+    echo "エラー: ffmpeg が見つかりません。" >&2
+    return 127
+  fi
+
+  if ! command -v ffprobe >/dev/null 2>&1; then
+    echo "エラー: ffprobe が見つかりません。" >&2
+    return 127
+  fi
+
+  local start_sec="0" end_sec="" duration_sec=""
+  if [[ -n "$start" ]]; then
+    if ! start_sec="$(_llm_video_time_to_seconds "$start")"; then
+      echo "エラー: --start の形式が不正です: $start" >&2
+      return 2
+    fi
+  fi
+  if [[ -n "$end" ]]; then
+    if ! end_sec="$(_llm_video_time_to_seconds "$end")"; then
+      echo "エラー: --end の形式が不正です: $end" >&2
+      return 2
+    fi
+  fi
+  if [[ -n "$duration" ]]; then
+    if ! duration_sec="$(_llm_video_time_to_seconds "$duration")"; then
+      echo "エラー: --duration の形式が不正です: $duration" >&2
+      return 2
+    fi
+  fi
+
+  if [[ -n "$end_sec" ]]; then
+    if ! awk -v s="$start_sec" -v e="$end_sec" 'BEGIN { exit !(e > s) }'; then
+      echo "エラー: --end は --start より後の時刻を指定してください。" >&2
+      return 2
+    fi
+  fi
+
+  local source_height
+  source_height="$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 -- "$input_file" 2>/dev/null | head -n 1)"
+
+  local -a vf_parts trim_args cmd
+  vf_parts=("fps=${fps}")
+  if [[ -z "$source_height" || "$source_height" != <-> || "$source_height" -gt "$height" ]]; then
+    vf_parts+=("scale=-2:${height}")
+  fi
+  vf_parts+=("setsar=1")
+  local vf="${(j:,:)vf_parts}"
+
+  trim_args=()
+  [[ -n "$start" ]] && trim_args+=(-ss "$start")
+  [[ -n "$end" ]] && trim_args+=(-to "$end")
+  [[ -n "$duration" ]] && trim_args+=(-t "$duration")
+
+  cmd=(ffmpeg -hide_banner -y -i "$input_file")
+  cmd+=("${trim_args[@]}")
+  cmd+=(-map 0:v:0)
+  if (( keep_audio )); then
+    cmd+=(-map "0:a?")
+  else
+    cmd+=(-an)
+  fi
+  cmd+=(-vf "$vf" -c:v libx264 -crf "$crf" -preset "$preset" -pix_fmt yuv420p)
+  if (( keep_audio )); then
+    cmd+=(-c:a aac -b:a "$audio_bitrate" -ac 1)
+  fi
+  cmd+=(-sn -dn -movflags +faststart "$output_file")
+
+  if (( dry_run )); then
+    printf '%q ' "${cmd[@]}"
+    printf '\n'
+    return 0
+  fi
+
+  local audio_desc="音声あり ${audio_bitrate}/mono"
+  (( keep_audio )) || audio_desc="音声なし"
+
+  echo "変換中: $input_file → $output_file"
+  echo "設定: profile=${profile}, fps=${fps}, max-height=${height}, crf=${crf}, ${audio_desc}"
+  if [[ -n "$start" || -n "$end" || -n "$duration" ]]; then
+    echo "範囲: start=${start:-0}, end=${end:-未指定}, duration=${duration:-未指定}"
+  fi
+
+  if "${cmd[@]}"; then
+    echo "変換完了: $output_file"
+
+    local input_bytes output_bytes
+    input_bytes="$(_llm_video_file_bytes "$input_file")"
+    output_bytes="$(_llm_video_file_bytes "$output_file")"
+    if [[ -n "$input_bytes" && -n "$output_bytes" ]]; then
+      echo "サイズ: $(_llm_video_human_bytes "$input_bytes") → $(_llm_video_human_bytes "$output_bytes")"
+    fi
+
+    local original_duration clip_duration
+    original_duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 -- "$input_file" 2>/dev/null)"
+    if [[ -n "$duration_sec" ]]; then
+      clip_duration="$duration_sec"
+    elif [[ -n "$end_sec" ]]; then
+      clip_duration="$(awk -v s="$start_sec" -v e="$end_sec" 'BEGIN { printf "%.3f", e - s }')"
+    elif [[ -n "$original_duration" ]]; then
+      clip_duration="$(awk -v o="$original_duration" -v s="$start_sec" 'BEGIN { d = o - s; if (d < 0) d = 0; printf "%.3f", d }')"
+    fi
+
+    if [[ -n "$clip_duration" ]]; then
+      local low_tokens high_tokens
+      low_tokens="$(awk -v d="$clip_duration" -v f="$fps" -v a="$keep_audio" 'BEGIN { printf "%d", d * f * 70 + (a ? d * 32 : 0) }')"
+      high_tokens="$(awk -v d="$clip_duration" -v f="$fps" -v a="$keep_audio" 'BEGIN { printf "%d", d * f * 280 + (a ? d * 32 : 0) }')"
+      echo "Gemini概算: videoMetadata.fps=${fps} 指定時、LOW/MEDIUM 約 ${low_tokens} tokens, HIGH 約 ${high_tokens} tokens"
+      echo "注意: Gemini側で fps/media_resolution を指定しないと、出力FPSだけではトークン削減に反映されない場合があります。"
+    fi
+  else
+    echo "変換失敗" >&2
+    return 1
+  fi
+}
+
 pdf2img() {
   local input="$1"
   if [[ -z "$input" ]]; then
