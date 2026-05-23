@@ -1,5 +1,7 @@
 model = "gpt-5.5"
 model_reasoning_effort = "xhigh"
+model_context_window = 1050000
+model_auto_compact_token_limit = 1000000
 
 [projects."/Users/shun.tagami/dotfiles"]
 trust_level = "trusted"
