@@ -8,9 +8,12 @@
 // 対応する Markdown 構造:
 //   - `<!-- tab: タイトル -->`         複数タブ。出現順に Doc のタブへ割り当てる
 //   - `# ` / `## ` / `### `            HEADING_1 / 2 / 3（ドキュメント先頭の見出しのみ TITLE）
+//   - `- ...` / `1. ...`               箇条書き・番号付きリスト
+//   - Markdown テーブル                 Google Docs の表
 //   - ` ``` ` で囲んだコードブロック    1x1 のグレー（#efefef）テーブル＝LINE 1通分
 //   - それ以外の行                     NORMAL_TEXT 段落（空行も段落として保持）
 //   - インライン **太字** と [文字](URL) リンクは書式付きで反映
+//   - `{{name}}` 形式のプレースホルダーは全体を黄色ハイライト
 //   - ` ```mermaid ` 等の言語付きフェンス  Doc では描画不可のため出力しない
 //   - 画像参照 ![imageN] は文字としてそのまま残す（画像本体は手で貼り直す前提）
 //   - 先頭の `>` 引用ヘッダや `---`、最初の `<!-- tab -->` / `＜…＞` 見出しより前は無視
@@ -26,7 +29,9 @@
 // --doc-id を省略した場合のみテンプレからの新規コピーを行う。
 //
 // Usage:
-//   md2gdoc <md-path> [--doc-id <id>] [--name <doc-name>] [--folder <folder-id>] [--template <doc-id>] [--dry-run]
+//   md2gdoc <md-path> [google-doc-url] [--name <doc-name>] [--folder <folder-id>] [--template <doc-id>] [--dry-run]
+//   md2gdoc <md-path> --doc-url <google-doc-url>
+//   md2gdoc <md-path> --doc-id <id>
 //
 // --dry-run: Google API を叩かず、パース結果（タブ・ブロック・メッセージ数）だけ表示する。
 //
@@ -35,6 +40,88 @@
 import { readFileSync, existsSync } from "node:fs";
 import { resolve, isAbsolute } from "node:path";
 import { homedir } from "node:os";
+
+// 汎用ドキュメント雛形（見出し h1〜h6 の色定義のみを継承する用途・1タブ）
+const DEFAULT_TEMPLATE_ID = "168k8wuUAYN3HQhWxlFi7icw_v9yH1ilL8dPr5oAKENA";
+
+function printUsageAndExit(exitCode = 0) {
+  const out = exitCode === 0 ? console.log : console.error;
+  out(`Usage:
+  md2gdoc <md-path> [google-doc-url]
+  md2gdoc <md-path> --doc-url <google-doc-url>
+  md2gdoc <md-path> --doc-id <doc-id>
+  md2gdoc <md-path> --name <doc-name> [--folder <folder-id>]
+  md2gdoc <md-path> --dry-run
+
+Examples:
+  md2gdoc ./LINEメッセージ.md 'https://docs.google.com/document/d/xxxxxxxx/edit'
+  md2gdoc ./LINEメッセージ.md --doc-url 'https://docs.google.com/document/d/xxxxxxxx/edit'
+  md2gdoc ./LINEメッセージ.md --name 'LINEメッセージ_新規'
+
+Options:
+  --doc-url <url>       既存の Google Doc をURLで指定して再構築
+  --doc-id <id|url>     既存の Google Doc をIDまたはURLで指定して再構築
+  --name <name>         新規作成時のDoc名
+  --folder <id>         新規作成時のDriveフォルダID
+  --template <id|url>   コピー元テンプレートDoc
+  --dry-run             Google APIを書き込まず、パース結果だけ表示
+  -h, --help, help      このヘルプを表示`);
+  process.exit(exitCode);
+}
+
+function parseArgs(argv) {
+  const out = { _: [] };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--") {
+      out._.push(...argv.slice(i + 1));
+      break;
+    }
+    if (!a.startsWith("--")) {
+      out._.push(a);
+      continue;
+    }
+    const key = a.slice(2);
+    const next = argv[i + 1];
+    if (next && !next.startsWith("--")) {
+      out[key] = next;
+      i++;
+    } else {
+      out[key] = true;
+    }
+  }
+  return out;
+}
+
+function normalizeDocId(value) {
+  if (typeof value !== "string") return null;
+  const s = value.trim();
+  const m = /\/document\/d\/([a-zA-Z0-9_-]+)/.exec(s) || /\/d\/([a-zA-Z0-9_-]+)/.exec(s);
+  if (m) return m[1];
+  return /^[a-zA-Z0-9_-]{20,}$/.test(s) ? s : null;
+}
+
+// --- args ---
+const rawArgs = process.argv.slice(2);
+if (!rawArgs.length || rawArgs[0] === "help" || rawArgs.includes("--help") || rawArgs.includes("-h")) {
+  printUsageAndExit(0);
+}
+
+const args = parseArgs(rawArgs);
+const mdPath = args._[0];
+if (!mdPath) printUsageAndExit(2);
+
+const docName = args.name || "LINEメッセージ_テンプレ";
+const folderId = args.folder || null;
+const templateId = normalizeDocId(args.template) || args.template || DEFAULT_TEMPLATE_ID;
+const docTarget = args["doc-url"] || args.url || args["doc-id"] || args._[1] || null;
+const existingDocId = docTarget ? normalizeDocId(docTarget) : null;
+if (docTarget && !existingDocId) {
+  console.error(`Google Doc URL / Doc ID を読み取れません: ${docTarget}`);
+  console.error("");
+  printUsageAndExit(2);
+}
+const dryRun = !!args["dry-run"];
 
 // --- env (~/dotfiles/.env.local) ---
 const ENV_PATH = resolve(homedir(), "dotfiles/.env.local");
@@ -53,26 +140,6 @@ for (const line of readFileSync(ENV_PATH, "utf8").split("\n")) {
 // 外部パッケージ解決: Deno なら npm: 指定、node なら bare specifier。
 const NPM = typeof Deno !== "undefined" ? "npm:" : "";
 const { google } = await import(`${NPM}googleapis`);
-
-// 汎用ドキュメント雛形（見出し h1〜h6 の色定義のみを継承する用途・1タブ）
-const DEFAULT_TEMPLATE_ID = "168k8wuUAYN3HQhWxlFi7icw_v9yH1ilL8dPr5oAKENA";
-
-// --- args ---
-const args = process.argv.slice(2);
-const mdPath = args.find((a) => !a.startsWith("--"));
-if (!mdPath) {
-  console.error("Usage: md2gdoc <md-path> [--doc-id <id>] [--name <doc-name>] [--folder <folder-id>] [--template <doc-id>] [--dry-run]");
-  process.exit(1);
-}
-const flag = (name, fallback = null) => {
-  const idx = args.indexOf(name);
-  return idx >= 0 ? args[idx + 1] : fallback;
-};
-const docName = flag("--name", "LINEメッセージ_テンプレ");
-const folderId = flag("--folder", null);
-const templateId = flag("--template", DEFAULT_TEMPLATE_ID);
-const existingDocId = flag("--doc-id", null);
-const dryRun = args.includes("--dry-run");
 
 const md = readFileSync(isAbsolute(mdPath) ? mdPath : resolve(process.cwd(), mdPath), "utf8");
 
@@ -102,6 +169,8 @@ const drive = google.drive({ version: "v3", auth });
 // 出力: [{ title, blocks: Block[] }]   ← タブ単位
 //   Block = { type:"heading", level:1|2|3, text }
 //         | { type:"para", text }            ← 空行は text:"" の para
+//         | { type:"list", items:[{ ordered, level, text }] }
+//         | { type:"table", rows:string[][] }
 //         | { type:"code", text }            ← コードブロック1通分（プレーンテキスト）
 
 function parseDoc(text) {
@@ -165,10 +234,90 @@ function parseDoc(text) {
 
     if (line.trim() === "---") { i++; continue; } // 水平線は無視
 
+    if (isTableStart(lines, i)) {
+      const { rows, nextIndex } = parseTable(lines, i);
+      current.blocks.push({ type: "table", rows });
+      i = nextIndex;
+      continue;
+    }
+
+    const listItem = parseListItem(line);
+    if (listItem) {
+      const items = [];
+      while (i < lines.length) {
+        const item = parseListItem(lines[i]);
+        if (!item) break;
+        items.push(item);
+        i++;
+      }
+      current.blocks.push({ type: "list", items });
+      continue;
+    }
+
     current.blocks.push({ type: "para", text: line });
     i++;
   }
   return tabs;
+}
+
+function parseListItem(line) {
+  const m = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/.exec(line);
+  if (!m) return null;
+  const indent = m[1].replace(/\t/g, "    ").length;
+  const level = indent >= 2 ? 1 + Math.floor((indent - 2) / 4) : 0;
+  return {
+    ordered: /^\d+[.)]$/.test(m[2]),
+    level,
+    text: m[3],
+  };
+}
+
+function isTableStart(lines, index) {
+  const header = splitTableRow(lines[index]);
+  const delimiter = splitTableRow(lines[index + 1] ?? "");
+  if (!header || !delimiter || header.length < 2 || delimiter.length !== header.length) return false;
+  return delimiter.every((cell) => /^:?-{3,}:?$/.test(cell.trim()));
+}
+
+function parseTable(lines, index) {
+  const header = splitTableRow(lines[index]).map((cell) => cell.trim());
+  let i = index + 2; // separator row is skipped
+  const rows = [header];
+  while (i < lines.length) {
+    const cells = splitTableRow(lines[i]);
+    if (!cells) break;
+    rows.push(cells.map((cell) => cell.trim()));
+    i++;
+  }
+  const colCount = Math.max(...rows.map((row) => row.length));
+  return {
+    rows: rows.map((row) => row.concat(Array(colCount - row.length).fill(""))),
+    nextIndex: i,
+  };
+}
+
+function splitTableRow(line) {
+  if (!line || !line.includes("|")) return null;
+  let body = line.trim();
+  if (body.startsWith("|")) body = body.slice(1);
+  if (body.endsWith("|")) body = body.slice(0, -1);
+  const cells = [];
+  let cell = "";
+  for (let i = 0; i < body.length; i++) {
+    if (body[i] === "\\" && body[i + 1] === "|") {
+      cell += "|";
+      i++;
+      continue;
+    }
+    if (body[i] === "|") {
+      cells.push(cell);
+      cell = "";
+      continue;
+    }
+    cell += body[i];
+  }
+  cells.push(cell);
+  return cells;
 }
 
 // 構造由来の空行を間引く: 空 para は「前後ともに非空 para」のときだけ残す
@@ -221,7 +370,27 @@ function parseInline(raw) {
     text += raw[i];
     i++;
   }
+  ranges.push(...placeholderRanges(text));
   return { text, ranges };
+}
+
+function placeholderRanges(text) {
+  const ranges = [];
+  const re = /\{\{[^{}\n]*\}\}/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    ranges.push({
+      start: m.index,
+      end: m.index + m[0].length,
+      style: { backgroundColor: PLACEHOLDER_BG },
+      fields: "backgroundColor",
+    });
+  }
+  return ranges;
+}
+
+function isCenteredHeading(block) {
+  return block.type === "heading" && block.level === 1 && /^＜.*＞$/.test(block.text.trim());
 }
 
 // =================================================================
@@ -261,6 +430,21 @@ async function getLastTableLocation(documentId, tabId) {
   return null;
 }
 
+async function getLastTableGrid(documentId, tabId) {
+  const tab = await getTab(documentId, tabId);
+  const content = tab.documentTab?.body?.content ?? [];
+  for (let i = content.length - 1; i >= 0; i--) {
+    const el = content[i];
+    if (!el.table || typeof el.startIndex !== "number") continue;
+    const cells = [];
+    for (const row of el.table.tableRows ?? []) {
+      cells.push((row.tableCells ?? []).map((cell) => cell.content?.[0]?.startIndex ?? null));
+    }
+    return { tableStart: el.startIndex, cells };
+  }
+  return null;
+}
+
 function isEmptyParagraph(el) {
   const elements = el?.paragraph?.elements ?? [];
   return elements.length === 1 && elements[0].textRun?.content === "\n";
@@ -282,6 +466,7 @@ async function clearTab(documentId, tabId) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+const PLACEHOLDER_BG = { color: { rgbColor: { red: 1, green: 1, blue: 0 } } };
 // Google Docs「明るいグレー2」: #f3f3f3（LINE 配信 Doc の慣習色）
 const CELL_BG = { color: { rgbColor: { red: 0.9529412, green: 0.9529412, blue: 0.9529412 } } };
 // セルボーダーは 1pt 白。テーブルの境目を背景になじませる手法。
@@ -293,6 +478,175 @@ const CELL_BORDER = {
 };
 
 const HEADING_STYLE = { 1: "HEADING_1", 2: "HEADING_2", 3: "HEADING_3" };
+const LIST_PRESET = {
+  ordered: "NUMBERED_DECIMAL_ALPHA_ROMAN",
+  unordered: "BULLET_DISC_CIRCLE_SQUARE",
+};
+const TABLE_BORDER = {
+  color: { color: { rgbColor: { red: 0.8, green: 0.8, blue: 0.8 } } },
+  width: { magnitude: 0.5, unit: "PT" },
+  dashStyle: "SOLID",
+};
+
+async function appendList(documentId, tabId, items) {
+  if (!items.length) return;
+  const start = (await getTabEndIndex(documentId, tabId)) - 1;
+  let cursor = start;
+  const paras = [];
+  const requests = [];
+
+  for (const item of items) {
+    const { text, ranges } = parseInline(item.text);
+    const tabs = "\t".repeat(Math.max(0, item.level));
+    const paraStart = cursor;
+    const textStart = paraStart + tabs.length;
+    requests.push({ insertText: { text: tabs + text + "\n", location: { index: cursor, tabId } } });
+    cursor += tabs.length + text.length + 1;
+    paras.push({
+      ordered: item.ordered,
+      tabs: tabs.length,
+      start: paraStart,
+      end: cursor,
+    });
+    requests.push({
+      updateParagraphStyle: {
+        range: { startIndex: paraStart, endIndex: paraStart + 1, tabId },
+        paragraphStyle: { namedStyleType: "NORMAL_TEXT", alignment: "START" },
+        fields: "namedStyleType,alignment",
+      },
+    });
+    if (text.length > 0) {
+      requests.push({
+        updateTextStyle: {
+          range: { startIndex: textStart, endIndex: textStart + text.length, tabId },
+          textStyle: { fontSize: { magnitude: 12, unit: "PT" } },
+          fields: "fontSize",
+        },
+      });
+    }
+    for (const r of ranges) {
+      if (r.end <= r.start) continue;
+      requests.push({
+        updateTextStyle: {
+          range: { startIndex: textStart + r.start, endIndex: textStart + r.end, tabId },
+          textStyle: r.style,
+          fields: r.fields,
+        },
+      });
+    }
+  }
+
+  const baseOrdered = items[0].ordered;
+  requests.push({
+    createParagraphBullets: {
+      range: { startIndex: start, endIndex: cursor, tabId },
+      bulletPreset: baseOrdered ? LIST_PRESET.ordered : LIST_PRESET.unordered,
+    },
+  });
+  await batchUpdate(documentId, requests);
+
+  let removedTabs = 0;
+  const overrideRequests = [];
+  for (const p of paras) {
+    const shiftedStart = p.start - removedTabs;
+    const shiftedEnd = p.end - removedTabs - p.tabs;
+    if (p.ordered !== baseOrdered) {
+      overrideRequests.push({
+        createParagraphBullets: {
+          range: { startIndex: shiftedStart, endIndex: shiftedEnd, tabId },
+          bulletPreset: p.ordered ? LIST_PRESET.ordered : LIST_PRESET.unordered,
+        },
+      });
+    }
+    removedTabs += p.tabs;
+  }
+  await batchUpdate(documentId, overrideRequests);
+}
+
+async function appendMarkdownTable(documentId, tabId, rows) {
+  const rowCount = rows.length;
+  const colCount = Math.max(...rows.map((row) => row.length));
+  if (!rowCount || !colCount) return;
+
+  const end = await getTabEndIndex(documentId, tabId);
+  await batchUpdate(documentId, [
+    { insertTable: { rows: rowCount, columns: colCount, location: { index: end - 1, tabId } } },
+  ]);
+  await sleep(1200);
+
+  const grid = await getLastTableGrid(documentId, tabId);
+  if (!grid) throw new Error("markdown table not found after insert");
+
+  const cellJobs = [];
+  for (let r = 0; r < rowCount; r++) {
+    for (let c = 0; c < colCount; c++) {
+      const cellStart = grid.cells?.[r]?.[c];
+      if (typeof cellStart !== "number") continue;
+      const { text, ranges } = parseInline(rows[r]?.[c] ?? "");
+      if (!text.length) continue;
+      cellJobs.push({ rowIndex: r, cellStart, text, ranges });
+    }
+  }
+  cellJobs.sort((a, b) => b.cellStart - a.cellStart);
+
+  const requests = [
+    {
+      updateTableCellStyle: {
+        tableStartLocation: { index: grid.tableStart, tabId },
+        tableCellStyle: {
+          borderTop: TABLE_BORDER,
+          borderRight: TABLE_BORDER,
+          borderBottom: TABLE_BORDER,
+          borderLeft: TABLE_BORDER,
+        },
+        fields: "borderTop,borderRight,borderBottom,borderLeft",
+      },
+    },
+    {
+      updateTableColumnProperties: {
+        tableStartLocation: { index: grid.tableStart, tabId },
+        columnIndices: Array.from({ length: colCount }, (_, i) => i),
+        tableColumnProperties: { widthType: "EVENLY_DISTRIBUTED" },
+        fields: "widthType",
+      },
+    },
+  ];
+
+  for (const job of cellJobs) {
+    requests.push(
+      { insertText: { text: job.text, location: { index: job.cellStart, tabId } } },
+      {
+        updateParagraphStyle: {
+          range: { startIndex: job.cellStart, endIndex: job.cellStart + job.text.length, tabId },
+          paragraphStyle: { namedStyleType: "NORMAL_TEXT", lineSpacing: 120 },
+          fields: "namedStyleType,lineSpacing",
+        },
+      },
+      {
+        updateTextStyle: {
+          range: { startIndex: job.cellStart, endIndex: job.cellStart + job.text.length, tabId },
+          textStyle: {
+            fontSize: { magnitude: 10, unit: "PT" },
+            ...(job.rowIndex === 0 ? { bold: true } : {}),
+          },
+          fields: job.rowIndex === 0 ? "fontSize,bold" : "fontSize",
+        },
+      },
+    );
+    for (const r of job.ranges) {
+      if (r.end <= r.start) continue;
+      requests.push({
+        updateTextStyle: {
+          range: { startIndex: job.cellStart + r.start, endIndex: job.cellStart + r.end, tabId },
+          textStyle: r.style,
+          fields: r.fields,
+        },
+      });
+    }
+  }
+  await batchUpdate(documentId, requests);
+  await sleep(1200);
+}
 
 // コードブロック1通分を 1x1 グレーテーブルとして末尾に追加する
 async function appendTable(documentId, tabId, cellText) {
@@ -319,6 +673,13 @@ async function appendTable(documentId, tabId, cellText) {
   }
 
   const text = cellText.length ? cellText : " ";
+  const placeholderRequests = placeholderRanges(text).map((r) => ({
+    updateTextStyle: {
+      range: { startIndex: loc.cellStart + r.start, endIndex: loc.cellStart + r.end, tabId },
+      textStyle: r.style,
+      fields: r.fields,
+    },
+  }));
   await batchUpdate(documentId, [
     { insertText: { text, location: { index: loc.cellStart, tabId } } },
     {
@@ -335,6 +696,7 @@ async function appendTable(documentId, tabId, cellText) {
         fields: "fontSize",
       },
     },
+    ...placeholderRequests,
     {
       updateTableCellStyle: {
         tableStartLocation: { index: loc.tableStart, tabId },
@@ -378,6 +740,16 @@ async function buildTab(documentId, tabId, blocks, state) {
       await appendTable(documentId, tabId, block.text);
       continue;
     }
+    if (block.type === "list") {
+      await flush();
+      await appendList(documentId, tabId, block.items);
+      continue;
+    }
+    if (block.type === "table") {
+      await flush();
+      await appendMarkdownTable(documentId, tabId, block.rows);
+      continue;
+    }
 
     if (cursor === null) {
       cursor = (await getTabEndIndex(documentId, tabId)) - 1;
@@ -392,6 +764,7 @@ async function buildTab(documentId, tabId, blocks, state) {
     }
 
     const { text, ranges } = parseInline(block.text);
+    const centeredHeading = isCenteredHeading(block);
     const start = cursor;
     pending.push({ insertText: { text: text + "\n", location: { index: cursor, tabId } } });
     cursor += text.length + 1;
@@ -400,12 +773,21 @@ async function buildTab(documentId, tabId, blocks, state) {
         range: { startIndex: start, endIndex: start + 1, tabId },
         paragraphStyle: {
           namedStyleType: namedStyle,
+          ...(centeredHeading ? { alignment: "CENTER" } : {}),
           ...(block.type !== "heading" ? { alignment: "START" } : {}),
         },
-        fields: block.type !== "heading" ? "namedStyleType,alignment" : "namedStyleType",
+        fields: block.type !== "heading" || centeredHeading ? "namedStyleType,alignment" : "namedStyleType",
       },
     });
-    if (block.type !== "heading") {
+    if (centeredHeading && text.length > 0) {
+      pending.push({
+        updateTextStyle: {
+          range: { startIndex: start, endIndex: start + text.length, tabId },
+          textStyle: { fontSize: { magnitude: 18, unit: "PT" } },
+          fields: "fontSize",
+        },
+      });
+    } else if (block.type !== "heading" && text.length > 0) {
       pending.push({
         updateTextStyle: {
           range: { startIndex: start, endIndex: start + text.length, tabId },
@@ -448,6 +830,8 @@ if (dryRun) {
     for (const b of t.blocks) {
       if (b.type === "heading") console.error(`  H${b.level}  ${b.text}`);
       else if (b.type === "code") console.error(`  [msg] ${b.text.split("\n")[0].slice(0, 40)}… (${b.text.split("\n").length}行)`);
+      else if (b.type === "list") console.error(`  list ${b.items.length}項目`);
+      else if (b.type === "table") console.error(`  table ${b.rows.length}x${b.rows[0]?.length ?? 0}`);
       else console.error(`  p   ${b.text === "" ? "(空行)" : b.text.slice(0, 50)}`);
     }
   }
