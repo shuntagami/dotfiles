@@ -30,6 +30,11 @@ import { homedir } from "node:os";
 import { execSync } from "node:child_process";
 import { docToMarkdown, getDocWithSuggestionFallback, extractDocId } from "./lib/doc-to-markdown.mjs";
 
+const rawArgs = process.argv.slice(2);
+if (!rawArgs.length || rawArgs[0] === "help" || rawArgs.includes("--help") || rawArgs.includes("-h")) {
+  printUsageAndExit(0);
+}
+
 // 認証情報は ~/dotfiles/.env.local から読む。
 const ENV_PATH = resolve(homedir(), "dotfiles/.env.local");
 if (!existsSync(ENV_PATH)) {
@@ -44,22 +49,13 @@ const NPM = typeof Deno !== "undefined" ? "npm:" : "";
 // 引数
 // =================================================================
 
-const args = parseArgs(process.argv.slice(2));
+const args = parseArgs(rawArgs);
 // URL は --doc-url / --url / 第1位置引数 のいずれでも受け付ける
 const directDocUrl = args["doc-url"] || args.url || args._[0];
 
 // URL を渡せば --out は任意（自動解決）。client / project-id 経由は --task-title と --out が必要。
-const usageAndExit = () => {
-  console.error("Usage:");
-  console.error("  gdoc2md <google-doc-url> [--out <path>] [--check-only]");
-  console.error("  gdoc2md --client <name> --task-title <title> --out <path> [--check-only]");
-  console.error("  gdoc2md --project-id <uuid> --task-title <title> --out <path> [--check-only]");
-  console.error("");
-  console.error("URL だけ渡した場合、--out はカレントディレクトリの ./<Docタイトル>.md になります。");
-  process.exit(2);
-};
-if (!directDocUrl && !args.client && !args["project-id"]) usageAndExit();
-if (!directDocUrl && (!args["task-title"] || !args.out)) usageAndExit();
+if (!directDocUrl && !args.client && !args["project-id"]) printUsageAndExit(2);
+if (!directDocUrl && (!args["task-title"] || !args.out)) printUsageAndExit(2);
 
 const checkOnly = !!args["check-only"];
 // --out があれば即解決。無ければ Doc メタ取得後に autoResolveOutPath で決める。
@@ -271,6 +267,33 @@ console.log(JSON.stringify({
 // =================================================================
 // helpers
 // =================================================================
+
+function printUsageAndExit(exitCode = 0) {
+  const out = exitCode === 0 ? console.log : console.error;
+  out(`Usage:
+  gdoc2md <google-doc-url> [--out <path>] [--check-only]
+  gdoc2md --doc-url <google-doc-url> [--out <path>] [--check-only]
+  gdoc2md --client <name> --task-title <title> --out <path> [--check-only]
+  gdoc2md --project-id <uuid> --task-title <title> --out <path> [--check-only]
+
+Examples:
+  gdoc2md 'https://docs.google.com/document/d/xxxxxxxx/edit'
+  gdoc2md 'https://docs.google.com/document/d/xxxxxxxx/edit' --out ./LINEメッセージ.md
+  gdoc2md 'https://docs.google.com/document/d/xxxxxxxx/edit' --check-only
+
+Notes:
+  URLだけ渡した場合、保存先はカレントディレクトリの ./<Docタイトル>.md です。
+
+Options:
+  --out <path>          Markdownの保存先
+  --check-only          保存せず、Google Docとローカルファイルの鮮度だけJSONで表示
+  --doc-url, --url      Google Doc URLを明示指定
+  --client <name>       Supabaseのclient名からDoc URLを取得
+  --project-id <uuid>   Supabaseのproject idからDoc URLを取得
+  --task-title <title>  Supabase task title
+  -h, --help, help      このヘルプを表示`);
+  process.exit(exitCode);
+}
 
 function parseArgs(argv) {
   const out = { _: [] };
