@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "google-calendar": {
-      "command": "/Users/shun.tagami/dotfiles/pkg/.anyenv/envs/nodenv/shims/node",
+      "command": "/opt/homebrew/bin/node",
       "args": [
         "/Users/shun.tagami/projects/google-calendar-mcp/build/index.js"
       ],
