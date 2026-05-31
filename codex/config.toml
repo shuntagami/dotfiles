@@ -2,6 +2,7 @@ model = "gpt-5.5"
 model_reasoning_effort = "xhigh"
 model_context_window = 1050000
 model_auto_compact_token_limit = 1000000
+service_tier = "fast"
 
 [projects."/Users/shun.tagami/dotfiles"]
 trust_level = "trusted"
@@ -28,6 +29,9 @@ trust_level = "trusted"
 trust_level = "trusted"
 
 [projects."/Users/shun.tagami/projects/elevenlabs-transcribe-bot"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/projects"]
 trust_level = "trusted"
 
 [tui.model_availability_nux]
