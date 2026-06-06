@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo="${SCRIBE_VIDEO_DOWNLOADER_ROOT:-$HOME/projects/elevenlabs-transcribe-bot}"
+script="$repo/scripts/download-video.ts"
+config="$repo/src/deno.json"
+
+if ! command -v deno >/dev/null 2>&1; then
+  echo "Error: deno is not installed or not in PATH." >&2
+  exit 127
+fi
+
+if [[ ! -f "$script" || ! -f "$config" ]]; then
+  cat >&2 <<EOF
+Error: video downloader project was not found.
+
+Expected:
+  $script
+  $config
+
+Set SCRIBE_VIDEO_DOWNLOADER_ROOT if the project lives somewhere else.
+EOF
+  exit 1
+fi
+
+exec deno run --allow-all --config "$config" "$script" "$@"
