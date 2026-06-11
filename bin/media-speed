@@ -1,0 +1,210 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  media-speed <rate> <input> [output]
+  media-speed <input> <rate> [output]
+
+Examples:
+  media-speed 2 movie.mp4
+  media-speed 1.5 meeting.m4a
+  media-speed lecture.mp3 0.75
+
+Creates <input>_<rate>x.<ext> when output is omitted.
+EOF
+}
+
+is_number() {
+  awk -v v="$1" 'BEGIN {
+    exit !((v ~ /^([0-9]+([.][0-9]+)?|[.][0-9]+)$/) && v + 0 > 0)
+  }'
+}
+
+normalize_number() {
+  awk -v v="$1" 'BEGIN { printf "%.12g", v + 0 }'
+}
+
+atempo_chain() {
+  awk -v rate="$1" '
+    BEGIN {
+      r = rate + 0
+      first = 1
+      if (r >= 1) {
+        while (r > 2.0) {
+          append(2.0)
+          r /= 2.0
+        }
+      } else {
+        while (r < 0.5) {
+          append(0.5)
+          r /= 0.5
+        }
+      }
+      append(r)
+      print out
+    }
+    function append(v) {
+      if (!first) out = out ","
+      out = out "atempo=" sprintf("%.8g", v)
+      first = 0
+    }
+  '
+}
+
+default_output() {
+  local input="$1"
+  local rate_label="$2"
+  local dir base stem ext
+
+  dir="$(dirname "$input")"
+  base="$(basename "$input")"
+
+  if [[ "$base" == *.* && "$base" != .* ]]; then
+    stem="${base%.*}"
+    ext="${base##*.}"
+    printf '%s/%s_%sx.%s\n' "$dir" "$stem" "$rate_label" "$ext"
+  else
+    printf '%s/%s_%sx\n' "$dir" "$base" "$rate_label"
+  fi
+}
+
+stream_exists() {
+  local selector="$1"
+  local input="$2"
+  [[ -n "$(ffprobe -v error -select_streams "$selector" -show_entries stream=index -of csv=p=0 -- "$input" 2>/dev/null | head -n 1)" ]]
+}
+
+output_ext() {
+  local output="$1"
+  local base ext
+  base="$(basename "$output")"
+  if [[ "$base" == *.* && "$base" != .* ]]; then
+    ext="${base##*.}"
+    printf '%s\n' "$ext" | tr '[:upper:]' '[:lower:]'
+  fi
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+if (( $# < 2 || $# > 3 )); then
+  usage >&2
+  exit 2
+fi
+
+rate=""
+input=""
+output="${3:-}"
+
+if is_number "$1"; then
+  rate="$(normalize_number "$1")"
+  input="$2"
+elif is_number "$2"; then
+  input="$1"
+  rate="$(normalize_number "$2")"
+else
+  echo "Error: rate must be a positive number." >&2
+  usage >&2
+  exit 2
+fi
+
+if [[ ! -f "$input" ]]; then
+  echo "Error: input file not found: $input" >&2
+  exit 1
+fi
+
+if [[ -z "$output" ]]; then
+  output="$(default_output "$input" "$rate")"
+fi
+
+if [[ "$input" == "$output" ]]; then
+  echo "Error: input and output must be different." >&2
+  exit 2
+fi
+
+command -v ffmpeg >/dev/null 2>&1 || { echo "Error: ffmpeg not found." >&2; exit 127; }
+command -v ffprobe >/dev/null 2>&1 || { echo "Error: ffprobe not found." >&2; exit 127; }
+
+has_video=0
+has_audio=0
+stream_exists "v:0" "$input" && has_video=1
+stream_exists "a:0" "$input" && has_audio=1
+
+if (( ! has_video && ! has_audio )); then
+  echo "Error: no video or audio stream found: $input" >&2
+  exit 1
+fi
+
+ext="$(output_ext "$output")"
+video_filter="setpts=$(awk -v r="$rate" 'BEGIN { printf "%.12g", 1 / r }')*PTS"
+audio_filter="$(atempo_chain "$rate")"
+
+video_codec=()
+audio_codec=()
+container_flags=()
+
+if (( has_video )); then
+  case "$ext" in
+    webm)
+      video_codec=(-c:v libvpx-vp9 -crf 32 -b:v 0)
+      audio_codec=(-c:a libopus -b:a 96k)
+      ;;
+    *)
+      video_codec=(-c:v libx264 -crf 23 -preset medium -pix_fmt yuv420p)
+      audio_codec=(-c:a aac -b:a 128k)
+      ;;
+  esac
+else
+  case "$ext" in
+    mp3)
+      audio_codec=(-c:a libmp3lame -q:a 2)
+      ;;
+    m4a|mp4|mov)
+      audio_codec=(-c:a aac -b:a 128k)
+      ;;
+    wav)
+      audio_codec=(-c:a pcm_s16le)
+      ;;
+    flac)
+      audio_codec=(-c:a flac)
+      ;;
+    opus|ogg)
+      audio_codec=(-c:a libopus -b:a 96k)
+      ;;
+  esac
+fi
+
+case "$ext" in
+  mp4|m4v|mov)
+    container_flags=(-movflags +faststart)
+    ;;
+esac
+
+echo "Processing $input -> $output (${rate}x)"
+
+if (( has_video && has_audio )); then
+  ffmpeg -hide_banner -y -i "$input" \
+    -filter_complex "[0:v:0]${video_filter}[v];[0:a:0]${audio_filter}[a]" \
+    -map "[v]" -map "[a]" \
+    "${video_codec[@]}" "${audio_codec[@]}" \
+    -map_metadata 0 -sn -dn "${container_flags[@]}" "$output"
+elif (( has_video )); then
+  ffmpeg -hide_banner -y -i "$input" \
+    -filter:v "$video_filter" \
+    -map 0:v:0 -an \
+    "${video_codec[@]}" \
+    -map_metadata 0 -sn -dn "${container_flags[@]}" "$output"
+else
+  ffmpeg -hide_banner -y -i "$input" \
+    -filter:a "$audio_filter" \
+    -map 0:a:0 -vn \
+    "${audio_codec[@]}" \
+    -map_metadata 0 -sn -dn "${container_flags[@]}" "$output"
+fi
+
+echo "Done: $output"
