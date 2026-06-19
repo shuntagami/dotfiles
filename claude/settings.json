@@ -9,6 +9,7 @@
       "mcp__Neon__list_projects"
     ]
   },
+  "model": "opus[1m]",
   "enabledPlugins": {
     "vercel@claude-plugins-official": true,
     "slack@claude-plugins-official": true
