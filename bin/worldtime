@@ -3,6 +3,7 @@
 const cities = [
   ['東京 (日本)',          'Asia/Tokyo'],
   ['ハワイ (米国)',        'Pacific/Honolulu'],
+  ['バンクーバー (加国)',  'America/Vancouver'],
   ['ニューヨーク (米国)',  'America/New_York'],
   ['ロンドン (英国)',      'Europe/London'],
   ['パリ (仏国)',          'Europe/Paris'],
