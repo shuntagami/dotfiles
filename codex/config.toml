@@ -1,8 +1,12 @@
 model = "gpt-5.5"
-model_reasoning_effort = "xhigh"
+model_reasoning_effort = "high"
 model_context_window = 1050000
 model_auto_compact_token_limit = 1000000
-service_tier = "fast"
+service_tier = "priority"
+
+notify = ["/Users/shun.tagami/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
 
 [projects."/Users/shun.tagami/dotfiles"]
 trust_level = "trusted"
@@ -34,11 +38,24 @@ trust_level = "trusted"
 [projects."/Users/shun.tagami/projects"]
 trust_level = "trusted"
 
+[projects."/Users/shun.tagami/Downloads"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/projects/writing-pro"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/Downloads/コピー_下西さん_簿記2本目"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/Documents/Codex/2026-06-14/users-shun-tagami-projects-launch-consulting"]
+trust_level = "trusted"
+
 [tui.model_availability_nux]
 "gpt-5.5" = 4
 
 [features]
 goals = true
+js_repl = false
 
 [notice]
 fast_default_opt_out = false
@@ -46,18 +63,39 @@ fast_default_opt_out = false
 [plugins."slack@openai-curated"]
 enabled = true
 
+[plugins."documents@openai-primary-runtime"]
+enabled = true
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = true
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = true
+
+[plugins."computer-use@openai-bundled"]
+enabled = true
+
+[plugins."chrome@openai-bundled"]
+enabled = true
+
+[plugins."browser@openai-bundled"]
+enabled = true
+
+[plugins."pdf@openai-primary-runtime"]
+enabled = true
+
 [mcp_servers.playwright]
 command = "npx"
 args = ["-y", "@playwright/mcp@latest"]
 
 [mcp_servers.playwright.tools.browser_click]
-approval_mode = "approve"
+approval_mode = "auto"
 
 [mcp_servers.playwright.tools.browser_navigate]
-approval_mode = "approve"
+approval_mode = "auto"
 
 [mcp_servers.playwright.tools.browser_run_code_unsafe]
-approval_mode = "approve"
+approval_mode = "auto"
 
 [mcp_servers.screenpipe]
 command = "npx"
@@ -68,3 +106,43 @@ url = "https://mcp.notion.com/mcp"
 
 [mcp_servers.supabase]
 url = "https://mcp.supabase.com/mcp"
+
+[mcp_servers.node_repl]
+args = []
+command = "/Applications/Codex.app/Contents/Resources/cua_node/bin/node_repl"
+startup_timeout_sec = 120
+
+[mcp_servers.node_repl.env]
+NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS = "1000"
+NODE_REPL_NODE_MODULE_DIRS = "/Applications/Codex.app/Contents/Resources/cua_node/lib/node_modules"
+NODE_REPL_NODE_PATH = "/Applications/Codex.app/Contents/Resources/cua_node/bin/node"
+NODE_REPL_TRUSTED_CODE_PATHS = "/Users/shun.tagami/.codex"
+CODEX_HOME = "/Users/shun.tagami/.codex"
+NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "27dca86fd6b571c49414a4b78e46b57bcf683a46cd1319799c11fbb6cfae3110"
+BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
+NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = "Control the in-app browser in conjunction with the Browser Plugin."
+NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = "Control the Chrome browser in conjunction with the Chrome Plugin. Prefer this method of controlling Chrome over alternatives (such as Computer Use) unless the user explicitly mentions an alternative."
+BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
+BROWSER_USE_CODEX_APP_VERSION = "26.609.41114"
+CODEX_CLI_PATH = "/Applications/Codex.app/Contents/Resources/codex"
+
+[marketplaces.openai-bundled]
+last_updated = "2026-06-14T12:45:40Z"
+source_type = "local"
+source = "/Users/shun.tagami/.codex/.tmp/bundled-marketplaces/openai-bundled"
+
+[marketplaces.openai-primary-runtime]
+last_updated = "2026-06-15T01:11:08Z"
+source_type = "local"
+source = "/Users/shun.tagami/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
+
+[desktop]
+conversationDetailMode = "STEPS_PROSE"
+ambient-suggestions-enabled = true
+notifications-turn-mode = "always"
+localeOverride = "ja-JP"
+preventSleepWhileRunning = true
+show-context-window-usage = true
+
+[desktop.open-in-target-preferences]
+global = "cursor"
