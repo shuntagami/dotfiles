@@ -26,13 +26,13 @@
       "codex": {
         "tools": {
           "browser_click": {
-            "approval_mode": "approve"
+            "approval_mode": "auto"
           },
           "browser_navigate": {
-            "approval_mode": "approve"
+            "approval_mode": "auto"
           },
           "browser_run_code_unsafe": {
-            "approval_mode": "approve"
+            "approval_mode": "auto"
           }
         }
       }
