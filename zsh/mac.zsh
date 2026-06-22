@@ -31,6 +31,25 @@ alias rm-ds-store="find . -name '.DS_Store' -type f -delete"
 
 alias emptytrash="osascript -e 'tell application \"Finder\" to empty trash'"
 
+# Quit visible GUI apps, keeping terminal apps alive so the command can finish.
+quitapps() {
+  osascript <<'APPLESCRIPT'
+tell application "System Events"
+  set appNames to name of every application process whose visible is true and background only is false
+end tell
+
+set terminalApps to {"Terminal", "iTerm2", "Warp", "Ghostty", "WezTerm", "Alacritty", "kitty"}
+
+repeat with appName in appNames
+  if terminalApps does not contain (appName as text) then
+    try
+      tell application appName to quit
+    end try
+  end if
+end repeat
+APPLESCRIPT
+}
+
 # Flush Directory Service cache
 alias flush="dscacheutil -flushcache && killall -HUP mDNSResponder"
 
