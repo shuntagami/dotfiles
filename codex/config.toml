@@ -1,8 +1,8 @@
 model = "gpt-5.5"
-model_reasoning_effort = "high"
+model_reasoning_effort = "xhigh"
 model_context_window = 1050000
 model_auto_compact_token_limit = 1000000
-service_tier = "priority"
+service_tier = "fast"
 
 notify = ["/Users/shun.tagami/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
 approval_policy = "never"
@@ -48,6 +48,9 @@ trust_level = "trusted"
 trust_level = "trusted"
 
 [projects."/Users/shun.tagami/Documents/Codex/2026-06-14/users-shun-tagami-projects-launch-consulting"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/projects/toolbox"]
 trust_level = "trusted"
 
 [tui.model_availability_nux]
