@@ -1,0 +1,287 @@
+#!/usr/bin/env node
+
+const fs = require('fs');
+const path = require('path');
+
+const JAPANESE_RE =
+  /[\u2460-\u24ff\u2776-\u2793\u3000-\u30ff\u3400-\u9fff\uff00-\uffefA-Za-z0-9「」『』！？、。,.…ー・%％（）()\r\n+?／/]+/g;
+
+const GENERIC_EFFECT_NAMES = new Set([
+  '',
+  'Vector Motion',
+  'Basic Motion',
+  'Opacity',
+  'モーション',
+  '不透明度',
+  'Shape',
+]);
+
+function usage() {
+  console.error(`Usage:
+  premiere-xml-telops INPUT.xml
+  premiere-xml-telops INPUT.xml -o OUTPUT.txt
+  cat INPUT.xml | premiere-xml-telops - > telops.txt
+
+Options:
+  -o, --output FILE   Write output to FILE
+  -h, --help          Show this help`);
+}
+
+function parseArgs(argv) {
+  const args = [...argv];
+  let input = null;
+  let output = null;
+
+  while (args.length > 0) {
+    const arg = args.shift();
+    if (arg === '-h' || arg === '--help') {
+      usage();
+      process.exit(0);
+    }
+    if (arg === '-o' || arg === '--output') {
+      output = args.shift();
+      if (!output) {
+        console.error('Missing output path after -o/--output');
+        process.exit(1);
+      }
+      continue;
+    }
+    if (arg.startsWith('-') && arg !== '-') {
+      console.error(`Unknown option: ${arg}`);
+      usage();
+      process.exit(1);
+    }
+    if (input) {
+      console.error(`Unexpected argument: ${arg}`);
+      usage();
+      process.exit(1);
+    }
+    input = arg;
+  }
+
+  if (!input) {
+    usage();
+    process.exit(1);
+  }
+
+  return { input, output };
+}
+
+function decodeXmlEntities(value) {
+  return value
+    .replace(/&#x([0-9a-fA-F]+);/g, (_match, codePoint) =>
+      String.fromCodePoint(Number.parseInt(codePoint, 16)),
+    )
+    .replace(/&#(\d+);/g, (_match, codePoint) =>
+      String.fromCodePoint(Number.parseInt(codePoint, 10)),
+    )
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
+function normalizeText(text) {
+  return text
+    .normalize('NFKC')
+    .replace(/\r|\n/g, '')
+    .replace(
+      /[\s　「」『』“”"'、。，．.・…!！?？:：;；（）()[\]【】\-ー〜~+／/,]/g,
+      '',
+    );
+}
+
+function displayText(text) {
+  return text
+    .normalize('NFC')
+    .replace(/\r/g, ' / ')
+    .replace(/\n/g, ' / ')
+    .trim();
+}
+
+function hasJapanese(text) {
+  return [...text].some(
+    (char) =>
+      ('\u3040' <= char && char <= '\u30ff') ||
+      ('\u3400' <= char && char <= '\u9fff'),
+  );
+}
+
+function decodedSourceChunks(value) {
+  const raw = Buffer.from(value, 'base64').toString('utf8');
+  const matches = raw.match(JAPANESE_RE) || [];
+
+  return matches
+    .map((chunk) => displayText(chunk.trim().replace(/\0/g, '')))
+    .filter((chunk) => normalizeText(chunk).length >= 4 && hasJapanese(chunk));
+}
+
+function getBlocks(xml, tag) {
+  return [
+    ...xml.matchAll(new RegExp(`<${tag}\\b[^>]*>[\\s\\S]*?<\\/${tag}>`, 'g')),
+  ].map((match) => match[0]);
+}
+
+function getTagText(xml, tag) {
+  const match = xml.match(
+    new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)<\\/${tag}>`),
+  );
+  return match
+    ? decodeXmlEntities(match[1].replace(/<[^>]+>/g, '')).trim()
+    : '';
+}
+
+function getClipId(clipBlock) {
+  const match = clipBlock.match(/<clipitem\b[^>]*\bid="([^"]+)"/);
+  return match ? decodeXmlEntities(match[1]) : '';
+}
+
+function isDisabledClip(clipBlock) {
+  return getTagText(clipBlock, 'enabled').toUpperCase() === 'FALSE';
+}
+
+function removeDuplicateTelops(telops) {
+  const seen = new Set();
+
+  return telops.filter((telop) => {
+    const key = normalizeText(telop.text);
+    if (seen.has(key)) return false;
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function getSourceTextCandidates(effectBlock) {
+  return getBlocks(effectBlock, 'parameter').flatMap((parameterBlock) => {
+    if (getTagText(parameterBlock, 'name') !== 'ソーステキスト') return [];
+
+    const value = getTagText(parameterBlock, 'value');
+    try {
+      return decodedSourceChunks(value).map((text) => ({
+        source: 'source-text',
+        text,
+      }));
+    } catch {
+      return [];
+    }
+  });
+}
+
+function removeContainedCandidates(candidates) {
+  const normalized = candidates.map((candidate) => normalizeText(candidate.text));
+  return candidates.filter((_, index) => {
+    const value = normalized[index];
+    return !normalized.some(
+      (otherValue, otherIndex) =>
+        otherIndex !== index &&
+        otherValue.length > value.length &&
+        otherValue.includes(value),
+    );
+  });
+}
+
+function getEffectCandidates(effectBlock) {
+  const effectId = getTagText(effectBlock, 'effectid');
+  const effectName = displayText(getTagText(effectBlock, 'name'));
+  const effectNameCandidates =
+    effectId === 'GraphicAndType' && !GENERIC_EFFECT_NAMES.has(effectName)
+      ? [{ source: 'effect-name', text: effectName }]
+      : [];
+
+  return removeContainedCandidates([
+    ...effectNameCandidates,
+    ...getSourceTextCandidates(effectBlock),
+  ]);
+}
+
+function parsePremiereXmlTelops(xmlText) {
+  const seen = new Set();
+  const telops = getBlocks(xmlText, 'track').flatMap((trackBlock) =>
+    getBlocks(trackBlock, 'clipitem').flatMap((clipBlock) => {
+      if (isDisabledClip(clipBlock)) return [];
+
+      const startFrame = Number(getTagText(clipBlock, 'start'));
+      const endFrame = Number(getTagText(clipBlock, 'end'));
+      if (!Number.isFinite(startFrame) || !Number.isFinite(endFrame)) return [];
+      if (endFrame < 0) return [];
+      const sortStartFrame = startFrame < 0 ? endFrame : startFrame;
+
+      const clipId = getClipId(clipBlock);
+      return getBlocks(clipBlock, 'effect').flatMap((effectBlock) =>
+        getEffectCandidates(effectBlock).flatMap((candidate) => {
+          const normalized = normalizeText(candidate.text);
+          if (!normalized) return [];
+
+          const key = `${clipId}:${normalized}`;
+          if (seen.has(key)) return [];
+          seen.add(key);
+
+          return [
+            {
+              clipId,
+              source: candidate.source,
+              text: candidate.text,
+              startFrame: sortStartFrame,
+              endFrame,
+            },
+          ];
+        }),
+      );
+    }),
+  );
+
+  return removeDuplicateTelops(
+    telops.sort(
+      (a, b) =>
+        a.startFrame - b.startFrame ||
+        a.endFrame - b.endFrame ||
+        a.clipId.localeCompare(b.clipId) ||
+        a.source.localeCompare(b.source),
+    ),
+  ).map((telop) => ({
+    text: telop.text,
+  }));
+}
+
+function telopsToText(telops) {
+  return telops.map((telop) => telop.text).join('\n');
+}
+
+function readInput(input) {
+  if (input === '-') {
+    return fs.readFileSync(0, 'utf8');
+  }
+
+  const inputPath = path.resolve(input);
+  if (!fs.existsSync(inputPath)) {
+    console.error(`File not found: ${inputPath}`);
+    process.exit(1);
+  }
+  return fs.readFileSync(inputPath, 'utf8').replace(/^\uFEFF/, '');
+}
+
+function defaultOutputPath(input) {
+  const parsed = path.parse(input);
+  return path.resolve(`${parsed.name}_telops.txt`);
+}
+
+const { input, output } = parseArgs(process.argv.slice(2));
+const xmlText = readInput(input);
+const telops = parsePremiereXmlTelops(xmlText);
+
+if (telops.length === 0) {
+  console.error('No telops found in Premiere XML.');
+  process.exit(1);
+}
+
+const text = `${telopsToText(telops)}\n`;
+
+if (output || input !== '-') {
+  const outputPath = output ? path.resolve(output) : defaultOutputPath(input);
+  fs.writeFileSync(outputPath, text, 'utf8');
+  console.error(`Wrote ${telops.length} telops: ${outputPath}`);
+} else {
+  process.stdout.write(text);
+}
