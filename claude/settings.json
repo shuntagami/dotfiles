@@ -16,5 +16,9 @@
   "effortLevel": "medium",
   "skipDangerousModePermissionPrompt": true,
   "agentPushNotifEnabled": true,
-  "tui": "fullscreen"
+  "tui": "fullscreen",
+  "statusLine": {
+    "type": "command",
+    "command": "jq -r '(.context_window // {}) as $c | ($c.used_percentage // 0) as $p | (if $p >= 80 then \"\\u001b[31m\" elif $p >= 50 then \"\\u001b[33m\" else \"\\u001b[32m\" end) as $col | \"\\($col)ctx \\($p | floor)%\\u001b[0m\"'"
+  }
 }
