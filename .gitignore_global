@@ -8,3 +8,4 @@ __pycache__/
 .next
 next-env.d.ts
 レイアウト分析
+*.mp4
