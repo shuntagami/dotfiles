@@ -53,6 +53,15 @@ trust_level = "trusted"
 [projects."/Users/shun.tagami/projects/toolbox"]
 trust_level = "trusted"
 
+[projects."/Users/shun.tagami/Documents/Codex/2026-07-01/aii"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/Documents/Codex/2026-07-01/new-chat"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/Documents/Codex/2026-07-01/new-chat-2"]
+trust_level = "trusted"
+
 [tui.model_availability_nux]
 "gpt-5.5" = 4
 
@@ -85,6 +94,9 @@ enabled = true
 enabled = true
 
 [plugins."pdf@openai-primary-runtime"]
+enabled = true
+
+[plugins."template-creator@openai-primary-runtime"]
 enabled = true
 
 [mcp_servers.playwright]
@@ -121,21 +133,21 @@ NODE_REPL_NODE_MODULE_DIRS = "/Applications/Codex.app/Contents/Resources/cua_nod
 NODE_REPL_NODE_PATH = "/Applications/Codex.app/Contents/Resources/cua_node/bin/node"
 NODE_REPL_TRUSTED_CODE_PATHS = "/Users/shun.tagami/.codex"
 CODEX_HOME = "/Users/shun.tagami/.codex"
-NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "27dca86fd6b571c49414a4b78e46b57bcf683a46cd1319799c11fbb6cfae3110"
+NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "cb79053fda6deb0f3b5d6f0d90d4257305ebdbd1e378a12e8fbc5bde782eb59b"
 BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
 NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = "Control the in-app browser in conjunction with the Browser Plugin."
 NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = "Control the Chrome browser in conjunction with the Chrome Plugin. Prefer this method of controlling Chrome over alternatives (such as Computer Use) unless the user explicitly mentions an alternative."
 BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
-BROWSER_USE_CODEX_APP_VERSION = "26.609.41114"
+BROWSER_USE_CODEX_APP_VERSION = "26.623.81905"
 CODEX_CLI_PATH = "/Applications/Codex.app/Contents/Resources/codex"
 
 [marketplaces.openai-bundled]
-last_updated = "2026-06-14T12:45:40Z"
+last_updated = "2026-07-01T04:17:42Z"
 source_type = "local"
 source = "/Users/shun.tagami/.codex/.tmp/bundled-marketplaces/openai-bundled"
 
 [marketplaces.openai-primary-runtime]
-last_updated = "2026-06-15T01:11:08Z"
+last_updated = "2026-07-01T05:11:06Z"
 source_type = "local"
 source = "/Users/shun.tagami/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
 
@@ -146,6 +158,7 @@ notifications-turn-mode = "always"
 localeOverride = "ja-JP"
 preventSleepWhileRunning = true
 show-context-window-usage = true
+followUpQueueMode = "queue"
 
 [desktop.open-in-target-preferences]
 global = "cursor"
