@@ -15,3 +15,6 @@ screenpipe/**/*.db
 screenpipe/**/.env
 screenpipe/**/config.env
 screenpipe/**/connections.json
+
+# vfr-sync-rife: RIFEバイナリ+モデル(35MB)はコミットしない。install_rife.shで取得
+claude/skills/vfr-sync-rife/bin/

@@ -64,6 +64,13 @@ if [[ -e ~/.claude/settings.json && ! -L ~/.claude/settings.json ]]; then
 fi
 ln -sf ~/dotfiles/claude/settings.json ~/.claude/settings.json
 
+# Claude Code skills: symlink each skill directory. RIFE binary for vfr-sync-rife
+# is not in git; fetch it once with claude/skills/vfr-sync-rife/scripts/install_rife.sh
+mkdir -p ~/.claude/skills
+for skill_dir in "${HOME}"/dotfiles/claude/skills/*(/N); do
+  ln -sfn "${skill_dir}" ~/.claude/skills/"${skill_dir:t}"
+done
+
 # Screenpipe: manage only prompt/config files that are safe to keep in dotfiles.
 # Databases, recordings, logs, outputs, and connection secrets stay under ~/.screenpipe.
 if [[ -d "${HOME}/dotfiles/screenpipe/pipes" ]]; then
