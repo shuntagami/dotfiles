@@ -1,0 +1,246 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  dlthumb [options] <YouTube URL> [YouTube URL...]
+
+Options:
+  -d, --directory <dir>  Save into dir (default: current directory)
+  -o, --output <file>    Save to file (single URL only)
+  -l, --list             List available thumbnails
+  -h, --help             Show this help
+
+Downloads the largest thumbnail image exposed by YouTube without converting it.
+EOF
+}
+
+die() {
+  echo "Error: $*" >&2
+  exit 1
+}
+
+need_command() {
+  command -v "$1" >/dev/null 2>&1 || die "$1 is not installed or not in PATH."
+}
+
+safe_filename() {
+  printf '%s' "$1" | sed 's#[/:\\]#-#g; s/[[:cntrl:]]//g'
+}
+
+image_dimensions() {
+  local file="$1"
+  local width height dims
+
+  if command -v sips >/dev/null 2>&1; then
+    width="$(sips -g pixelWidth "$file" 2>/dev/null | awk '/pixelWidth:/ {print $2; exit}')"
+    height="$(sips -g pixelHeight "$file" 2>/dev/null | awk '/pixelHeight:/ {print $2; exit}')"
+    if [[ -n "$width" && -n "$height" ]]; then
+      printf '%sx%s\n' "$width" "$height"
+      return 0
+    fi
+  fi
+
+  if command -v identify >/dev/null 2>&1; then
+    dims="$(identify -format '%wx%h' "$file" 2>/dev/null || true)"
+    if [[ -n "$dims" ]]; then
+      printf '%s\n' "$dims"
+      return 0
+    fi
+  fi
+
+  if command -v ffprobe >/dev/null 2>&1; then
+    dims="$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$file" 2>/dev/null || true)"
+    if [[ -n "$dims" ]]; then
+      printf '%s\n' "$dims"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+declare -a tmp_files=()
+
+cleanup() {
+  if ((${#tmp_files[@]})); then
+    rm -f "${tmp_files[@]}"
+  fi
+}
+trap cleanup EXIT
+
+thumbnail_candidates_jq='
+  def ext_from_url:
+    (try (.url | split("?")[0] | capture("\\.(?<ext>[A-Za-z0-9]+)$").ext) catch "jpg")
+    | ascii_downcase;
+
+  def expected_score:
+    .url as $u |
+    if ($u | test("/maxresdefault[.]jpg$")) then 3000000
+    elif ($u | test("/maxresdefault[.]jpg[?]")) then 2500000
+    elif ($u | test("/maxresdefault[.]webp$")) then 2400000
+    elif ($u | test("/hq720[.]jpg($|[?])")) then 1300000
+    elif ($u | test("/hq720[.]webp($|[?])")) then 1200000
+    elif ($u | test("/sddefault[.]jpg($|[?])")) then 700000
+    elif ($u | test("/sddefault[.]webp($|[?])")) then 690000
+    elif ($u | test("/hqdefault[.]jpg($|[?])")) then 480000
+    elif ($u | test("/hqdefault[.]webp($|[?])")) then 470000
+    elif ($u | test("/mqdefault[.]jpg($|[?])")) then 320000
+    elif ($u | test("/mqdefault[.]webp($|[?])")) then 310000
+    elif ($u | test("/default[.]jpg($|[?])")) then 120000
+    elif ($u | test("/default[.]webp($|[?])")) then 110000
+    else 0
+    end;
+
+  [
+    .thumbnails[]?
+    | select(.url)
+    | . + {
+        area: ((.width // 0) * (.height // 0)),
+        expected: expected_score,
+        ext: ext_from_url
+      }
+    | . + {score: ([.area, .expected] | max)}
+  ]
+  | unique_by(.url)
+  | sort_by(.score, .area, (.preference // -999999), (.id // ""))
+  | reverse
+  | .[]
+  | [.url, (.width // ""), (.height // ""), .ext]
+  | @tsv
+'
+
+download_one() {
+  local url="$1"
+  local output_override="${2:-}"
+  local info_file candidates_file
+  local id title safe_title
+  local thumb_url width height ext target part suffix dims
+
+  info_file="$(mktemp)"
+  tmp_files+=("$info_file")
+  candidates_file="$(mktemp)"
+  tmp_files+=("$candidates_file")
+
+  yt-dlp --dump-single-json --skip-download "$url" >"$info_file"
+  jq -r "$thumbnail_candidates_jq" "$info_file" >"$candidates_file"
+
+  [[ -s "$candidates_file" ]] || die "no thumbnails found: $url"
+
+  id="$(jq -r '.id // "thumbnail"' "$info_file")"
+  title="$(jq -r '.title // .id // "thumbnail"' "$info_file")"
+  safe_title="$(safe_filename "$title")"
+
+  while IFS=$'\t' read -r thumb_url width height ext; do
+    part="$(mktemp)"
+    tmp_files+=("$part")
+
+    if ! curl -fsSL --retry 2 --retry-delay 1 -o "$part" "$thumb_url"; then
+      rm -f "$part"
+      continue
+    fi
+
+    dims="$(image_dimensions "$part" || true)"
+    if [[ -n "$output_override" ]]; then
+      target="$output_override"
+      mkdir -p "$(dirname "$target")"
+    else
+      mkdir -p "$directory"
+      suffix=""
+      if [[ -n "$dims" ]]; then
+        suffix="_${dims}"
+      elif [[ -n "$width" && -n "$height" ]]; then
+        suffix="_${width}x${height}"
+      fi
+      target="${directory%/}/${safe_title} [${id}]${suffix}.${ext}"
+    fi
+
+    mv -f "$part" "$target"
+    chmod 0644 "$target" 2>/dev/null || true
+    if [[ -n "$dims" ]]; then
+      echo "Saved: $target (${dims})"
+    elif [[ -n "$width" && -n "$height" ]]; then
+      echo "Saved: $target (${width}x${height})"
+    else
+      echo "Saved: $target"
+    fi
+    return 0
+  done <"$candidates_file"
+
+  die "failed to download thumbnail: $url"
+}
+
+directory="."
+output=""
+list_only=0
+urls=()
+
+while (($#)); do
+  case "$1" in
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    -l | --list)
+      list_only=1
+      shift
+      ;;
+    -d | --directory)
+      shift
+      [[ $# -gt 0 ]] || die "--directory requires a value."
+      directory="$1"
+      shift
+      ;;
+    --directory=*)
+      directory="${1#*=}"
+      shift
+      ;;
+    -o | --output)
+      shift
+      [[ $# -gt 0 ]] || die "--output requires a value."
+      output="$1"
+      shift
+      ;;
+    --output=*)
+      output="${1#*=}"
+      shift
+      ;;
+    --)
+      shift
+      urls+=("$@")
+      break
+      ;;
+    -*)
+      die "unknown option: $1"
+      ;;
+    *)
+      urls+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if ((${#urls[@]} == 0)); then
+  usage >&2
+  exit 2
+fi
+
+need_command yt-dlp
+need_command jq
+need_command curl
+
+if ((list_only)); then
+  for url in "${urls[@]}"; do
+    yt-dlp --list-thumbnails "$url"
+  done
+  exit 0
+fi
+
+if [[ -n "$output" && ${#urls[@]} -ne 1 ]]; then
+  die "--output can only be used with one URL."
+fi
+
+for url in "${urls[@]}"; do
+  download_one "$url" "$output"
+done
