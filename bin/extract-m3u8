@@ -5,9 +5,30 @@
 //   npx playwright install chromium
 
 import { createRequire } from "module";
+import path from "path";
+
 const require = createRequire(import.meta.url);
-const globalModules = require("child_process").execSync("npm root -g").toString().trim();
-const { chromium } = require(globalModules + "/playwright");
+
+function loadPlaywright() {
+  try {
+    return require("playwright");
+  } catch (localError) {
+    try {
+      const globalModules = require("child_process")
+        .execSync("npm root -g")
+        .toString()
+        .trim();
+
+      return require(path.join(globalModules, "playwright"));
+    } catch (globalError) {
+      console.error("Playwright is not installed.");
+      console.error("Run: npm install -g playwright && npx playwright install chromium");
+      process.exit(1);
+    }
+  }
+}
+
+const { chromium } = loadPlaywright();
 
 const url = process.argv[2];
 if (!url) {
