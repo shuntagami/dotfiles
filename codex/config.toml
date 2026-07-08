@@ -62,6 +62,9 @@ trust_level = "trusted"
 [projects."/Users/shun.tagami/Documents/Codex/2026-07-01/new-chat-2"]
 trust_level = "trusted"
 
+[projects."/Users/shun.tagami/projects/movie-checker"]
+trust_level = "trusted"
+
 [tui.model_availability_nux]
 "gpt-5.5" = 4
 
