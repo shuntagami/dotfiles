@@ -519,7 +519,7 @@ async function appendList(documentId, tabId, items) {
       requests.push({
         updateTextStyle: {
           range: { startIndex: textStart, endIndex: textStart + text.length, tabId },
-          textStyle: { fontSize: { magnitude: 12, unit: "PT" } },
+          textStyle: { fontSize: { magnitude: 11, unit: "PT" } },
           fields: "fontSize",
         },
       });
@@ -758,6 +758,19 @@ async function buildTab(documentId, tabId, blocks, state) {
     let namedStyle;
     if (block.type === "heading") {
       namedStyle = state.firstHeadingDone ? HEADING_STYLE[block.level] : "TITLE";
+      // 2つ目以降の見出しの前に空行を1つ入れる。
+      // 転記先Docの見出しスタイルに余白が無いと、直前のテーブル・本文と密着して読みづらいため。
+      if (state.firstHeadingDone) {
+        pending.push({ insertText: { text: "\n", location: { index: cursor, tabId } } });
+        pending.push({
+          updateParagraphStyle: {
+            range: { startIndex: cursor, endIndex: cursor + 1, tabId },
+            paragraphStyle: { namedStyleType: "NORMAL_TEXT", alignment: "START" },
+            fields: "namedStyleType,alignment",
+          },
+        });
+        cursor += 1;
+      }
       state.firstHeadingDone = true;
     } else {
       namedStyle = "NORMAL_TEXT";
@@ -791,7 +804,7 @@ async function buildTab(documentId, tabId, blocks, state) {
       pending.push({
         updateTextStyle: {
           range: { startIndex: start, endIndex: start + text.length, tabId },
-          textStyle: { fontSize: { magnitude: 12, unit: "PT" } },
+          textStyle: { fontSize: { magnitude: 11, unit: "PT" } },
           fields: "fontSize",
         },
       });
