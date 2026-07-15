@@ -9,3 +9,5 @@ __pycache__/
 next-env.d.ts
 レイアウト分析
 *.mp4
+
+**/.claude/settings.local.json
