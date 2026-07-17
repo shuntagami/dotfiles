@@ -44,6 +44,10 @@ ln -sf ~/dotfiles/.zpreztorc ~/.zpreztorc
 ln -sf ~/dotfiles/.zprofile ~/.zprofile
 ln -sf ~/dotfiles/.zshenv ~/.zshenv
 ln -sf ~/dotfiles/.zshrc ~/.zshrc
+if [[ -e ~/.finicky.js && ! -L ~/.finicky.js ]]; then
+  mv ~/.finicky.js ~/.finicky.js.bak.$(date +%Y%m%d%H%M%S)
+fi
+ln -sf ~/dotfiles/.finicky.js ~/.finicky.js
 mkdir -p ~/.docker
 ln -sf ~/dotfiles/misc/docker-config.json ~/.docker/config.json
 mkdir -p ~/.local/state/crossnote
@@ -118,6 +122,13 @@ if [[ ! -f ~/.ssh/config.local ]]; then
 fi
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
+  # Finicky is the system URL router: Discord links go to Chrome and all other
+  # links fall through to Dia according to ~/.finicky.js.
+  if command -v defaultbrowser >/dev/null 2>&1 && [[ -d /Applications/Finicky.app ]]; then
+    open -g -a Finicky
+    defaultbrowser finicky
+  fi
+
   if [[ "${DOTFILES_PROFILE:-full}" != "minimal" ]]; then
     ln -sfn ~/dotfiles/hammerspoon ~/.hammerspoon
   fi
