@@ -71,7 +71,11 @@ git-grep-count() {
 }
 alias ggc="git-grep-count"
 
-alias cc="claude"
+# Claude Code (always skip permission prompts)
+alias cc="claude --dangerously-skip-permissions"
+alias ccs="claude --dangerously-skip-permissions --model sonnet"
+alias ccf="claude --dangerously-skip-permissions --model fable"
+alias cco="claude --dangerously-skip-permissions --model opus"
 
 # --- ffmpeg 区切りカット用 zsh 関数 ---
 # 使い方:
