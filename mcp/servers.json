@@ -22,11 +22,23 @@
       "args": [
         "-y",
         "@playwright/mcp@latest"
-      ]
-     }
+      ],
+      "codex": {
+        "tools": {
+          "browser_click": {
+            "approval_mode": "auto"
+          },
+          "browser_navigate": {
+            "approval_mode": "auto"
+          },
+          "browser_run_code_unsafe": {
+            "approval_mode": "auto"
+          }
+        }
+      }
     },
     "screenpipe": {
-      "enabled": true,
+      "enabled": false,
       "type": "stdio",
       "command": "npx",
       "args": [
@@ -35,15 +47,14 @@
       ]
     },
     "notion": {
-      "enabled": true,
+      "enabled": false,
       "type": "http",
       "url": "https://mcp.notion.com/mcp"
     },
     "supabase": {
       "enabled": true,
-      "type": "http",
-      "url": "https://mcp.supabase.com/mcp",
-      "headers": {}
+      "type": "stdio",
+      "command": "/Users/shun.tagami/dotfiles/mcp/run-supabase-mcp.sh"
     }
   }
 }

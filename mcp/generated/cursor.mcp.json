@@ -8,22 +8,9 @@
         "@playwright/mcp@latest"
       ]
     },
-    "screenpipe": {
-      "type": "stdio",
-      "command": "npx",
-      "args": [
-        "-y",
-        "screenpipe-mcp"
-      ]
-    },
-    "notion": {
-      "type": "http",
-      "url": "https://mcp.notion.com/mcp"
-    },
     "supabase": {
-      "type": "http",
-      "url": "https://mcp.supabase.com/mcp",
-      "headers": {}
+      "type": "stdio",
+      "command": "/Users/shun.tagami/dotfiles/mcp/run-supabase-mcp.sh"
     }
   }
 }

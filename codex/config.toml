@@ -116,15 +116,8 @@ approval_mode = "auto"
 [mcp_servers.playwright.tools.browser_run_code_unsafe]
 approval_mode = "auto"
 
-[mcp_servers.screenpipe]
-command = "npx"
-args = ["-y", "screenpipe-mcp"]
-
-[mcp_servers.notion]
-url = "https://mcp.notion.com/mcp"
-
 [mcp_servers.supabase]
-url = "https://mcp.supabase.com/mcp"
+command = "/Users/shun.tagami/dotfiles/mcp/run-supabase-mcp.sh"
 
 [mcp_servers.node_repl]
 args = []
