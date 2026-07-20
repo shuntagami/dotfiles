@@ -48,11 +48,6 @@ function codexBlock(name, config) {
   if (config.enabled === false) {
     lines.push("enabled = false");
   }
-  if (config.codex?.bearer_token_env_var) {
-    lines.push(
-      `bearer_token_env_var = ${tomlString(config.codex.bearer_token_env_var)}`,
-    );
-  }
   if (config.env && Object.keys(config.env).length > 0) {
     lines.push("");
     lines.push(`[mcp_servers.${name}.env]`);

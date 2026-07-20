@@ -120,8 +120,7 @@ approval_mode = "auto"
 url = "https://mcp.notion.com/mcp"
 
 [mcp_servers.supabase]
-url = "https://mcp.supabase.com/mcp?project_ref=vktggjrrpqoepgsziwsj"
-bearer_token_env_var = "SUPABASE_ACCESS_TOKEN"
+command = "/Users/shun.tagami/dotfiles/mcp/run-supabase-mcp.sh"
 
 [mcp_servers.node_repl]
 args = []

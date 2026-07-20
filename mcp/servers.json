@@ -53,14 +53,8 @@
     },
     "supabase": {
       "enabled": true,
-      "type": "http",
-      "url": "https://mcp.supabase.com/mcp?project_ref=vktggjrrpqoepgsziwsj",
-      "headers": {
-        "Authorization": "Bearer ${SUPABASE_ACCESS_TOKEN}"
-      },
-      "codex": {
-        "bearer_token_env_var": "SUPABASE_ACCESS_TOKEN"
-      }
+      "type": "stdio",
+      "command": "/Users/shun.tagami/dotfiles/mcp/run-supabase-mcp.sh"
     }
   }
 }

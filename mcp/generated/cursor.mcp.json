@@ -13,11 +13,8 @@
       "url": "https://mcp.notion.com/mcp"
     },
     "supabase": {
-      "type": "http",
-      "url": "https://mcp.supabase.com/mcp?project_ref=vktggjrrpqoepgsziwsj",
-      "headers": {
-        "Authorization": "Bearer ${SUPABASE_ACCESS_TOKEN}"
-      }
+      "type": "stdio",
+      "command": "/Users/shun.tagami/dotfiles/mcp/run-supabase-mcp.sh"
     }
   }
 }

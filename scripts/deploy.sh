@@ -139,15 +139,6 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   mkdir -p ~/Library/Application\ Support/ngrok
   ln -sf ~/dotfiles/misc/ngrok.yml ~/Library/Application\ Support/ngrok/ngrok.yml
 
-  # Supabase MCP: expose the Keychain PAT to GUI apps without storing it in config.
-  chmod 700 ~/dotfiles/mcp/load-supabase-token.sh
-  mkdir -p ~/Library/LaunchAgents
-  ln -sfn ~/dotfiles/misc/com.shuntagami.supabase-mcp-token.plist \
-    ~/Library/LaunchAgents/com.shuntagami.supabase-mcp-token.plist
-  launchctl bootout gui/$(id -u)/com.shuntagami.supabase-mcp-token 2>/dev/null || true
-  launchctl bootstrap gui/$(id -u) \
-    ~/Library/LaunchAgents/com.shuntagami.supabase-mcp-token.plist
-
   # watch-downloads-copy: auto-copy plain text files from Downloads to clipboard
   chmod +x ~/dotfiles/bin/watch-downloads-copy
   launchctl unload ~/Library/LaunchAgents/com.user.watch-downloads.plist 2>/dev/null
