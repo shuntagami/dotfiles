@@ -116,15 +116,12 @@ approval_mode = "auto"
 [mcp_servers.playwright.tools.browser_run_code_unsafe]
 approval_mode = "auto"
 
-[mcp_servers.screenpipe]
-command = "npx"
-args = ["-y", "screenpipe-mcp"]
-
 [mcp_servers.notion]
 url = "https://mcp.notion.com/mcp"
 
 [mcp_servers.supabase]
-url = "https://mcp.supabase.com/mcp"
+url = "https://mcp.supabase.com/mcp?project_ref=vktggjrrpqoepgsziwsj"
+bearer_token_env_var = "SUPABASE_ACCESS_TOKEN"
 
 [mcp_servers.node_repl]
 args = []

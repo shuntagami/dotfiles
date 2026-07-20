@@ -48,6 +48,11 @@ function codexBlock(name, config) {
   if (config.enabled === false) {
     lines.push("enabled = false");
   }
+  if (config.codex?.bearer_token_env_var) {
+    lines.push(
+      `bearer_token_env_var = ${tomlString(config.codex.bearer_token_env_var)}`,
+    );
+  }
   if (config.env && Object.keys(config.env).length > 0) {
     lines.push("");
     lines.push(`[mcp_servers.${name}.env]`);
@@ -99,20 +104,30 @@ function syncCodex() {
   const lines = config.split("\n");
   const kept = [];
   let skipping = false;
+  let insertedManagedBlocks = false;
+  const managedServerNames = new Set(Object.keys(servers));
+  const renderedManagedBlocks = Object.entries(enabledServers)
+    .map(([name, config]) => codexBlock(name, config))
+    .join("\n\n");
   for (const line of lines) {
-    if (line.match(/^\[mcp_servers(?:\.|\])/)) {
-      skipping = true;
-      continue;
-    }
-    if (skipping && line.match(/^\[/)) {
+    const mcpTable = line.match(/^\[mcp_servers\.([^\.\]]+)/);
+    if (mcpTable) {
+      skipping = managedServerNames.has(mcpTable[1]);
+      if (skipping && !insertedManagedBlocks) {
+        kept.push(renderedManagedBlocks, "");
+        insertedManagedBlocks = true;
+      }
+    } else if (line.match(/^\[/)) {
       skipping = false;
     }
     if (!skipping) kept.push(line);
   }
 
   const base = kept.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd();
-  const blocks = Object.entries(enabledServers).map(([name, config]) => codexBlock(name, config));
-  fs.writeFileSync(codexConfigPath, `${base}\n\n${blocks.join("\n\n")}\n`);
+  const nextConfig = insertedManagedBlocks
+    ? base
+    : `${base}\n\n${renderedManagedBlocks}`;
+  fs.writeFileSync(codexConfigPath, `${nextConfig}\n`);
 }
 
 function syncClaude() {

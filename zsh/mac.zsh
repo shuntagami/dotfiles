@@ -17,6 +17,14 @@ if [ -d "/opt/homebrew" ]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
+# Supabase MCP: keep the PAT in Keychain and expose it only at runtime.
+# launchd normally provides this to GUI apps; this is the shell fallback.
+if [[ -z "${SUPABASE_ACCESS_TOKEN:-}" ]]; then
+  export SUPABASE_ACCESS_TOKEN="$(
+    /usr/bin/security find-generic-password -s "Supabase CLI" -w 2>/dev/null
+  )"
+fi
+
 # color
 autoload -U colors
 colors
