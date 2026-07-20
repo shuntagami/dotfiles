@@ -47,7 +47,7 @@
       ]
     },
     "notion": {
-      "enabled": true,
+      "enabled": false,
       "type": "http",
       "url": "https://mcp.notion.com/mcp"
     },

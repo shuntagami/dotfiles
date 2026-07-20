@@ -116,9 +116,6 @@ approval_mode = "auto"
 [mcp_servers.playwright.tools.browser_run_code_unsafe]
 approval_mode = "auto"
 
-[mcp_servers.notion]
-url = "https://mcp.notion.com/mcp"
-
 [mcp_servers.supabase]
 command = "/Users/shun.tagami/dotfiles/mcp/run-supabase-mcp.sh"
 

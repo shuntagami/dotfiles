@@ -8,10 +8,6 @@
         "@playwright/mcp@latest"
       ]
     },
-    "notion": {
-      "type": "http",
-      "url": "https://mcp.notion.com/mcp"
-    },
     "supabase": {
       "type": "stdio",
       "command": "/Users/shun.tagami/dotfiles/mcp/run-supabase-mcp.sh"
