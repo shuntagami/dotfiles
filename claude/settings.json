@@ -18,7 +18,7 @@
     "vercel@claude-plugins-official": true,
     "slack@claude-plugins-official": true
   },
-  "effortLevel": "xhigh",
+  "effortLevel": "high",
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "agentPushNotifEnabled": true
