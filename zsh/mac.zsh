@@ -193,14 +193,20 @@ _sync_cursor_extensions() {
   fi
 }
 
-# brew bundle dump does not emit npm entries, so restore them after dumping.
+# Keep npm entries in sync even on Homebrew versions that do not dump them.
 _sync_global_npm_packages_to_brewfile() {
   local brewfile=$1
   local fallback_file=$2
-  local npm_packages_file=$(mktemp)
-  local tmp_brewfile=$(mktemp)
+  local npm_packages_file
+  local tmp_brewfile
   local npm_packages=
   local npm_packages_loaded=false
+
+  npm_packages_file=$(mktemp) || return 1
+  if ! tmp_brewfile=$(mktemp); then
+    rm -f "$npm_packages_file"
+    return 1
+  fi
 
   if command -v npm >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
     npm_packages=$(npm ls -g --depth=0 --json 2>/dev/null \
@@ -214,15 +220,62 @@ _sync_global_npm_packages_to_brewfile() {
   fi
 
   if [[ "$npm_packages_loaded" == false && -n "$fallback_file" && -s "$fallback_file" ]]; then
-    cp "$fallback_file" "$npm_packages_file"
+    if ! cp "$fallback_file" "$npm_packages_file"; then
+      rm -f "$npm_packages_file" "$tmp_brewfile"
+      return 1
+    fi
   fi
 
-  grep -v '^npm ' "$brewfile" > "$tmp_brewfile"
-  if [[ -s "$npm_packages_file" ]]; then
-    cat "$npm_packages_file" >> "$tmp_brewfile"
+  if ! sed '/^npm /d' "$brewfile" > "$tmp_brewfile"; then
+    rm -f "$npm_packages_file" "$tmp_brewfile"
+    return 1
   fi
-  mv "$tmp_brewfile" "$brewfile"
+  if [[ -s "$npm_packages_file" ]]; then
+    if ! cat "$npm_packages_file" >> "$tmp_brewfile"; then
+      rm -f "$npm_packages_file" "$tmp_brewfile"
+      return 1
+    fi
+  fi
+  if ! mv "$tmp_brewfile" "$brewfile"; then
+    rm -f "$npm_packages_file" "$tmp_brewfile"
+    return 1
+  fi
   rm -f "$npm_packages_file"
+}
+
+# Build the new Brewfile separately so a failed/empty dump cannot erase the
+# checked-in Brewfile. The final move stays on the same filesystem and is atomic.
+_dump_system_packages_to_brewfile() {
+  local brewfile=$1
+  local fallback_file=$2
+  local dumped_brewfile
+
+  dumped_brewfile=$(mktemp "${brewfile}.tmp.XXXXXX") || return 1
+
+  if ! brew bundle dump --file=- > "$dumped_brewfile"; then
+    echo "Failed to dump installed packages; keeping the existing Brewfile." >&2
+    rm -f "$dumped_brewfile"
+    return 1
+  fi
+
+  if [[ ! -s "$dumped_brewfile" ]]; then
+    echo "Homebrew produced an empty dump; keeping the existing Brewfile." >&2
+    rm -f "$dumped_brewfile"
+    return 1
+  fi
+
+  if ! _sync_global_npm_packages_to_brewfile "$dumped_brewfile" "$fallback_file" \
+    || [[ ! -s "$dumped_brewfile" ]]; then
+    echo "Failed to add npm packages; keeping the existing Brewfile." >&2
+    rm -f "$dumped_brewfile"
+    return 1
+  fi
+
+  if ! chmod 644 "$dumped_brewfile" || ! mv "$dumped_brewfile" "$brewfile"; then
+    echo "Failed to replace the Brewfile; keeping the existing Brewfile." >&2
+    rm -f "$dumped_brewfile"
+    return 1
+  fi
 }
 
 update-brew-env() {
@@ -244,11 +297,10 @@ update-brew-env() {
     grep '^npm ' "$brewfile" > "$existing_npm_packages_file"
 
     # システムを正として同期（Brewfile 更新 → lock 更新）
-    if ! brew bundle dump --force --file="$brewfile"; then
+    if ! _dump_system_packages_to_brewfile "$brewfile" "$existing_npm_packages_file"; then
       rm -f "$existing_npm_packages_file"
       return 1
     fi
-    _sync_global_npm_packages_to_brewfile "$brewfile" "$existing_npm_packages_file"
     rm -f "$existing_npm_packages_file"
 
     brew bundle install --file="$brewfile"
