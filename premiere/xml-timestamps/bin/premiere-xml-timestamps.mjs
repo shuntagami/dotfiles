@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { writeFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import {
   actualFps,
@@ -15,7 +16,7 @@ function usage() {
   premiere-xml-timestamps audit <xml> [--allow-truncated]
   premiere-xml-timestamps extract <xml> (--all-tracks | --track <sequence-id:track> [--track ...])
       [--extensions jpg,png,mov,mp4] [--comment TEXT]
-      [--format table|comments|json] [--allow-truncated]`;
+      [--format table|comments|json] [--dedupe] [--output PATH] [--allow-truncated]`;
 }
 
 function parseCli(argv) {
@@ -42,7 +43,9 @@ function parseCli(argv) {
       "all-tracks": { type: "boolean", default: false },
       extensions: { type: "string" },
       comment: { type: "string" },
+      dedupe: { type: "boolean", default: false },
       format: { type: "string", default: "table" },
+      output: { type: "string" },
     },
     strict: true,
   });
@@ -231,19 +234,28 @@ async function main() {
   }
   output.sort((a, b) => a.seconds - b.seconds || a.name.localeCompare(b.name, "ja"));
 
+  let rendered;
   if (cli.values.format === "json") {
-    console.log(JSON.stringify(output, null, 2));
+    rendered = JSON.stringify(output, null, 2);
   } else if (cli.values.format === "comments") {
-    for (const item of output) {
-      console.log(`${item.vimeoTimecode} ${cli.values.comment || item.name}`);
-    }
+    const lines = output.map(
+      (item) => `${item.vimeoTimecode} ${cli.values.comment || item.name}`,
+    );
+    rendered = (cli.values.dedupe ? [...new Set(lines)] : lines).join("\n");
   } else {
-    console.log("timecode\tseconds\tsequence\ttrack\tname");
-    for (const item of output) {
-      console.log(
-        `${item.timecode}\t${item.seconds.toFixed(6)}\t${item.sourceSequenceId}\t${item.sourceTrack}\t${item.name}`,
-      );
-    }
+    rendered = [
+      "timecode\tseconds\tsequence\ttrack\tname",
+      ...output.map(
+        (item) =>
+          `${item.timecode}\t${item.seconds.toFixed(6)}\t${item.sourceSequenceId}\t${item.sourceTrack}\t${item.name}`,
+      ),
+    ].join("\n");
+  }
+  if (cli.values.output) {
+    await writeFile(cli.values.output, `${rendered}\n`, "utf8");
+    console.error(`Wrote: ${cli.values.output}`);
+  } else {
+    console.log(rendered);
   }
 }
 

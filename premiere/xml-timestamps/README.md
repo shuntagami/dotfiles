@@ -47,7 +47,9 @@ node bin/premiere-xml-timestamps.mjs extract ~/Downloads/project.xml \
   --all-tracks \
   --extensions jpg,jpeg,png \
   --format comments \
-  --comment 画像
+  --comment 画像 \
+  --dedupe \
+  --output ~/Downloads/timestamps.txt
 ```
 
 素材トラックが分かっている場合は、背景やロゴなどを避けるため対象を限定できます。
@@ -71,6 +73,7 @@ node bin/premiere-xml-timestamps.mjs inspect ~/Downloads/project.xml
 - `--all-tracks`は背景・ロゴなども含みます。素材専用トラックがある案件では`--track`の方が確実です。
 - `--allow-truncated`は検査用です。本番ではPremiereから完全なXMLを再書き出してください。
 - コメント形式は最終時刻を秒単位に丸めます。同じ秒に複数素材がある場合、素材名付きのtableまたはJSONで区別できます。
+- `--dedupe`は、時刻とコメントが同一の行を初出順のまま1行へまとめます。
 
 ## Test
 
