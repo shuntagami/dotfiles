@@ -80,6 +80,7 @@ export async function parseXmeml(path, { allowTruncated = false } = {}) {
         duration: null,
         rate: { timebase: null, ntsc: false },
         videoTracks: [],
+        audioTracks: [],
       };
       const parentClip = nearestFrame(
         stack,
@@ -88,17 +89,20 @@ export async function parseXmeml(path, { allowTruncated = false } = {}) {
       if (parentClip && frame.sequence.id) parentClip.nestedSequenceId = frame.sequence.id;
     } else if (
       tag.name === "track" &&
-      parent?.name === "video" &&
+      (parent?.name === "video" || parent?.name === "audio") &&
       stack.at(-2)?.name === "media" &&
       stack.at(-3)?.sequence
     ) {
       const sequence = stack.at(-3).sequence;
+      const mediaType = parent.name;
+      const tracks = mediaType === "video" ? sequence.videoTracks : sequence.audioTracks;
       frame.track = {
-        index: sequence.videoTracks.length + 1,
+        index: tracks.length + 1,
+        mediaType,
         clips: [],
         items: [],
       };
-      sequence.videoTracks.push(frame.track);
+      tracks.push(frame.track);
     } else if (tag.name === "clipitem") {
       // Keep a boundary for every clipitem, including audio clips that we do not
       // collect. Without it, files and effects inside an audio clip can leak into
@@ -300,7 +304,9 @@ export async function parseXmeml(path, { allowTruncated = false } = {}) {
     }
   }
   for (const sequence of sequences.values()) {
-    for (const track of sequence.videoTracks) resolveTransitionBoundaries(track);
+    for (const track of [...sequence.videoTracks, ...sequence.audioTracks]) {
+      resolveTransitionBoundaries(track);
+    }
   }
   if (!rootSequenceId || !sequences.size) throw new Error("no-sequence-found");
 

@@ -29,6 +29,28 @@ node bin/premiere-xml-timestamps.mjs audit ~/Downloads/project.xml
 node bin/premiere-xml-timestamps.mjs audit ~/Downloads/project.xml --allow-truncated
 ```
 
+## 動画チェック用パッケージをまとめて出力する
+
+```sh
+premiere-xml-review ~/Downloads/project.xml \
+  --video ~/Downloads/final.mp4 \
+  --output-dir ~/Downloads/project_review
+```
+
+既定では、動画チェックで判断材料になる次のファイルだけを生成します。
+
+- `timeline.txt`: 素材とテロップを時刻順に統合
+- `materials.tsv`: 素材名、正確な時刻、元シーケンス・トラック
+- `telops.txt`: タイムスタンプ付きテロップ
+- `bgm.txt`: XML上で独立クリップとして識別できたBGMと使用区間
+- `warnings.txt`: XML欠損や完成動画との尺違いがある場合のみ
+
+効果音、トランジション、通常エフェクトなどは、既定では出力しません。低レベル情報が必要な調査時だけ`--diagnostics`を付けます。
+
+`--video`はXMLと完成動画の尺を照合します。尺が違う場合、XML時刻を完成動画の時刻として扱えない旨を警告します。倍速がXMLへ完全に記録されていない案件を補正するには、`movie-checker`と同様に完成動画の文字起こしとテロップを照合した時間写像が別途必要です。
+
+`bgm.txt`に曲がない場合も「BGMなし」とは断定しません。BGMが元素材へ焼き込まれている場合や、XMLの音声部分が欠損している場合、曲名はXMLだけから復元できません。
+
 ## 画像素材の時刻を抽出する
 
 全シーケンス・全ビデオトラックから、最上位シーケンスへ到達できる画像を抽出します。

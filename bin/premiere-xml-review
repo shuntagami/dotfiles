@@ -1,0 +1,464 @@
+#!/usr/bin/env node
+
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+const { pathToFileURL } = require('url');
+
+const DEFAULT_MATERIAL_EXTENSIONS =
+  'avif,avi,bmp,gif,heic,jpeg,jpg,m4v,mkv,mov,mp4,png,tif,tiff,webm,webp';
+const AUDIO_EXTENSIONS = new Set(['aac', 'aif', 'aiff', 'flac', 'm4a', 'mp3', 'wav']);
+const VIDEO_EXTENSIONS = new Set(['avi', 'm4v', 'mkv', 'mov', 'mp4', 'webm']);
+
+function usage() {
+  console.error(`Usage:
+  premiere-xml-review INPUT.xml
+  premiere-xml-review INPUT.xml -o OUTPUT_DIR
+  premiere-xml-review INPUT.xml --video FINAL.mp4
+  premiere-xml-review INPUT.xml --track sequence-2:8 --allow-truncated
+
+Options:
+  -o, --output-dir DIR  Output directory (default: INPUT_review)
+      --track ID:N      Limit material extraction to a video track; repeatable
+      --extensions LIST Material extensions (default: common image/video formats)
+      --video FILE      Compare XML duration with the rendered video
+      --allow-truncated Recover usable data from a truncated XML
+      --diagnostics     Also emit low-level XML/audio diagnostics
+  -h, --help            Show this help`);
+}
+
+function parseArgs(argv) {
+  const options = {
+    input: null,
+    outputDir: null,
+    tracks: [],
+    extensions: DEFAULT_MATERIAL_EXTENSIONS,
+    video: null,
+    allowTruncated: false,
+    diagnostics: false,
+  };
+  const args = [...argv];
+  while (args.length) {
+    const arg = args.shift();
+    if (arg === '-h' || arg === '--help') {
+      usage();
+      process.exit(0);
+    } else if (arg === '-o' || arg === '--output-dir') {
+      options.outputDir = args.shift();
+      if (!options.outputDir) throw new Error(`${arg} requires a directory`);
+    } else if (arg === '--track') {
+      const value = args.shift();
+      if (!value) throw new Error('--track requires sequence-id:track');
+      options.tracks.push(value);
+    } else if (arg === '--extensions') {
+      options.extensions = args.shift();
+      if (!options.extensions) throw new Error('--extensions requires a list');
+    } else if (arg === '--video') {
+      options.video = args.shift();
+      if (!options.video) throw new Error('--video requires a file');
+    } else if (arg === '--allow-truncated') {
+      options.allowTruncated = true;
+    } else if (arg === '--diagnostics') {
+      options.diagnostics = true;
+    } else if (arg.startsWith('-')) {
+      throw new Error(`Unknown option: ${arg}`);
+    } else if (options.input) {
+      throw new Error(`Unexpected argument: ${arg}`);
+    } else {
+      options.input = arg;
+    }
+  }
+  if (!options.input) throw new Error('INPUT.xml is required');
+  options.input = path.resolve(options.input);
+  if (!fs.existsSync(options.input)) throw new Error(`File not found: ${options.input}`);
+  if (options.video) {
+    options.video = path.resolve(options.video);
+    if (!fs.existsSync(options.video)) throw new Error(`File not found: ${options.video}`);
+  }
+  if (!options.outputDir) {
+    const parsed = path.parse(options.input);
+    options.outputDir = path.join(parsed.dir, `${parsed.name}_review`);
+  } else {
+    options.outputDir = path.resolve(options.outputDir);
+  }
+  return options;
+}
+
+function runNode(script, args) {
+  const result = spawnSync(process.execPath, [script, ...args], {
+    encoding: 'utf8',
+    maxBuffer: 50 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    throw new Error((result.stderr || result.stdout || 'Command failed').trim());
+  }
+  return result;
+}
+
+function renderedVideoDuration(videoPath) {
+  if (!videoPath) return null;
+  const result = spawnSync(
+    'ffprobe',
+    [
+      '-v',
+      'error',
+      '-show_entries',
+      'format=duration',
+      '-of',
+      'default=noprint_wrappers=1:nokey=1',
+      videoPath,
+    ],
+    { encoding: 'utf8' },
+  );
+  if (result.error?.code === 'ENOENT') return null;
+  if (result.status !== 0) {
+    throw new Error((result.stderr || 'ffprobe failed').trim());
+  }
+  const duration = Number(result.stdout.trim());
+  return Number.isFinite(duration) ? duration : null;
+}
+
+function clock(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  const secondsText = secs.toFixed(3).padStart(6, '0');
+  return hours
+    ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${secondsText}`
+    : `${String(minutes).padStart(2, '0')}:${secondsText}`;
+}
+
+function extensionOf(name) {
+  const match = /\.([^.]+)$/.exec(name || '');
+  return match ? match[1].toLowerCase() : '';
+}
+
+function normalizedName(name) {
+  return name.normalize('NFKC').toLowerCase();
+}
+
+function isReviewMaterialName(name) {
+  // Persistent layout furniture is not a useful review checkpoint.
+  return !(
+    /(?:^|[\s_.-])(logo|background|bg)(?:[\s_.-]|$)|背景/i.test(name) ||
+    /concentration[\s_-]*line|集中線|^0+_?\.png$/i.test(name)
+  );
+}
+
+function filterMaterialTsv(tsv, applyUtilityFilter) {
+  if (!applyUtilityFilter) return tsv;
+  const lines = tsv.trimEnd().split('\n');
+  const rows = lines.slice(1).map((line) => {
+    const columns = line.split('\t');
+    return { line, name: columns.slice(4).join('\t') };
+  });
+  const videoCounts = new Map();
+  for (const row of rows) {
+    if (!VIDEO_EXTENSIONS.has(extensionOf(row.name))) continue;
+    const key = normalizedName(row.name);
+    videoCounts.set(key, (videoCounts.get(key) || 0) + 1);
+  }
+  const maximumVideoCount = Math.max(0, ...videoCounts.values());
+  const mainFootage = new Set(
+    [...videoCounts]
+      .filter(([, count]) => count >= maximumVideoCount * 0.3)
+      .map(([name]) => name),
+  );
+  return `${[
+    lines[0],
+    ...rows
+      .filter((row) =>
+        row.name &&
+        isReviewMaterialName(row.name) &&
+        !mainFootage.has(normalizedName(row.name))
+      )
+      .map((row) => row.line),
+  ].join('\n')}\n`;
+}
+
+function materialEventsFromTsv(tsv) {
+  return tsv
+    .trimEnd()
+    .split('\n')
+    .slice(1)
+    .flatMap((line) => {
+      const columns = line.split('\t');
+      const seconds = Number(columns[1]);
+      if (!Number.isFinite(seconds) || columns.length < 5) return [];
+      return [{
+        seconds,
+        priority: 0,
+        line: `[${columns[0]}] [素材] ${columns.slice(4).join('\t')}`,
+      }];
+    });
+}
+
+function telopEvents(text) {
+  return text.trimEnd().split('\n').flatMap((line) => {
+    const match = /^\[((?:(\d+):)?(\d+):(\d+(?:\.\d+)?))\]\s+(.*)$/.exec(line);
+    if (!match) return [];
+    const seconds = Number(match[2] || 0) * 3600 + Number(match[3]) * 60 + Number(match[4]);
+    return [{ seconds, priority: 1, line: `[${match[1]}] [テロップ] ${match[5]}` }];
+  });
+}
+
+function mergeIntervals(intervals, maximumGapSeconds = 0.2) {
+  const sorted = [...intervals].sort((a, b) => a.start - b.start || a.end - b.end);
+  const merged = [];
+  for (const interval of sorted) {
+    const previous = merged.at(-1);
+    if (previous && interval.start <= previous.end + maximumGapSeconds) {
+      previous.end = Math.max(previous.end, interval.end);
+      previous.count += interval.count;
+    } else {
+      merged.push({ ...interval });
+    }
+  }
+  return merged;
+}
+
+async function audioReport(input, allowTruncated) {
+  const modulePath = path.resolve(
+    __dirname,
+    '../premiere/xml-timestamps/src/xmeml.mjs',
+  );
+  const {
+    actualFps,
+    mapSequenceFrameToRoot,
+    parseXmeml,
+  } = await import(pathToFileURL(modulePath).href);
+  const model = await parseXmeml(input, { allowTruncated });
+  const root = model.sequences.get(model.rootSequenceId);
+  const fps = actualFps(root?.rate);
+  if (!fps) throw new Error('Root sequence frame rate is missing');
+
+  const videoNames = new Set();
+  for (const sequence of model.sequences.values()) {
+    for (const track of sequence.videoTracks) {
+      for (const clip of track.clips) {
+        const name = clip.fileName || clip.name;
+        if (name) videoNames.add(normalizedName(name));
+      }
+    }
+  }
+
+  const raw = [];
+  for (const sequence of model.sequences.values()) {
+    for (const track of sequence.audioTracks) {
+      for (const clip of track.clips) {
+        const name = clip.fileName || clip.name;
+        if (
+          !clip.enabled ||
+          clip.nestedSequenceId ||
+          !name ||
+          !Number.isFinite(clip.start) ||
+          !Number.isFinite(clip.end) ||
+          clip.end <= clip.start
+        ) continue;
+        const starts = mapSequenceFrameToRoot(model, sequence.id, clip.start);
+        const ends = mapSequenceFrameToRoot(model, sequence.id, clip.end - 0.001);
+        for (const start of starts) {
+          const possibleEnds = ends
+            .map((item) => item.rootFrame + 0.001)
+            .filter((frame) => frame > start.rootFrame)
+            .sort((a, b) => a - b);
+          if (!possibleEnds.length) continue;
+          raw.push({
+            name,
+            normalized: normalizedName(name),
+            start: start.rootFrame / fps,
+            end: possibleEnds[0] / fps,
+            sequenceId: sequence.id,
+            track: track.index,
+          });
+        }
+      }
+    }
+  }
+
+  // Premiere duplicates linked stereo channels on adjacent tracks. Collapse
+  // events with the same normalized filename and interval.
+  const events = [...new Map(raw.map((item) => [
+    `${item.normalized}:${item.start.toFixed(4)}:${item.end.toFixed(4)}`,
+    item,
+  ])).values()].sort((a, b) => a.start - b.start || a.name.localeCompare(b.name, 'ja'));
+
+  const groups = new Map();
+  for (const event of events) {
+    const group = groups.get(event.normalized) || { name: event.name, events: [] };
+    group.events.push({ start: event.start, end: event.end, count: 1 });
+    groups.set(event.normalized, group);
+  }
+
+  const summaries = [];
+  for (const [nameKey, group] of groups) {
+    const ranges = mergeIntervals(group.events);
+    const maximumDuration = Math.max(...ranges.map((item) => item.end - item.start));
+    const extension = extensionOf(group.name);
+    const linkedVideo = videoNames.has(nameKey) || VIDEO_EXTENSIONS.has(extension);
+    const category = linkedVideo
+      ? 'source'
+      : extension === 'mp3' && maximumDuration >= 8
+        ? 'bgm-candidate'
+        : maximumDuration < 8
+          ? 'sfx'
+          : AUDIO_EXTENSIONS.has(extension)
+            ? 'other-audio'
+            : 'unknown';
+    summaries.push({
+      name: group.name,
+      normalized: nameKey,
+      category,
+      maximumDuration,
+      eventCount: group.events.length,
+      ranges,
+    });
+  }
+
+  const categoryByName = new Map(summaries.map((item) => [item.normalized, item.category]));
+  const table = [
+    'start\tend\tduration_seconds\tcategory\tsequence\taudio_track\tname',
+    ...events.map((item) =>
+      `${clock(item.start)}\t${clock(item.end)}\t${(item.end - item.start).toFixed(3)}\t${categoryByName.get(item.normalized)}\t${item.sequenceId}\t${item.track}\t${item.name}`,
+    ),
+  ].join('\n');
+
+  const bgm = summaries
+    .filter((item) => item.category === 'bgm-candidate')
+    .sort((a, b) => a.ranges[0].start - b.ranges[0].start);
+  const sfx = summaries
+    .filter((item) => item.category === 'sfx')
+    .sort((a, b) => b.eventCount - a.eventCount || a.name.localeCompare(b.name, 'ja'));
+  const other = summaries
+    .filter((item) => item.category === 'other-audio')
+    .sort((a, b) => a.ranges[0].start - b.ranges[0].start);
+  const bgmLines = ['XMLで識別できたBGM'];
+  if (!bgm.length) {
+    bgmLines.push(
+      '（独立したBGMクリップを識別できません。完成動画にBGMがないという意味ではありません）',
+    );
+  }
+  for (const item of bgm) {
+    for (const range of item.ranges) {
+      bgmLines.push(`[${clock(range.start)} - ${clock(range.end)}] ${item.name}`);
+    }
+  }
+  const diagnosticLines = ['Sound effects'];
+  if (!sfx.length) diagnosticLines.push('(none detected)');
+  for (const item of sfx) diagnosticLines.push(`${item.name}\t${item.eventCount} uses`);
+  diagnosticLines.push('', 'Other long audio (voice/music classification needs review)');
+  if (!other.length) diagnosticLines.push('(none detected)');
+  for (const item of other) {
+    diagnosticLines.push(`${item.name}\t${item.eventCount} clips`);
+  }
+
+  return {
+    table: `${table}\n`,
+    bgm: `${bgmLines.join('\n')}\n`,
+    diagnostics: `${diagnosticLines.join('\n')}\n`,
+    warnings: model.warnings,
+    xmlDuration: Number.isFinite(root?.duration) ? root.duration / fps : null,
+  };
+}
+
+async function main() {
+  const options = parseArgs(process.argv.slice(2));
+  fs.mkdirSync(options.outputDir, { recursive: true });
+  const timestampScript = path.resolve(
+    __dirname,
+    '../premiere/xml-timestamps/bin/premiere-xml-timestamps.mjs',
+  );
+  const telopScript = path.resolve(__dirname, 'premiere-xml-telops');
+  const materialTsv = path.join(options.outputDir, 'materials.tsv');
+  const telopsPath = path.join(options.outputDir, 'telops.txt');
+  const common = options.allowTruncated ? ['--allow-truncated'] : [];
+  const trackArguments = options.tracks.length
+    ? options.tracks.flatMap((value) => ['--track', value])
+    : ['--all-tracks'];
+
+  const materialResult = runNode(timestampScript, [
+    'extract',
+    options.input,
+    ...trackArguments,
+    '--extensions',
+    options.extensions,
+    '--format',
+    'table',
+    '--output',
+    materialTsv,
+    ...common,
+  ]);
+  const telopResult = runNode(telopScript, [
+    options.input,
+    '--timestamps',
+    '--output',
+    telopsPath,
+    ...common,
+  ]);
+  const auditResult = options.diagnostics
+    ? runNode(timestampScript, ['audit', options.input, ...common])
+    : null;
+
+  const materials = filterMaterialTsv(
+    fs.readFileSync(materialTsv, 'utf8'),
+    options.tracks.length === 0,
+  );
+  fs.writeFileSync(materialTsv, materials, 'utf8');
+  const telops = fs.readFileSync(telopsPath, 'utf8');
+  const timeline = [
+    ...materialEventsFromTsv(materials),
+    ...telopEvents(telops),
+  ].sort((a, b) => a.seconds - b.seconds || a.priority - b.priority || a.line.localeCompare(b.line, 'ja'));
+  fs.writeFileSync(
+    path.join(options.outputDir, 'timeline.txt'),
+    `${timeline.map((item) => item.line).join('\n')}\n`,
+    'utf8',
+  );
+  const audio = await audioReport(options.input, options.allowTruncated);
+  fs.writeFileSync(path.join(options.outputDir, 'bgm.txt'), audio.bgm, 'utf8');
+  if (options.diagnostics) {
+    fs.writeFileSync(path.join(options.outputDir, 'xml-audit.txt'), auditResult.stdout, 'utf8');
+    fs.writeFileSync(path.join(options.outputDir, 'audio.tsv'), audio.table, 'utf8');
+    fs.writeFileSync(
+      path.join(options.outputDir, 'audio-diagnostics.txt'),
+      audio.diagnostics,
+      'utf8',
+    );
+  }
+
+  const warnings = new Set([
+    ...materialResult.stderr.split('\n'),
+    ...telopResult.stderr.split('\n'),
+    ...(auditResult ? auditResult.stderr.split('\n') : []),
+    ...audio.warnings.map((warning) => `Warning: ${warning}`),
+  ].filter((line) => line.startsWith('Warning:')));
+  const actionableWarnings = [];
+  if (warnings.size) {
+    actionableWarnings.push(
+      'XMLが途中で切れているか不正です。映像の時刻情報は復旧しましたが、音声・BGM情報は不完全な可能性があります。',
+    );
+  }
+  const videoDuration = renderedVideoDuration(options.video);
+  if (videoDuration != null && audio.xmlDuration != null) {
+    const difference = Math.abs(videoDuration - audio.xmlDuration);
+    if (difference > 1) {
+      actionableWarnings.push(
+        `XMLの尺（${clock(audio.xmlDuration)}）と完成動画の尺（${clock(videoDuration)}）が${difference.toFixed(3)}秒ずれています。XMLだけの時刻を完成動画の時刻として扱わず、文字起こしによる時間補正が必要です。`,
+      );
+    }
+  }
+  if (actionableWarnings.length) {
+    fs.writeFileSync(
+      path.join(options.outputDir, 'warnings.txt'),
+      `${actionableWarnings.map((warning) => `WARNING: ${warning}`).join('\n')}\n`,
+      'utf8',
+    );
+  }
+  for (const warning of actionableWarnings) console.error(`Warning: ${warning}`);
+  console.error(`Wrote review package: ${options.outputDir}`);
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+});

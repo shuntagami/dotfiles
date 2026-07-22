@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -54,6 +54,7 @@ test("maps a child frame through a retimed nested sequence", async () => {
   assert.equal(asset.graphicEffects[0].name, "テロップです");
   assert.equal(asset.graphicEffects[0].parameters.get("source").name, "ソーステキスト");
   assert.equal(model.sequences.get("sequence-1").videoTracks[0].clips[0].fileName, null);
+  assert.equal(model.sequences.get("sequence-2").audioTracks[0].clips[0].fileName, "wrong.wav");
   const mapped = mapSequenceFrameToRoot(model, "sequence-2", 20);
   assert.equal(mapped.length, 1);
   assert.equal(mapped[0].rootFrame, 20);
@@ -70,6 +71,25 @@ test("telop CLI emits final-timeline timestamps", async () => {
   await writeFile(path, xml, "utf8");
   await execFileAsync(command, [path, "--timestamps", "--output", output]);
   assert.equal(await readFile(output, "utf8"), "[00:00.667] テロップです\n");
+});
+
+test("review CLI emits high-signal files without diagnostics by default", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "premiere-xml-test-"));
+  const path = join(directory, "sample.xml");
+  const output = join(directory, "review");
+  const command = fileURLToPath(
+    new URL("../../../bin/premiere-xml-review", import.meta.url),
+  );
+  await writeFile(path, xml, "utf8");
+  await execFileAsync(command, [path, "--output-dir", output]);
+  const timeline = await readFile(join(output, "timeline.txt"), "utf8");
+  assert.match(timeline, /\[00:00\.667\] \[素材\] asset\.png/);
+  assert.match(timeline, /\[00:00\.667\] \[テロップ\] テロップです/);
+  assert.match(
+    await readFile(join(output, "bgm.txt"), "utf8"),
+    /完成動画にBGMがないという意味ではありません/,
+  );
+  await assert.rejects(() => access(join(output, "audio.tsv")));
 });
 
 test("rejects a truncated XML unless recovery is enabled", async () => {
