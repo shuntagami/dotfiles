@@ -1,9 +1,14 @@
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import { mapSequenceFrameToRoot, parseXmeml } from "../src/xmeml.mjs";
+
+const execFileAsync = promisify(execFile);
 
 const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <xmeml version="4">
@@ -18,6 +23,9 @@ const xml = `<?xml version="1.0" encoding="UTF-8"?>
         <media><video><track><clipitem id="asset">
           <name>asset.png</name><start>20</start><end>30</end><in>0</in><out>10</out>
           <file id="file-1"><name>asset.png</name><pathurl>file://localhost/tmp/asset.png</pathurl></file>
+          <filter><effect><effectid>GraphicAndType</effectid><name>テロップです</name>
+            <parameter><parameterid>source</parameterid><name>ソーステキスト</name><value>44OG44K544OI</value></parameter>
+          </effect></filter>
         </clipitem></track></video>
         <audio><track><clipitem id="audio"><name>audio</name>
           <file id="file-2"><name>wrong.wav</name><pathurl>file://localhost/tmp/wrong.wav</pathurl></file>
@@ -41,12 +49,27 @@ test("maps a child frame through a retimed nested sequence", async () => {
   await writeFile(path, xml, "utf8");
   const model = await parseXmeml(path);
   assert.equal(model.rootSequenceId, "sequence-1");
-  assert.equal(model.sequences.get("sequence-2").videoTracks[0].clips[0].fileName, "asset.png");
+  const asset = model.sequences.get("sequence-2").videoTracks[0].clips[0];
+  assert.equal(asset.fileName, "asset.png");
+  assert.equal(asset.graphicEffects[0].name, "テロップです");
+  assert.equal(asset.graphicEffects[0].parameters.get("source").name, "ソーステキスト");
   assert.equal(model.sequences.get("sequence-1").videoTracks[0].clips[0].fileName, null);
   const mapped = mapSequenceFrameToRoot(model, "sequence-2", 20);
   assert.equal(mapped.length, 1);
   assert.equal(mapped[0].rootFrame, 20);
   assert.equal(mapped[0].path[0].speed, 200);
+});
+
+test("telop CLI emits final-timeline timestamps", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "premiere-xml-test-"));
+  const path = join(directory, "sample.xml");
+  const output = join(directory, "telops.txt");
+  const command = fileURLToPath(
+    new URL("../../../bin/premiere-xml-telops", import.meta.url),
+  );
+  await writeFile(path, xml, "utf8");
+  await execFileAsync(command, [path, "--timestamps", "--output", output]);
+  assert.equal(await readFile(output, "utf8"), "[00:00.667] テロップです\n");
 });
 
 test("rejects a truncated XML unless recovery is enabled", async () => {

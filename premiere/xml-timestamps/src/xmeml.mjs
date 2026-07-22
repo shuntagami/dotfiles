@@ -119,6 +119,7 @@ export async function parseXmeml(path, { allowTruncated = false } = {}) {
           fileName: null,
           filePath: null,
           timeRemap: null,
+          graphicEffects: [],
         };
         parent.track.clips.push(frame.clip);
         parent.track.items.push({ type: "clip", clip: frame.clip });
@@ -132,11 +133,16 @@ export async function parseXmeml(path, { allowTruncated = false } = {}) {
     } else if (tag.name === "file") {
       frame.file = { name: null, pathUrl: null };
     } else if (tag.name === "effect") {
-      frame.effect = { id: null, parameters: new Map() };
+      const ownerBoundary = nearestFrame(
+        stack,
+        (candidate) => candidate.clipItemBoundary || candidate.transition,
+      );
+      frame.effect = { id: null, name: null, parameters: new Map() };
+      frame.effectOwnerClip = ownerBoundary?.clip ?? null;
     } else if (tag.name === "parameter") {
       const effectFrame = nearestFrame(stack, (candidate) => candidate.effect);
       if (effectFrame) {
-        frame.parameter = { id: null, value: null, keyframes: [] };
+        frame.parameter = { id: null, name: null, value: null, keyframes: [] };
       }
     } else if (tag.name === "keyframe") {
       const parameterFrame = nearestFrame(stack, (candidate) => candidate.parameter);
@@ -175,16 +181,13 @@ export async function parseXmeml(path, { allowTruncated = false } = {}) {
         effectFrame.effect.parameters.set(frame.parameter.id, frame.parameter);
       }
     } else if (frame.effect) {
-      const clipFrame = nearestFrame(
-        stack,
-        (candidate) => candidate.clipItemBoundary,
-      );
-      if (clipFrame?.clip && frame.effect.id === "timeremap") {
+      const clip = frame.effectOwnerClip;
+      if (clip && frame.effect.id === "timeremap") {
         const speed = frame.effect.parameters.get("speed");
         const variable = frame.effect.parameters.get("variablespeed");
         const reverse = frame.effect.parameters.get("reverse");
         const graph = frame.effect.parameters.get("graphdict");
-        clipFrame.clip.timeRemap = {
+        clip.timeRemap = {
           speed: numberOrNull(speed?.value),
           variable: booleanValue(variable?.value),
           reverse: booleanValue(reverse?.value),
@@ -192,6 +195,8 @@ export async function parseXmeml(path, { allowTruncated = false } = {}) {
             (keyframe) => keyframe.when != null && keyframe.value != null,
           ),
         };
+      } else if (clip && frame.effect.id === "GraphicAndType") {
+        clip.graphicEffects.push(frame.effect);
       }
     } else if (frame.file) {
       const clipFrame = nearestFrame(
@@ -239,9 +244,13 @@ export async function parseXmeml(path, { allowTruncated = false } = {}) {
       if (tagName === "name") parent.file.name = text;
       else if (tagName === "pathurl") parent.file.pathUrl = text;
     }
-    if (parent?.effect && tagName === "effectid") parent.effect.id = text;
+    if (parent?.effect) {
+      if (tagName === "effectid") parent.effect.id = text;
+      else if (tagName === "name") parent.effect.name = text;
+    }
     if (parent?.parameter) {
       if (tagName === "parameterid") parent.parameter.id = text;
+      else if (tagName === "name") parent.parameter.name = text;
       else if (tagName === "value") parent.parameter.value = text;
     }
     if (parent?.keyframe) {
