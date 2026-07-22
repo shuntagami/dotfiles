@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 
 const JAPANESE_RE =
   /[\u2460-\u24ff\u2776-\u2793\u3000-\u30ff\u3400-\u9fff\uff00-\uffefA-Za-z0-9「」『』！？、。,.…ー・%％（）()\r\n+?／/]+/g;
@@ -20,17 +21,22 @@ function usage() {
   console.error(`Usage:
   premiere-xml-telops INPUT.xml
   premiere-xml-telops INPUT.xml -o OUTPUT.txt
+  premiere-xml-telops INPUT.xml --timestamps -o OUTPUT.txt
   cat INPUT.xml | premiere-xml-telops - > telops.txt
 
 Options:
-  -o, --output FILE   Write output to FILE
-  -h, --help          Show this help`);
+  -o, --output FILE    Write output to FILE
+  -t, --timestamps     Prefix each telop with its final timeline timestamp
+      --allow-truncated  Recover usable video data from a truncated XML
+  -h, --help           Show this help`);
 }
 
 function parseArgs(argv) {
   const args = [...argv];
   let input = null;
   let output = null;
+  let timestamps = false;
+  let allowTruncated = false;
 
   while (args.length > 0) {
     const arg = args.shift();
@@ -44,6 +50,14 @@ function parseArgs(argv) {
         console.error('Missing output path after -o/--output');
         process.exit(1);
       }
+      continue;
+    }
+    if (arg === '-t' || arg === '--timestamps') {
+      timestamps = true;
+      continue;
+    }
+    if (arg === '--allow-truncated') {
+      allowTruncated = true;
       continue;
     }
     if (arg.startsWith('-') && arg !== '-') {
@@ -64,7 +78,7 @@ function parseArgs(argv) {
     process.exit(1);
   }
 
-  return { input, output };
+  return { input, output, timestamps, allowTruncated };
 }
 
 function decodeXmlEntities(value) {
@@ -249,6 +263,108 @@ function telopsToText(telops) {
   return telops.map((telop) => telop.text).join('\n');
 }
 
+function parsedGraphicEffectCandidates(effect) {
+  const effectName = displayText(effect.name || '');
+  const effectNameCandidates = !GENERIC_EFFECT_NAMES.has(effectName)
+    ? [{ source: 'effect-name', text: effectName }]
+    : [];
+  const sourceTextCandidates = [...effect.parameters.values()].flatMap(
+    (parameter) => {
+      if (parameter.name !== 'ソーステキスト' || !parameter.value) return [];
+      try {
+        return decodedSourceChunks(parameter.value).map((text) => ({
+          source: 'source-text',
+          text,
+        }));
+      } catch {
+        return [];
+      }
+    },
+  );
+  return removeContainedCandidates([
+    ...effectNameCandidates,
+    ...sourceTextCandidates,
+  ]);
+}
+
+function timestampText(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  const secondsText = secs.toFixed(3).padStart(6, '0');
+  return hours
+    ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${secondsText}`
+    : `${String(minutes).padStart(2, '0')}:${secondsText}`;
+}
+
+async function parseTimestampedTelops(input, allowTruncated) {
+  if (input === '-') {
+    throw new Error('--timestamps requires an XML file path, not stdin');
+  }
+  const modulePath = path.resolve(
+    __dirname,
+    '../premiere/xml-timestamps/src/xmeml.mjs',
+  );
+  const { actualFps, mapSequenceFrameToRoot, parseXmeml } = await import(
+    pathToFileURL(modulePath).href
+  );
+  const model = await parseXmeml(path.resolve(input), { allowTruncated });
+  for (const warning of model.warnings) console.error(`Warning: ${warning}`);
+  const root = model.sequences.get(model.rootSequenceId);
+  const fps = actualFps(root?.rate);
+  if (!fps) throw new Error('Root sequence frame rate is missing');
+
+  const output = [];
+  const seen = new Set();
+  let unmapped = 0;
+  for (const sequence of model.sequences.values()) {
+    for (const track of sequence.videoTracks) {
+      for (const clip of track.clips) {
+        if (!clip.enabled || !Number.isFinite(clip.start)) continue;
+        const candidates = removeContainedCandidates(
+          clip.graphicEffects.flatMap(parsedGraphicEffectCandidates),
+        );
+        const clipSeen = new Set();
+        for (const candidate of candidates) {
+          const normalized = normalizeText(candidate.text);
+          if (!normalized || clipSeen.has(normalized)) continue;
+          clipSeen.add(normalized);
+          const mappings = mapSequenceFrameToRoot(model, sequence.id, clip.start);
+          if (!mappings.length) {
+            unmapped += 1;
+            continue;
+          }
+          for (const mapping of mappings) {
+            if (mapping.rootFrame < 0) continue;
+            const key = `${mapping.rootFrame.toFixed(6)}:${normalized}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            output.push({
+              text: candidate.text,
+              seconds: mapping.rootFrame / fps,
+              rootFrame: mapping.rootFrame,
+              clipId: clip.id,
+            });
+          }
+        }
+      }
+    }
+  }
+  if (unmapped) console.error(`Warning: skipped ${unmapped} unmapped telops`);
+  return output.sort(
+    (a, b) =>
+      a.rootFrame - b.rootFrame ||
+      a.clipId.localeCompare(b.clipId) ||
+      a.text.localeCompare(b.text, 'ja'),
+  );
+}
+
+function timestampedTelopsToText(telops) {
+  return telops
+    .map((telop) => `[${timestampText(telop.seconds)}] ${telop.text}`)
+    .join('\n');
+}
+
 function readInput(input) {
   if (input === '-') {
     return fs.readFileSync(0, 'utf8');
@@ -262,26 +378,43 @@ function readInput(input) {
   return fs.readFileSync(inputPath, 'utf8').replace(/^\uFEFF/, '');
 }
 
-function defaultOutputPath(input) {
+function defaultOutputPath(input, timestamps = false) {
   const parsed = path.parse(input);
-  return path.resolve(`${parsed.name}_telops.txt`);
+  const suffix = timestamps ? '_telops_timestamped.txt' : '_telops.txt';
+  return path.resolve(`${parsed.name}${suffix}`);
 }
 
-const { input, output } = parseArgs(process.argv.slice(2));
-const xmlText = readInput(input);
-const telops = parsePremiereXmlTelops(xmlText);
+async function main() {
+  const { input, output, timestamps, allowTruncated } = parseArgs(
+    process.argv.slice(2),
+  );
+  const telops = timestamps
+    ? await parseTimestampedTelops(input, allowTruncated)
+    : parsePremiereXmlTelops(readInput(input));
 
-if (telops.length === 0) {
-  console.error('No telops found in Premiere XML.');
-  process.exit(1);
+  if (telops.length === 0) {
+    console.error('No telops found in Premiere XML.');
+    process.exitCode = 1;
+    return;
+  }
+
+  const body = timestamps
+    ? timestampedTelopsToText(telops)
+    : telopsToText(telops);
+  const text = `${body}\n`;
+
+  if (output || input !== '-') {
+    const outputPath = output
+      ? path.resolve(output)
+      : defaultOutputPath(input, timestamps);
+    fs.writeFileSync(outputPath, text, 'utf8');
+    console.error(`Wrote ${telops.length} telops: ${outputPath}`);
+  } else {
+    process.stdout.write(text);
+  }
 }
 
-const text = `${telopsToText(telops)}\n`;
-
-if (output || input !== '-') {
-  const outputPath = output ? path.resolve(output) : defaultOutputPath(input);
-  fs.writeFileSync(outputPath, text, 'utf8');
-  console.error(`Wrote ${telops.length} telops: ${outputPath}`);
-} else {
-  process.stdout.write(text);
-}
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+});

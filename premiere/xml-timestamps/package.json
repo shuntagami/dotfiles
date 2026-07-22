@@ -1,0 +1,15 @@
+{
+  "name": "premiere-xml-timestamps",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "premiere-xml-timestamps": "./bin/premiere-xml-timestamps.mjs"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "saxes": "6.0.0"
+  }
+}
