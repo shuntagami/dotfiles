@@ -61,6 +61,17 @@ if [[ -e ~/.codex/config.toml && ! -L ~/.codex/config.toml ]]; then
 fi
 ln -sf ~/dotfiles/codex/config.toml ~/.codex/config.toml
 
+# Codex skills: symlink each repository-managed skill directory.
+mkdir -p ~/.codex/skills
+for skill_dir in "${HOME}"/dotfiles/codex/skills/*(/N); do
+  skill_target=~/.codex/skills/"${skill_dir:t}"
+  if [[ -e "${skill_target}" && ! -L "${skill_target}" ]]; then
+    echo "Skipping Codex skill ${skill_dir:t}: ${skill_target} exists and is not a symlink."
+    continue
+  fi
+  ln -sfn "${skill_dir}" "${skill_target}"
+done
+
 # Claude Code: settings.json includes standard Claude Code settings such as enabled plugins.
 mkdir -p ~/.claude
 if [[ -e ~/.claude/settings.json && ! -L ~/.claude/settings.json ]]; then
