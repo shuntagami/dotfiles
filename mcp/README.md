@@ -22,10 +22,18 @@ This syncs the canonical list to:
 Secrets are not committed. Prefer each service's official OAuth connector or
 tool-specific local config over storing tokens for MCP servers in dotfiles.
 
-Supabase uses the long-lived PAT already stored by Supabase CLI in macOS
-Keychain. `run-supabase-mcp.sh` reads it when the MCP server starts and exposes
-it only to that child process, so clients do not need to inherit a global
-`SUPABASE_ACCESS_TOKEN` environment variable.
+Supabase uses a long-lived PAT stored in a dedicated `Supabase MCP` item in
+macOS Keychain. Configure or rotate it with:
+
+```sh
+~/dotfiles/mcp/setup-supabase-mcp-auth.sh
+```
+
+`run-supabase-mcp.sh` reads the PAT when the MCP server starts and exposes it
+only to that child process, so clients do not need to inherit a global
+`SUPABASE_ACCESS_TOKEN` environment variable. The dedicated item is intentional:
+recent Supabase CLI releases restrict their own Keychain item to the CLI binary,
+which can make an MCP wrapper block on a Keychain permission prompt.
 
 Slack is not configured as a local MCP server. Codex uses the official
 `slack@openai-curated` plugin instead, enabled in `~/dotfiles/codex/config.toml`,
