@@ -111,8 +111,9 @@ function setupHint() {
   return [
     '',
     'Setup:',
-    '  1. Run: npm_config_ignore_scripts=true npm exec --yes --package netlify-cli -- netlify login',
-    '  2. Existing site: upload_html --site <name-or-id> report.html',
+    '  1. Install: brew install netlify-cli',
+    '  2. Run: netlify login',
+    '  3. Existing site: upload_html --site <name-or-id> report.html',
     '     New site:      upload_html --site-name <new-name> report.html',
     '',
     'The target can also be set with UPLOAD_HTML_NETLIFY_SITE_ID,',
@@ -178,12 +179,6 @@ function setupHint() {
 
   try {
     const args = [
-      'exec',
-      '--yes',
-      '--package',
-      'netlify-cli',
-      '--',
-      'netlify',
       'deploy',
       '--dir',
       tmpDir,
@@ -203,11 +198,14 @@ function setupHint() {
       if (auth) args.push('--auth', auth);
     }
 
-    const result = childProcess.spawnSync('npm', args, {
+    const result = childProcess.spawnSync('netlify', args, {
       cwd: tmpDir,
       encoding: 'utf8',
-      env: { ...process.env, npm_config_ignore_scripts: 'true' },
     });
+
+    if (result.error) {
+      throw new Error(`Failed to run netlify: ${result.error.message}`);
+    }
 
     if (result.status !== 0) {
       process.stderr.write(
