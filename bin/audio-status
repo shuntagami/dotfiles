@@ -1,0 +1,106 @@
+#!/bin/zsh
+
+set -euo pipefail
+
+shorten_device_name() {
+  local name="$1"
+
+  case "$name" in
+    "Loop120 by Shokz")
+      print -r -- "Shokz Loop120"
+      ;;
+    "MacBook Pro Microphone")
+      print -r -- "Mac mic"
+      ;;
+    "MacBook Pro Speakers")
+      print -r -- "Mac spk"
+      ;;
+    "")
+      print -r -- "-"
+      ;;
+    *)
+      print -r -- "$name"
+      ;;
+  esac
+}
+
+audio_report=$(system_profiler SPAudioDataType 2>/dev/null || true)
+bluetooth_report=$(system_profiler SPBluetoothDataType 2>/dev/null || true)
+
+input_device=$(
+  awk '
+    /^[[:space:]]{8}[^[:space:]].*:$/ {
+      current = $0
+      sub(/^[[:space:]]+/, "", current)
+      sub(/:$/, "", current)
+    }
+    /Default Input Device: Yes/ {
+      print current
+      exit
+    }
+  ' <<<"$audio_report"
+)
+
+output_device=$(
+  awk '
+    /^[[:space:]]{8}[^[:space:]].*:$/ {
+      current = $0
+      sub(/^[[:space:]]+/, "", current)
+      sub(/:$/, "", current)
+    }
+    /Default Output Device: Yes/ {
+      print current
+      exit
+    }
+  ' <<<"$audio_report"
+)
+
+input_device=$(shorten_device_name "$input_device")
+output_device=$(shorten_device_name "$output_device")
+
+battery_for_device() {
+  local raw_name="$1"
+
+  [[ -n "$raw_name" ]] || return
+
+  awk -v device="$raw_name" '
+    /^[[:space:]]{10}[^[:space:]].*:$/ {
+      in_device = 0
+      name = $0
+      sub(/^[[:space:]]+/, "", name)
+      sub(/:$/, "", name)
+      if (name == device) in_device = 1
+    }
+    in_device && /Battery Level:/ {
+      gsub(/^[[:space:]]+/, "")
+      sub(/^Battery Level:[[:space:]]*/, "")
+      print
+      exit
+    }
+    in_device && /Left Battery Level:/ {
+      left = $0
+      gsub(/^[[:space:]]+/, "", left)
+      sub(/^Left Battery Level:[[:space:]]*/, "", left)
+    }
+    in_device && /Right Battery Level:/ {
+      right = $0
+      gsub(/^[[:space:]]+/, "", right)
+      sub(/^Right Battery Level:[[:space:]]*/, "", right)
+    }
+    in_device && left && right {
+      print "L" left "/R" right
+      exit
+    }
+  ' <<<"$bluetooth_report"
+}
+
+output_battery=$(battery_for_device "$output_device")
+if [[ -z "$output_battery" && "$output_device" == "Shokz Loop120" ]]; then
+  output_battery=$(battery_for_device "Loop120 by Shokz")
+fi
+
+if [[ -n "$output_battery" ]]; then
+  output_device="${output_device} ${output_battery}"
+fi
+
+print -r -- "in:${input_device} out:${output_device}"
