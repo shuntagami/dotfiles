@@ -1,24 +1,30 @@
 #!/usr/bin/env node
 
 const childProcess = require('child_process');
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const DEFAULT_NETLIFY_SITE_NAME = 'shun-tagami-html-uploads';
-
 const HELP = `Upload an HTML file to Netlify and print the public URL
 
 Usage:
-  upload_html path/to/report.html
+  upload_html --site <name-or-id> path/to/report.html
+  upload_html --site-name <new-name> path/to/report.html
   upload_html --anonymous path/to/report.html
 
-Passwordless mode:
-  By default this deploys to:
-    ${DEFAULT_NETLIFY_SITE_NAME}
+Existing site:
+  upload_html --site launch-report path/to/report.html
 
-  Run netlify login once before using passwordless mode.
-  Override the target with --site or --site-name when needed.
+New site:
+  upload_html --site-name launch-report path/to/report.html
+
+  A random suffix is always appended to new site names:
+    launch-report-01234567
+
+  Run netlify login once before using either mode.
+  The target must be specified explicitly. The current directory's
+  .netlify/state.json is ignored.
 
 Anonymous mode:
   upload_html --anonymous path/to/report.html
@@ -55,6 +61,13 @@ function parseArgs(argv) {
     }
   }
 
+  if (options.siteId && options.siteName) {
+    throw new Error('Use either --site or --site-name, not both.');
+  }
+  if (options.anonymous && (options.siteId || options.siteName)) {
+    throw new Error('--anonymous cannot be combined with --site or --site-name.');
+  }
+
   return options;
 }
 
@@ -84,15 +97,26 @@ function preferHttps(url) {
   return typeof url === 'string' ? url.replace(/^http:\/\//, 'https://') : '';
 }
 
+function withRandomSuffix(siteName) {
+  const suffix = crypto.randomBytes(4).toString('hex');
+  const maxBaseLength = 63 - suffix.length - 1;
+  const base = siteName.trim().slice(0, maxBaseLength).replace(/-+$/, '');
+  if (!base) {
+    throw new Error('Site name must contain at least one non-hyphen character.');
+  }
+  return `${base}-${suffix}`;
+}
+
 function setupHint() {
   return [
     '',
-    'Passwordless setup:',
+    'Setup:',
     '  1. Run: npm_config_ignore_scripts=true npm exec --yes --package netlify-cli -- netlify login',
-    `  2. Run: upload_html report.html`,
+    '  2. Existing site: upload_html --site <name-or-id> report.html',
+    '     New site:      upload_html --site-name <new-name> report.html',
     '',
-    `Default site: ${DEFAULT_NETLIFY_SITE_NAME}`,
-    'Override with --site, --site-name, or NETLIFY_AUTH_TOKEN when needed.',
+    'The target can also be set with UPLOAD_HTML_NETLIFY_SITE_ID,',
+    'NETLIFY_SITE_ID, UPLOAD_HTML_NETLIFY_SITE_NAME, or NETLIFY_SITE_NAME.',
   ].join('\n');
 }
 
@@ -119,9 +143,35 @@ function setupHint() {
     process.exit(1);
   }
 
-  const siteId = options.siteId || process.env.UPLOAD_HTML_NETLIFY_SITE_ID || process.env.NETLIFY_SITE_ID || '';
-  const siteName = options.siteName || process.env.UPLOAD_HTML_NETLIFY_SITE_NAME || process.env.NETLIFY_SITE_NAME || DEFAULT_NETLIFY_SITE_NAME;
+  const siteId =
+    options.siteId ||
+    process.env.UPLOAD_HTML_NETLIFY_SITE_ID ||
+    process.env.NETLIFY_SITE_ID ||
+    '';
+  const requestedSiteName =
+    options.siteName ||
+    process.env.UPLOAD_HTML_NETLIFY_SITE_NAME ||
+    process.env.NETLIFY_SITE_NAME ||
+    '';
   const auth = options.auth || process.env.NETLIFY_AUTH_TOKEN || '';
+
+  if (!options.anonymous && !siteId && !requestedSiteName) {
+    console.error(
+      'Specify an existing site with --site, or a new site with --site-name.',
+    );
+    process.stderr.write(setupHint() + '\n');
+    process.exit(1);
+  }
+
+  let siteName = '';
+  if (requestedSiteName) {
+    try {
+      siteName = withRandomSuffix(requestedSiteName);
+    } catch (error) {
+      console.error(error.message);
+      process.exit(1);
+    }
+  }
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'upload_html.'));
   fs.copyFileSync(filePath, path.join(tmpDir, 'index.html'));
@@ -154,20 +204,31 @@ function setupHint() {
     }
 
     const result = childProcess.spawnSync('npm', args, {
+      cwd: tmpDir,
       encoding: 'utf8',
       env: { ...process.env, npm_config_ignore_scripts: 'true' },
     });
 
     if (result.status !== 0) {
-      process.stderr.write(result.stderr || result.stdout || 'Netlify deploy failed.\n');
+      process.stderr.write(
+        result.stderr || result.stdout || 'Netlify deploy failed.\n',
+      );
       if (!options.anonymous) process.stderr.write(setupHint() + '\n');
       process.exit(result.status || 1);
     }
 
     const output = extractJson(result.stdout);
-    const url = preferHttps(output.url || output.ssl_url || output.deploy_ssl_url || output.deploy_url || output.site_url);
+    const url = preferHttps(
+      output.url ||
+        output.ssl_url ||
+        output.deploy_ssl_url ||
+        output.deploy_url ||
+        output.site_url,
+    );
     if (!url) {
-      console.error('Netlify deploy succeeded, but no URL was found in the response.');
+      console.error(
+        'Netlify deploy succeeded, but no URL was found in the response.',
+      );
       process.exit(1);
     }
 
