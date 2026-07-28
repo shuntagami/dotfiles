@@ -76,6 +76,10 @@ sudo defaults write /Library/Preferences/com.apple.loginwindow AdminHostInfo Hos
 
 # Disable Notification Center and remove the menu bar icon
 # launchctl unload -w /System/Library/LaunchAgents/com.apple.notificationcenterui.plist 2> /dev/null
+#
+# Mirrored-display and per-app notification settings are managed separately by
+# scripts/macos-notifications.sh. scripts/setup.sh runs that focused script
+# without enabling every legacy setting in this file.
 
 # Disable automatic capitalization as it’s annoying when typing code
 defaults write NSGlobalDomain NSAutomaticCapitalizationEnabled -bool false
