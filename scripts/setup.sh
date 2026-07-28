@@ -47,6 +47,9 @@ if [[ "$(uname)" == "Darwin" ]]; then
 
   echo "==> Configuring macOS notifications..."
   bash "${DOTFILES}/scripts/macos-notifications.sh"
+
+  echo "==> Configuring MonitorControl..."
+  bash "${DOTFILES}/scripts/macos-monitorcontrol.sh"
 fi
 
 # if [[ "$(uname)" == "Darwin" ]]; then
