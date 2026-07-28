@@ -44,6 +44,9 @@ zsh "${DOTFILES}/scripts/deploy.sh"
 if [[ "$(uname)" == "Darwin" ]]; then
   echo "==> Configuring sudo Touch ID..."
   bash "${DOTFILES}/scripts/sudo-touch-id.sh"
+
+  echo "==> Configuring macOS notifications..."
+  bash "${DOTFILES}/scripts/macos-notifications.sh"
 fi
 
 # if [[ "$(uname)" == "Darwin" ]]; then
