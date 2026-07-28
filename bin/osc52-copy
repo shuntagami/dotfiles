@@ -1,0 +1,15 @@
+#!/bin/zsh
+
+# Copy stdin to the clipboard of the terminal displaying this session.
+# This is primarily useful over SSH, where pbcopy targets the remote Mac.
+emulate -L zsh
+setopt pipefail
+
+encoded="$(base64 | tr -d '\r\n')"
+
+if [[ -n "${TMUX:-}" ]]; then
+  # Pass the OSC 52 sequence through tmux to the outer terminal.
+  printf '\033Ptmux;\033\033]52;c;%s\a\033\\' "${encoded}" > /dev/tty
+else
+  printf '\033]52;c;%s\a' "${encoded}" > /dev/tty
+fi

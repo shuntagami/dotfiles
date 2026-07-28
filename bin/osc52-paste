@@ -1,0 +1,47 @@
+#!/bin/zsh
+
+# Read the clipboard from the terminal displaying this session.
+# iTerm2 3.5+ answers the OSC 52 query when clipboard access is enabled.
+emulate -L zsh
+setopt pipefail
+zmodload zsh/system
+
+exec 3<> /dev/tty
+saved_tty="$(stty -g <&3)"
+
+restore_tty() {
+  stty "${saved_tty}" <&3 2>/dev/null
+}
+trap restore_tty EXIT INT TERM HUP
+
+# Terminal responses arrive as input, so briefly switch the pane's tty to raw
+# mode while waiting for iTerm2's OSC 52 reply.
+stty raw -echo min 0 time 10 <&3
+if [[ -n "${TMUX:-}" ]]; then
+  printf '\033Ptmux;\033\033]52;c;?\a\033\\' >&3
+else
+  printf '\033]52;c;?\a' >&3
+fi
+
+response=""
+while sysread -i 3 -s 4096 -t 2 chunk; do
+  response+="${chunk}"
+  if [[ "${response}" == *$'\a'* || "${response}" == *$'\033\\'* ]]; then
+    break
+  fi
+done
+
+restore_tty
+trap - EXIT INT TERM HUP
+exec 3>&-
+
+if [[ "${response}" != *$'\033]52;'* ]]; then
+  print -u2 "osc52-paste: terminal did not return clipboard contents"
+  exit 1
+fi
+
+payload="${response#*$'\033]52;'}"
+payload="${payload#*;}"
+payload="${payload%%$'\a'*}"
+payload="${payload%%$'\033\\'*}"
+printf '%s' "${payload}" | base64 -D

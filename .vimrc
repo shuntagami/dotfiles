@@ -92,6 +92,19 @@ command! CopyRelPathLine let @+ = expand('%') . ':' . line('.')
 command! CopyDir let @+ = fnamemodify(expand('%:p:h'), ':~')
 command! CopyFileName let @+ = expand('%:t')
 
+" Over SSH, mirror yanked text to the clipboard of the terminal on the
+" connecting Mac. pbcopy and Vim's native clipboard otherwise target the
+" remote Mac's pasteboard.
+if !empty($SSH_CONNECTION) && exists('##TextYankPost') &&
+      \ executable(expand('~/dotfiles/bin/osc52-copy'))
+  augroup ssh_osc52_clipboard
+    autocmd!
+    autocmd TextYankPost * if v:event.operator ==# 'y' |
+          \ silent! call system(expand('~/dotfiles/bin/osc52-copy'),
+          \ getreg(v:event.regname)) | endif
+  augroup END
+endif
+
 " ==============================================================================
 " 外観 (syntax, colorscheme)
 " ==============================================================================

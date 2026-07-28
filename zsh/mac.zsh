@@ -57,6 +57,18 @@ alias flush="dscacheutil -flushcache && killall -HUP mDNSResponder"
 alias pbp="pbpaste"
 alias copyfile='pbcopy <'
 
+# pbcopy normally writes to the Mac running the shell. Over SSH, override it
+# so the contents go to the clipboard of the MacBook displaying the terminal.
+if [[ -n "${SSH_CONNECTION:-}" ]]; then
+  function pbcopy() {
+    ~/dotfiles/bin/osc52-copy
+  }
+
+  function pbpaste() {
+    ~/dotfiles/bin/osc52-paste
+  }
+fi
+
 function pb() {
   if [ -t 0 ]; then
     cat $1 | pbcopy
