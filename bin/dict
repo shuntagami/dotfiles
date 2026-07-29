@@ -1,0 +1,243 @@
+#!/bin/zsh
+
+emulate -L zsh
+setopt ERR_EXIT NO_UNSET PIPE_FAIL
+
+readonly DICT_KEY="NSUserDictionaryReplacementItems"
+
+usage() {
+  cat <<'EOF'
+macOSの日本語ユーザ辞書を操作します。
+
+使い方:
+  dict add <よみ> <変換語>
+  dict list [検索語]
+  dict remove <よみ> [変換語]
+
+例:
+  dict add きららざか 雲母坂
+  dict list
+  dict list きららざか
+  dict remove きららざか 雲母坂
+
+変換語を省略してremoveすると、同じよみの登録をすべて削除します。
+EOF
+}
+
+die() {
+  print -r -u2 -- "エラー: $1"
+  exit "${2:-1}"
+}
+
+require_macos() {
+  [[ "$(uname -s)" == "Darwin" ]] \
+    || die "dictはmacOS専用です。"
+}
+
+validate_entry() {
+  local reading="$1"
+  local word="$2"
+
+  [[ -n "$reading" && -n "$word" ]] \
+    || die "よみと変換語は空にできません。" 2
+  [[ "$reading" != *$'\n'* && "$reading" != *$'\r'* ]] \
+    || die "よみに改行は使用できません。" 2
+  [[ "$word" != *$'\n'* && "$word" != *$'\r'* ]] \
+    || die "変換語に改行は使用できません。" 2
+}
+
+load_dictionary() {
+  global_plist="$tmp_dir/global.plist"
+  replacements_plist="$tmp_dir/replacements.plist"
+  entry_count=0
+
+  if /usr/bin/defaults export NSGlobalDomain "$global_plist" >/dev/null 2>&1 \
+    && /usr/bin/plutil \
+      -extract "$DICT_KEY" xml1 \
+      -o "$replacements_plist" \
+      "$global_plist" >/dev/null 2>&1; then
+    entry_count=$(
+      /usr/bin/plutil -extract "$DICT_KEY" raw -o - "$global_plist"
+    )
+  fi
+}
+
+read_entry() {
+  local index="$1"
+
+  entry_reading=$(
+    /usr/bin/plutil -extract "${index}.replace" raw -o - \
+      "$replacements_plist"
+  )
+  entry_word=$(
+    /usr/bin/plutil -extract "${index}.with" raw -o - \
+      "$replacements_plist"
+  )
+  entry_enabled=$(
+    /usr/bin/plutil -extract "${index}.on" raw -o - \
+      "$replacements_plist"
+  )
+}
+
+escape_plist_string() {
+  local value="$1"
+
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\t'/\\t}"
+  REPLY="$value"
+}
+
+add_entry() {
+  (( $# == 2 )) || {
+    usage >&2
+    exit 2
+  }
+
+  local reading="$1"
+  local word="$2"
+  local index
+  local escaped_reading
+  local escaped_word
+
+  validate_entry "$reading" "$word"
+  load_dictionary
+
+  for (( index = 0; index < entry_count; ++index )); do
+    read_entry "$index"
+    if [[ "$entry_reading" == "$reading" && "$entry_word" == "$word" ]]; then
+      print -r -- "登録済みです: ${reading} → ${word}"
+      return 0
+    fi
+  done
+
+  escape_plist_string "$reading"
+  escaped_reading="$REPLY"
+  escape_plist_string "$word"
+  escaped_word="$REPLY"
+
+  /usr/bin/defaults write -g "$DICT_KEY" -array-add \
+    "{ on = 1; replace = \"${escaped_reading}\"; with = \"${escaped_word}\"; }"
+
+  print -r -- "登録しました: ${reading} → ${word}"
+  print -r -- "反映されないアプリは、一度終了して開き直してください。"
+}
+
+list_entries() {
+  (( $# <= 1 )) || {
+    usage >&2
+    exit 2
+  }
+
+  local query="${1:-}"
+  local index
+  local matched=0
+
+  load_dictionary
+
+  for (( index = 0; index < entry_count; ++index )); do
+    read_entry "$index"
+    if [[ -z "$query" \
+      || "$entry_reading" == *"$query"* \
+      || "$entry_word" == *"$query"* ]]; then
+      print -r -- "${entry_reading} → ${entry_word}"
+      (( ++matched ))
+    fi
+  done
+
+  if (( matched == 0 )); then
+    if [[ -n "$query" ]]; then
+      print -r -- "「${query}」に一致する登録はありません。"
+    else
+      print -r -- "登録はありません。"
+    fi
+  fi
+}
+
+remove_entries() {
+  (( $# == 1 || $# == 2 )) || {
+    usage >&2
+    exit 2
+  }
+
+  local reading="$1"
+  local word="${2:-}"
+  local index
+  local removed=0
+  local escaped_reading
+  local escaped_word
+  local enabled
+  local serialized_array="("
+
+  [[ -n "$reading" ]] || die "よみは空にできません。" 2
+  load_dictionary
+
+  for (( index = 0; index < entry_count; ++index )); do
+    read_entry "$index"
+
+    if [[ "$entry_reading" == "$reading" \
+      && ( -z "$word" || "$entry_word" == "$word" ) ]]; then
+      (( ++removed ))
+      continue
+    fi
+
+    escape_plist_string "$entry_reading"
+    escaped_reading="$REPLY"
+    escape_plist_string "$entry_word"
+    escaped_word="$REPLY"
+    if [[ "$entry_enabled" == "true" || "$entry_enabled" == "1" ]]; then
+      enabled=1
+    else
+      enabled=0
+    fi
+
+    serialized_array+="{ on = ${enabled}; replace = \"${escaped_reading}\"; "
+    serialized_array+="with = \"${escaped_word}\"; },"
+  done
+
+  if (( removed == 0 )); then
+    if [[ -n "$word" ]]; then
+      die "登録が見つかりません: ${reading} → ${word}"
+    else
+      die "「${reading}」の登録が見つかりません。"
+    fi
+  fi
+
+  serialized_array+=")"
+  /usr/bin/defaults write -g "$DICT_KEY" "$serialized_array"
+
+  if [[ -n "$word" ]]; then
+    print -r -- "削除しました: ${reading} → ${word}"
+  else
+    print -r -- "「${reading}」の登録を${removed}件削除しました。"
+  fi
+  print -r -- "反映されないアプリは、一度終了して開き直してください。"
+}
+
+require_macos
+
+command_name="${1:-help}"
+(( $# == 0 )) || shift
+
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf -- "$tmp_dir"' EXIT
+
+case "$command_name" in
+  add)
+    add_entry "$@"
+    ;;
+  list|ls)
+    list_entries "$@"
+    ;;
+  remove|rm)
+    remove_entries "$@"
+    ;;
+  help|-h|--help)
+    usage
+    ;;
+  *)
+    print -r -u2 -- "不明なサブコマンドです: ${command_name}"
+    usage >&2
+    exit 2
+    ;;
+esac
