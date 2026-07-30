@@ -16,15 +16,16 @@
   },
   "enabledPlugins": {
     "vercel@claude-plugins-official": true,
-    "slack@claude-plugins-official": true
+    "slack@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true
   },
   "effortLevel": "high",
   "tui": "fullscreen",
-  "skipDangerousModePermissionPrompt": true,
-  "agentPushNotifEnabled": true,
-  "voiceEnabled": true,
   "voice": {
     "enabled": true,
     "mode": "hold"
-  }
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "agentPushNotifEnabled": true,
+  "voiceEnabled": true
 }
