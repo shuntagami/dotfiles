@@ -50,10 +50,6 @@ fi
 ln -sf ~/dotfiles/.finicky.js ~/.finicky.js
 mkdir -p ~/.docker
 ln -sf ~/dotfiles/misc/docker-config.json ~/.docker/config.json
-mkdir -p ~/.local/state/crossnote
-ln -sf ~/dotfiles/misc/crossnote/parser.js ~/.local/state/crossnote/parser.js
-ln -sf ~/dotfiles/misc/crossnote/style.less ~/.local/state/crossnote/style.less
-
 # Codex: config.toml includes standard Codex settings such as installed plugins.
 mkdir -p ~/.codex
 if [[ -e ~/.codex/config.toml && ! -L ~/.codex/config.toml ]]; then
