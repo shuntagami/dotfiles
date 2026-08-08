@@ -123,7 +123,7 @@ approval_mode = "auto"
 approval_mode = "auto"
 
 [mcp_servers.supabase]
-command = "/Users/shun.tagami/dotfiles/mcp/run-supabase-mcp.sh"
+url = "https://mcp.supabase.com/mcp?project_ref=vktggjrrpqoepgsziwsj"
 
 [mcp_servers.node_repl]
 command = "/Applications/Codex.app/Contents/Resources/cua_node/bin/node_repl"
