@@ -22,18 +22,17 @@ This syncs the canonical list to:
 Secrets are not committed. Prefer each service's official OAuth connector or
 tool-specific local config over storing tokens for MCP servers in dotfiles.
 
-Supabase uses its hosted MCP server, scoped to project
-`vktggjrrpqoepgsziwsj`, and authenticates each client with browser OAuth. After
-syncing, authenticate Codex with:
+Supabase uses the local stdio MCP server with a long-lived PAT stored in a
+dedicated `Supabase MCP` item in macOS Keychain. Configure or rotate it with:
 
 ```sh
-codex mcp login supabase
+~/dotfiles/mcp/setup-supabase-mcp-auth.sh
 ```
 
-Cursor and Claude Code keep their own OAuth sessions, so authenticate the
-`supabase` server in each client after its first sync. Personal access tokens are
-reserved for non-interactive environments such as CI and are not stored by this
-dotfiles setup.
+`run-supabase-mcp.sh` reads the PAT when the MCP server starts and exposes it
+only to that child process, so clients do not need to inherit a global
+`SUPABASE_ACCESS_TOKEN` environment variable. The dedicated Keychain item keeps
+the secret out of dotfiles and avoids browser OAuth session expiry.
 
 Slack is not configured as a local MCP server. Codex uses the official
 `slack@openai-curated` plugin instead, enabled in `~/dotfiles/codex/config.toml`,
