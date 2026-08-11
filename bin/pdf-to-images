@@ -1,0 +1,59 @@
+#!/bin/bash
+
+show_help() {
+  echo "Usage: pdf-to-images [options] <input_pdf> [output_dir]"
+  echo ""
+  echo "Splits a PDF into one image per page."
+  echo ""
+  echo "Options:"
+  echo "  -f, --format <png|jpeg>   Output format (default: png)"
+  echo "  -r, --resolution <dpi>    Resolution in DPI (default: 150)"
+  echo "  -h, --help                Show this help"
+  echo ""
+}
+
+FORMAT="png"
+DPI="150"
+
+while [[ "$1" =~ ^- ]]; do
+  case "$1" in
+    -f|--format) FORMAT="$2"; shift 2 ;;
+    -r|--resolution) DPI="$2"; shift 2 ;;
+    -h|--help) show_help; exit 0 ;;
+    *) echo "Unknown option: $1"; show_help; exit 1 ;;
+  esac
+done
+
+if [ $# -eq 0 ]; then show_help; exit 0; fi
+
+input="$1"
+output_dir="${2:-${input%.*}_pages}"
+
+command -v cpdf >/dev/null 2>&1 || { echo "Error: cpdf not installed."; exit 1; }
+command -v gs >/dev/null 2>&1 || { echo "Error: ghostscript not installed. (brew install ghostscript)"; exit 1; }
+
+case "$FORMAT" in
+  png) GS_DEVICE="png16m" ;;
+  jpeg|jpg) GS_DEVICE="jpeg" ;;
+  *) echo "Error: unsupported format '$FORMAT' (use png or jpeg)"; exit 1 ;;
+esac
+
+mkdir -p "$output_dir"
+
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_dir"' EXIT
+
+base=$(basename "${input%.*}")
+
+cpdf -split "$input" -o "${tmp_dir}/page-%%%.pdf"
+
+total=0
+for page_pdf in "${tmp_dir}"/page-*.pdf; do
+  [ -e "$page_pdf" ] || continue
+  page_num=$(basename "$page_pdf" .pdf | sed 's/page-//')
+  out_file="${output_dir}/${base}_${page_num}.${FORMAT}"
+  gs -sDEVICE="$GS_DEVICE" -r"$DPI" -dNOPAUSE -dBATCH -dQUIET -o "$out_file" "$page_pdf"
+  total=$((total + 1))
+done
+
+echo "${total} pages -> ${output_dir}/"
