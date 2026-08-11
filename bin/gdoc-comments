@@ -1,0 +1,403 @@
+#!/usr/bin/env -S deno run -A --ext=js
+// @ts-nocheck
+// Google Doc の本文を Markdown に変換し、コメント（Suggestion ではなくコメント機能）を
+// 該当箇所の引用ブロックとして本文中に埋め込んで出力する standalone CLI。
+//
+// 背景: ドキュメントの URL を AI に渡すだけではコメントの内容までは伝わらない。
+// このスクリプトは「本文 + コメントの引用埋め込み」を1つの Markdown にまとめることで、
+// AI に渡す手間を最小化する。
+//
+// Deno で動くため repo 非依存・ローカル node_modules 不要（gdoc2md と同じ方針）。
+//
+// Usage:
+//   gdoc-comments <google-doc-url> [--out <path>] [--all]
+//
+//   デフォルトは標準出力（そのまま pbcopy や AI への貼り付けに使える）。
+//   --out を渡すとファイルに保存する。
+//   --all を渡すと解決済みコメントも含める（デフォルトは未解決のみ）。
+//
+// 認証: ~/dotfiles/.env.local の GOOGLE_SERVICE_ACCOUNT_KEY 等を使う（gdoc2md と共通）。
+//
+// マッチング方式:
+// - Drive API の comments.list が返す quotedFileContent（コメントがハイライトした原文）を、
+//   本文を段落/テーブル単位に分割したブロック列に対して部分一致で照合する。
+// - 最大 4 ブロックにまたがる照合まで対応（複数段落にまたがるハイライト向け）。
+// - 本文が編集されて引用テキストが見つからない場合は、末尾の「マッチしなかったコメント」に
+//   引用元テキストと合わせて出力する（コメントを取りこぼさないため）。
+
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { resolve, dirname, isAbsolute } from "node:path";
+import { homedir } from "node:os";
+import {
+  extractDocId,
+  getDocWithSuggestionFallback,
+  flattenTabs,
+  paragraphToMarkdown,
+  tableToMarkdown,
+  extractPlainText,
+} from "./lib/doc-to-markdown.mjs";
+
+const MAX_WINDOW = 4;
+
+const rawArgs = process.argv.slice(2);
+if (!rawArgs.length || rawArgs[0] === "help" || rawArgs.includes("--help") || rawArgs.includes("-h")) {
+  printUsageAndExit(0);
+}
+
+const args = parseArgs(rawArgs);
+const docUrl = args["doc-url"] || args.url || args._[0];
+if (!docUrl) printUsageAndExit(2);
+
+const includeResolved = !!args.all;
+const outPath = args.out ? (isAbsolute(args.out) ? args.out : resolve(process.cwd(), args.out)) : null;
+
+// =================================================================
+// .env.local 読み込み（gdoc2md と共通）
+// =================================================================
+
+const ENV_PATH = resolve(homedir(), "dotfiles/.env.local");
+if (!existsSync(ENV_PATH)) {
+  console.error(`.env.local が見つかりません: ${ENV_PATH}`);
+  process.exit(1);
+}
+for (const line of readFileSync(ENV_PATH, "utf8").split("\n")) {
+  const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
+  if (!m) continue;
+  let v = m[2];
+  if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1, -1);
+  if (!process.env[m[1]]) process.env[m[1]] = v;
+}
+
+const docId = extractDocId(docUrl);
+if (!docId) {
+  console.error(`URL から Doc ID を抽出できません: ${docUrl}`);
+  process.exit(1);
+}
+
+// =================================================================
+// Google API auth
+// =================================================================
+
+const NPM = typeof Deno !== "undefined" ? "npm:" : "";
+const { google } = await import(`${NPM}googleapis`);
+const credentials = JSON.parse(
+  process.env.GOOGLE_SERVICE_ACCOUNT_KEY
+    .replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t"),
+);
+const docsAuth = new google.auth.GoogleAuth({
+  credentials,
+  scopes: ["https://www.googleapis.com/auth/documents"],
+  clientOptions: process.env.GOOGLE_IMPERSONATE_EMAIL
+    ? { subject: process.env.GOOGLE_IMPERSONATE_EMAIL }
+    : undefined,
+});
+const driveAuth = new google.auth.GoogleAuth({
+  credentials,
+  scopes: ["https://www.googleapis.com/auth/drive"],
+  clientOptions: process.env.GOOGLE_IMPERSONATE_EMAIL
+    ? { subject: process.env.GOOGLE_IMPERSONATE_EMAIL }
+    : undefined,
+});
+const docs = google.docs({ version: "v1", auth: docsAuth });
+const drive = google.drive({ version: "v3", auth: driveAuth });
+
+// =================================================================
+// 取得
+// =================================================================
+
+console.error(`[1/4] Doc 本文を取得します: ${docUrl}`);
+const docResult = await getDocWithSuggestionFallback(docs, docId);
+const docTitle = docResult.data.title || "(無題)";
+
+const docMeta = await drive.files.get({
+  fileId: docId,
+  fields: "id,name,modifiedTime",
+  supportsAllDrives: true,
+});
+
+console.error(`[2/4] コメントを取得します`);
+const rawComments = await listComments(drive, docId);
+const comments = normalizeComments(rawComments, includeResolved);
+const unresolvedTotal = rawComments.filter((c) => !c.deleted && !c.resolved).length;
+const resolvedTotal = rawComments.filter((c) => !c.deleted && c.resolved).length;
+console.error(`      未解決 ${unresolvedTotal}件 / 解決済み ${resolvedTotal}件${includeResolved ? "（解決済みも含めて出力）" : "（未解決のみ出力）"}`);
+
+console.error(`[3/4] 本文とコメントを照合します`);
+const blocks = buildAllBlocks(docResult.data);
+const { groups, unmatched } = buildGroups(comments, blocks);
+const matchedCount = groups.reduce((n, g) => n + g.comments.length, 0);
+console.error(`      ${matchedCount}/${comments.length} 件を本文中にマッチ（未マッチ ${unmatched.length}件）`);
+
+const body = renderBody(blocks, groups);
+const finalContent = buildOutput({
+  docUrl,
+  docTitle,
+  docModifiedTime: docMeta.data.modifiedTime,
+  unresolvedTotal,
+  resolvedTotal,
+  includeResolved,
+  body,
+  unmatched,
+});
+
+console.error(`[4/4] 出力`);
+if (outPath) {
+  mkdirSync(dirname(outPath), { recursive: true });
+  writeFileSync(outPath, finalContent);
+  console.error(`保存しました: ${outPath}`);
+} else {
+  console.log(finalContent);
+}
+
+// =================================================================
+// helpers: CLI
+// =================================================================
+
+function printUsageAndExit(exitCode = 0) {
+  const out = exitCode === 0 ? console.log : console.error;
+  out(`Usage:
+  gdoc-comments <google-doc-url> [--out <path>] [--all]
+  gdoc-comments --doc-url <google-doc-url> [--out <path>] [--all]
+
+Examples:
+  gdoc-comments 'https://docs.google.com/document/d/xxxxxxxx/edit'
+  gdoc-comments 'https://docs.google.com/document/d/xxxxxxxx/edit' | pbcopy
+  gdoc-comments 'https://docs.google.com/document/d/xxxxxxxx/edit' --out ./comments.md --all
+
+Notes:
+  --out を省略すると標準出力に出す（AIへの貼り付け・pbcopy 向け）。
+
+Options:
+  --out <path>      Markdownの保存先（省略時は標準出力）
+  --all             解決済みコメントも含める（デフォルトは未解決のみ）
+  --doc-url, --url  Google Doc URLを明示指定
+  -h, --help, help  このヘルプを表示`);
+  process.exit(exitCode);
+}
+
+function parseArgs(argv) {
+  const out = { _: [] };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (!a.startsWith("--")) {
+      out._.push(a);
+      continue;
+    }
+    const key = a.slice(2);
+    const next = argv[i + 1];
+    if (next && !next.startsWith("--")) {
+      out[key] = next;
+      i++;
+    } else {
+      out[key] = true;
+    }
+  }
+  return out;
+}
+
+// =================================================================
+// helpers: Drive comments
+// =================================================================
+
+async function listComments(driveClient, fileId) {
+  const comments = [];
+  let pageToken;
+  do {
+    const res = await driveClient.comments.list({
+      fileId,
+      fields:
+        "nextPageToken, comments(id,content,author(displayName),createdTime,resolved,deleted,quotedFileContent(value),replies(content,author(displayName),createdTime,deleted))",
+      pageToken,
+      pageSize: 100,
+    });
+    comments.push(...(res.data.comments ?? []));
+    pageToken = res.data.nextPageToken;
+  } while (pageToken);
+  return comments;
+}
+
+function normalizeComments(raw, includeResolved) {
+  return raw
+    .filter((c) => !c.deleted)
+    .filter((c) => includeResolved || !c.resolved)
+    .map((c) => ({
+      author: c.author?.displayName || "unknown",
+      date: (c.createdTime || "").slice(0, 10),
+      content: c.content || "",
+      resolved: !!c.resolved,
+      quoted: c.quotedFileContent?.value || "",
+      replies: (c.replies || [])
+        .filter((r) => !r.deleted && r.content)
+        .map((r) => ({
+          author: r.author?.displayName || "unknown",
+          date: (r.createdTime || "").slice(0, 10),
+          content: r.content,
+        })),
+    }));
+}
+
+// =================================================================
+// helpers: 本文をブロック単位に分解
+// =================================================================
+
+function buildAllBlocks(doc) {
+  const blocks = [];
+  const tabs = doc.tabs;
+  if (tabs?.length) {
+    for (const tab of flattenTabs(tabs)) {
+      const props = tab.tabProperties;
+      if (tabs.length > 1 && props?.title) {
+        blocks.push({ plain: "", md: `<!-- tab: ${props.title} -->` });
+      }
+      blocks.push(...buildBlocks(tab.documentTab?.body?.content ?? [], doc.lists));
+    }
+  } else {
+    blocks.push(...buildBlocks(doc.body?.content ?? [], doc.lists));
+  }
+  return blocks;
+}
+
+function buildBlocks(content, lists) {
+  const blocks = [];
+  for (const el of content) {
+    if (el.paragraph) {
+      blocks.push({
+        plain: extractPlainText([el]),
+        md: paragraphToMarkdown(el.paragraph, lists),
+      });
+    } else if (el.table) {
+      blocks.push({
+        plain: tablePlainText(el.table),
+        md: tableToMarkdown(el.table, lists),
+      });
+    }
+  }
+  return blocks;
+}
+
+function tablePlainText(table) {
+  const rows = [];
+  for (const row of table.tableRows ?? []) {
+    const cells = (row.tableCells ?? []).map((cell) => extractPlainText(cell.content ?? []));
+    rows.push(cells.join(" | "));
+  }
+  return rows.join("\n");
+}
+
+// =================================================================
+// helpers: コメント照合
+// =================================================================
+
+function normalizeText(s) {
+  return (s || "").replace(/\s+/g, " ").trim();
+}
+
+// 引用テキストが blocks[i..i+w-1] の連結に部分一致する位置を探す。
+// ブロック数の少ない（＝範囲の狭い）マッチを優先するため、窓サイズ w=1 から順に総当たりする。
+// 単純に「先頭から窓を広げる」方式だと、無関係な前のブロックまで巻き込んで
+// 誤って広い範囲にマッチしてしまうため（例: 見出し行がコメントの引用に巻き込まれる）。
+function matchQuote(normPlains, quoted) {
+  const target = normalizeText(quoted);
+  if (!target) return null;
+  for (let w = 1; w <= MAX_WINDOW; w++) {
+    for (let i = 0; i + w <= normPlains.length; i++) {
+      const acc = normPlains.slice(i, i + w).filter(Boolean).join(" ");
+      if (acc.includes(target)) return { start: i, end: i + w - 1 };
+    }
+  }
+  return null;
+}
+
+// 各コメントをブロック範囲にマッチさせ、重なる範囲は1つのグループにまとめる
+function buildGroups(comments, blocks) {
+  const normPlains = blocks.map((b) => normalizeText(b.plain));
+  const matched = [];
+  const unmatched = [];
+  for (const c of comments) {
+    const m = matchQuote(normPlains, c.quoted);
+    if (m) matched.push({ ...m, comment: c });
+    else unmatched.push(c);
+  }
+  matched.sort((a, b) => a.start - b.start || a.end - b.end);
+  const groups = [];
+  for (const m of matched) {
+    const last = groups[groups.length - 1];
+    if (last && m.start <= last.end) {
+      last.end = Math.max(last.end, m.end);
+      last.comments.push(m.comment);
+    } else {
+      groups.push({ start: m.start, end: m.end, comments: [m.comment] });
+    }
+  }
+  return { groups, unmatched };
+}
+
+// =================================================================
+// helpers: レンダリング
+// =================================================================
+
+function oneLine(text) {
+  return normalizeText(text);
+}
+
+function renderBody(blocks, groups) {
+  const out = [];
+  let gi = 0;
+  let i = 0;
+  while (i < blocks.length) {
+    const group = groups[gi];
+    if (group && i === group.start) {
+      const quotedLines = blocks
+        .slice(group.start, group.end + 1)
+        .map((b) => b.md)
+        .filter((s) => s !== "")
+        .join("\n")
+        .split("\n")
+        .map((line) => (line.trim() ? `> ${line}` : ">"));
+      out.push(quotedLines.join("\n"));
+      out.push(">");
+      for (const c of group.comments) {
+        const resolvedTag = c.resolved ? " ✅解決済み" : "";
+        out.push(`> 💬 **${c.author}**${resolvedTag}（${c.date}）: ${oneLine(c.content)}`);
+        for (const r of c.replies) {
+          out.push(`>   ↳ **${r.author}**（${r.date}）: ${oneLine(r.content)}`);
+        }
+      }
+      out.push("");
+      i = group.end + 1;
+      gi++;
+      continue;
+    }
+    if (blocks[i].md) out.push(blocks[i].md);
+    i++;
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function buildOutput({ docUrl, docTitle, docModifiedTime, unresolvedTotal, resolvedTotal, includeResolved, body, unmatched }) {
+  const parts = [
+    `> **source:** ${docUrl}`,
+    `> **doc title:** ${docTitle}`,
+    `> **doc modified at:** ${docModifiedTime}`,
+    `> **fetched at:** ${new Date().toISOString()}`,
+    `> **comments:** 未解決 ${unresolvedTotal}件 / 解決済み ${resolvedTotal}件${includeResolved ? "（解決済みも本文中に埋め込み済み）" : "（未解決のみ埋め込み・--all で解決済みも含む）"}`,
+    "",
+    "---",
+    "",
+    body,
+  ];
+
+  if (unmatched.length) {
+    parts.push("", "## ⚠ 本文中の該当箇所を特定できなかったコメント", "");
+    for (const c of unmatched) {
+      const resolvedTag = c.resolved ? " ✅解決済み" : "";
+      parts.push(`- **${c.author}**${resolvedTag}（${c.date}）: ${oneLine(c.content)}`);
+      if (c.quoted) parts.push(`  - 引用元: ${oneLine(c.quoted)}`);
+      for (const r of c.replies) {
+        parts.push(`  - ↳ **${r.author}**（${r.date}）: ${oneLine(r.content)}`);
+      }
+    }
+  }
+
+  return parts.join("\n") + "\n";
+}

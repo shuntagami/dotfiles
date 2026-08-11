@@ -1,14 +1,19 @@
 // Google Docs API のレスポンスを Markdown に変換する共通モジュール。
 //
-// 対象ユーザー: apps/web/scripts/ 配下の .mjs スクリプト
+// 対象ユーザー: apps/web/scripts/ 配下の .mjs スクリプト、bin/gdoc2md, bin/gdoc-comments
 //   - extract-product-design.mjs（商品設計 Doc 取り込み）
 //   - sync-doc-to-md.mjs（任意タスクの Doc → .md 同期）
+//   - gdoc-comments（Doc のコメントを本文中に引用ブロックで埋め込んで抽出）
 //   - 将来: 他の Doc を取り込むスクリプトでも再利用可
 //
 // 提供する関数:
 //   - extractDocId(url)                      — URL から Doc ID を取り出す
 //   - docToMarkdown(doc)                     — Docs API レスポンス → Markdown
 //   - getDocWithSuggestionFallback(docs, id) — 提案モード反映済みで取得（権限が無ければ通常モードへフォールバック）
+//   - flattenTabs(tabs)                      — タブツリーを出現順のフラット配列に
+//   - paragraphToMarkdown(para, lists)       — 段落1つ分を Markdown に（ブロック単位の再利用向け）
+//   - tableToMarkdown(table, lists)          — テーブル1つ分を Markdown に
+//   - extractPlainText(content)              — 装飾を除いたプレーンテキスト抽出（照合用途）
 //
 // 設計メモ:
 // - getDocWithSuggestionFallback は googleapis の docs クライアント（呼び出し側で初期化）を受け取る
@@ -83,7 +88,7 @@ let imageCounter = 0;
 // 内部ヘルパー
 // =================================================================
 
-function flattenTabs(tabs) {
+export function flattenTabs(tabs) {
   const out = [];
   for (const tab of tabs) {
     out.push(tab);
@@ -104,7 +109,7 @@ function contentToMarkdown(content, lists) {
   return out.filter((s) => s !== null).join("\n");
 }
 
-function paragraphToMarkdown(para, lists) {
+export function paragraphToMarkdown(para, lists) {
   const style = para.paragraphStyle?.namedStyleType;
   const prefix = HEADING_PREFIX[style] ?? "";
 
@@ -160,7 +165,7 @@ function guessListGlyph(bullet, lists) {
   return "-";
 }
 
-function tableToMarkdown(table, lists) {
+export function tableToMarkdown(table, lists) {
   // Google Docs の Code Block は「1×1 / 背景がほぼ均一なグレー」のテーブルで表現される。
   // これを通常の markdown table に変換すると改行がスペースに潰れてしまうため、
   // 検出した場合は ``` フェンスで包んで改行を保持する。
@@ -222,7 +227,7 @@ function tableToCodeBlock(table, lists) {
   return "\n```\n" + text + "\n```\n";
 }
 
-function extractPlainText(content) {
+export function extractPlainText(content) {
   const parts = [];
   for (const el of content) {
     if (!el.paragraph) continue;
