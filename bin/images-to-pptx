@@ -1,0 +1,118 @@
+#!/usr/bin/env -S deno run -A --ext=js
+// 画像フォルダを1枚1枚スライドに貼り込んだPPTXを作る。
+// PDF→画像化した資料をGoogleスライドで開きたい時などに使う。
+//
+// Usage:
+//   images-to-pptx [options] <image_dir> [output.pptx]
+//
+// Options:
+//   -q, --quality <0-100>   JPEG品質 (sipsのformatOptions値, default: 65)
+//   -w, --width <px>        リサイズ後の最大幅 (default: 1280)
+//   -h, --help              このヘルプを表示
+//
+// output.pptx を省略すると <image_dir>.pptx (image_dirと同じ階層) に保存する。
+//
+// 実装メモ: リサイズ・JPEG変換はmacOS標準のsipsで行い、PPTX組み立てはpptxgenjs
+// (npm:, Denoのグローバルキャッシュ経由でrepo非依存) を使う。Pythonは使わない。
+
+import pptxgen from "npm:pptxgenjs@3.12.0";
+import { readdirSync, mkdtempSync, rmSync, existsSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { execFileSync } from "node:child_process";
+
+function showHelp() {
+  console.log(`Usage: images-to-pptx [options] <image_dir> [output.pptx]
+
+Options:
+  -q, --quality <0-100>   JPEG quality via sips (default: 65)
+  -w, --width <px>        Max image width in px (default: 1280)
+  -h, --help              Show this help
+`);
+}
+
+const rawArgs = [...Deno.args];
+let quality = 65;
+let width = 1280;
+const positional = [];
+
+while (rawArgs.length > 0) {
+  const arg = rawArgs.shift();
+  if (arg === "-h" || arg === "--help") {
+    showHelp();
+    Deno.exit(0);
+  } else if (arg === "-q" || arg === "--quality") {
+    quality = parseInt(rawArgs.shift(), 10);
+  } else if (arg === "-w" || arg === "--width") {
+    width = parseInt(rawArgs.shift(), 10);
+  } else {
+    positional.push(arg);
+  }
+}
+
+if (positional.length === 0) {
+  showHelp();
+  Deno.exit(1);
+}
+
+const imageDir = resolve(positional[0]);
+const outputPath = positional[1] ? resolve(positional[1]) : `${imageDir}.pptx`;
+
+if (!existsSync(imageDir)) {
+  console.error(`Error: directory not found: ${imageDir}`);
+  Deno.exit(1);
+}
+
+try {
+  execFileSync("sips", ["--version"], { stdio: "ignore" });
+} catch {
+  console.error("Error: sips not found (this command requires macOS).");
+  Deno.exit(1);
+}
+
+const images = readdirSync(imageDir)
+  .filter((f) => /\.(png|jpe?g)$/i.test(f))
+  .sort()
+  .map((f) => join(imageDir, f));
+
+if (images.length === 0) {
+  console.error(`Error: no images found in ${imageDir}`);
+  Deno.exit(1);
+}
+
+function sipsDims(path) {
+  const out = execFileSync("sips", ["-g", "pixelWidth", "-g", "pixelHeight", path], { encoding: "utf8" });
+  const w = parseInt(out.match(/pixelWidth: (\d+)/)[1], 10);
+  const h = parseInt(out.match(/pixelHeight: (\d+)/)[1], 10);
+  return { w, h };
+}
+
+const { w: w0, h: h0 } = sipsDims(images[0]);
+const slideWidthIn = 13.333;
+const slideHeightIn = (slideWidthIn * h0) / w0;
+
+const tmp = mkdtempSync(join(tmpdir(), "images-to-pptx-"));
+
+const p = new pptxgen();
+p.defineLayout({ name: "CUSTOM", width: slideWidthIn, height: slideHeightIn });
+p.layout = "CUSTOM";
+
+let i = 0;
+for (const imgPath of images) {
+  i++;
+  const outJpg = join(tmp, `slide-${String(i).padStart(3, "0")}.jpg`);
+  execFileSync("sips", [
+    "-s", "format", "jpeg",
+    "-s", "formatOptions", String(quality),
+    "-Z", String(width),
+    imgPath,
+    "--out", outJpg,
+  ], { stdio: "ignore" });
+
+  const slide = p.addSlide();
+  slide.addImage({ path: outJpg, x: 0, y: 0, w: slideWidthIn, h: slideHeightIn });
+}
+
+await p.writeFile({ fileName: outputPath });
+rmSync(tmp, { recursive: true, force: true });
+console.log(`${images.length} slides -> ${outputPath}`);
