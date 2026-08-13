@@ -6,14 +6,23 @@
 //   images-to-pptx [options] <image_dir> [output.pptx]
 //
 // Options:
-//   -q, --quality <0-100>   JPEG品質 (sipsのformatOptions値, default: 65)
-//   -w, --width <px>        リサイズ後の最大幅 (default: 1280)
+//   -p, --preset <name>     original|high|medium|low (default: medium)
+//   -q, --quality <0-100>   JPEG品質 (sipsのformatOptions値, presetを上書き)
+//   -w, --width <px>        リサイズ後の最大幅 (presetを上書き)
 //   -h, --help              このヘルプを表示
+//
+// プリセット:
+//   original  リサイズ・再エンコードなし。元画像をそのまま埋め込む(劣化ゼロ、最大サイズ)
+//   high      quality=90, width=1920
+//   medium    quality=65, width=1280 (default, 旧デフォルトと同じ)
+//   low       quality=45, width=960  (最小サイズ)
 //
 // output.pptx を省略すると <image_dir>.pptx (image_dirと同じ階層) に保存する。
 //
 // 実装メモ: リサイズ・JPEG変換はmacOS標準のsipsで行い、PPTX組み立てはpptxgenjs
 // (npm:, Denoのグローバルキャッシュ経由でrepo非依存) を使う。Pythonは使わない。
+// originalプリセットはsips変換自体をスキップして元ファイルを直接埋め込む
+// (quality=100でのJPEG再エンコードもPNG→JPEG変換も非可逆なため)。
 
 import pptxgen from "npm:pptxgenjs@3.12.0";
 import { readdirSync, mkdtempSync, rmSync, existsSync } from "node:fs";
@@ -21,19 +30,36 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 
+const PRESETS = {
+  original: { quality: null, width: null },
+  high: { quality: 90, width: 1920 },
+  medium: { quality: 65, width: 1280 },
+  low: { quality: 45, width: 960 },
+};
+
 function showHelp() {
   console.log(`Usage: images-to-pptx [options] <image_dir> [output.pptx]
 
 Options:
-  -q, --quality <0-100>   JPEG quality via sips (default: 65)
-  -w, --width <px>        Max image width in px (default: 1280)
+  -p, --preset <name>     original|high|medium|low (default: medium)
+  -q, --quality <0-100>   JPEG quality via sips (overrides preset)
+  -w, --width <px>        Max image width in px (overrides preset)
   -h, --help              Show this help
+
+Presets:
+  original  No resize/re-encode, embeds source files as-is (zero quality loss, largest file)
+  high      quality=90, width=1920
+  medium    quality=65, width=1280 (default, same as the old fixed defaults)
+  low       quality=45, width=960  (smallest file)
 `);
 }
 
 const rawArgs = [...Deno.args];
-let quality = 65;
-let width = 1280;
+let presetName = "medium";
+let quality = null;
+let width = null;
+let qualityExplicit = false;
+let widthExplicit = false;
 const positional = [];
 
 while (rawArgs.length > 0) {
@@ -41,14 +67,30 @@ while (rawArgs.length > 0) {
   if (arg === "-h" || arg === "--help") {
     showHelp();
     Deno.exit(0);
+  } else if (arg === "-p" || arg === "--preset") {
+    presetName = rawArgs.shift();
   } else if (arg === "-q" || arg === "--quality") {
     quality = parseInt(rawArgs.shift(), 10);
+    qualityExplicit = true;
   } else if (arg === "-w" || arg === "--width") {
     width = parseInt(rawArgs.shift(), 10);
+    widthExplicit = true;
   } else {
     positional.push(arg);
   }
 }
+
+if (!(presetName in PRESETS)) {
+  console.error(`Error: unknown preset "${presetName}" (expected: ${Object.keys(PRESETS).join("|")})`);
+  Deno.exit(1);
+}
+
+const useOriginal = presetName === "original";
+if (useOriginal && (qualityExplicit || widthExplicit)) {
+  console.error("Warning: --quality/--width are ignored with --preset original (no re-encode happens).");
+}
+if (!qualityExplicit) quality = PRESETS[presetName].quality;
+if (!widthExplicit) width = PRESETS[presetName].width;
 
 if (positional.length === 0) {
   showHelp();
@@ -100,17 +142,19 @@ p.layout = "CUSTOM";
 let i = 0;
 for (const imgPath of images) {
   i++;
-  const outJpg = join(tmp, `slide-${String(i).padStart(3, "0")}.jpg`);
-  execFileSync("sips", [
-    "-s", "format", "jpeg",
-    "-s", "formatOptions", String(quality),
-    "-Z", String(width),
-    imgPath,
-    "--out", outJpg,
-  ], { stdio: "ignore" });
+  let slideImgPath = imgPath;
+
+  if (!useOriginal) {
+    const outJpg = join(tmp, `slide-${String(i).padStart(3, "0")}.jpg`);
+    const sipsArgs = ["-s", "format", "jpeg", "-s", "formatOptions", String(quality ?? 65)];
+    if (width != null) sipsArgs.push("-Z", String(width));
+    sipsArgs.push(imgPath, "--out", outJpg);
+    execFileSync("sips", sipsArgs, { stdio: "ignore" });
+    slideImgPath = outJpg;
+  }
 
   const slide = p.addSlide();
-  slide.addImage({ path: outJpg, x: 0, y: 0, w: slideWidthIn, h: slideHeightIn });
+  slide.addImage({ path: slideImgPath, x: 0, y: 0, w: slideWidthIn, h: slideHeightIn });
 }
 
 await p.writeFile({ fileName: outputPath });

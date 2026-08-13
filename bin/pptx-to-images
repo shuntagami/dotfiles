@@ -1,0 +1,133 @@
+#!/usr/bin/env -S deno run -A --ext=js
+// PPTXに埋め込まれた画像を、スライド順に1枚ずつ取り出す。
+// images-to-pptx の逆変換 (再エンコードなしでバイト列をそのまま復元する)。
+//
+// Usage:
+//   pptx-to-images <input.pptx> [output_dir]
+//
+// output_dir を省略すると <input>_images (inputと同じ階層) に保存する。
+//
+// 実装メモ: PPTXの実体はzip。スライド表示順は
+//   ppt/presentation.xml の <p:sldId r:id="..."> 順
+//   -> ppt/_rels/presentation.xml.rels で slideN.xml に解決
+// を辿って求め、各スライド内の <a:blip r:embed="..."> 出現順を
+//   ppt/slides/_rels/slideN.xml.rels
+// で ppt/media/imageX.* に解決して抽出する。全て正規表現ベースの
+// 軽量パースで、外部XMLパーサ/npm依存なし。
+
+import { readFileSync, mkdtempSync, mkdirSync, rmSync, existsSync, copyFileSync } from "node:fs";
+import { join, resolve, dirname, basename } from "node:path";
+import { tmpdir } from "node:os";
+import { execFileSync } from "node:child_process";
+
+function showHelp() {
+  console.log(`Usage: pptx-to-images <input.pptx> [output_dir]
+
+Extracts the images embedded in a PPTX, one per slide, in slide order.
+This is the inverse of images-to-pptx: bytes are copied as-is, no re-encoding.
+
+output_dir defaults to <input>_images (next to the input file).
+`);
+}
+
+const rawArgs = [...Deno.args];
+if (rawArgs.length === 0 || rawArgs.includes("-h") || rawArgs.includes("--help")) {
+  showHelp();
+  Deno.exit(rawArgs.length === 0 ? 1 : 0);
+}
+
+const inputPath = resolve(rawArgs[0]);
+const outputDir = rawArgs[1] ? resolve(rawArgs[1]) : `${inputPath.replace(/\.pptx$/i, "")}_images`;
+
+if (!existsSync(inputPath)) {
+  console.error(`Error: file not found: ${inputPath}`);
+  Deno.exit(1);
+}
+
+try {
+  execFileSync("unzip", ["-v"], { stdio: "ignore" });
+} catch {
+  console.error("Error: unzip not found.");
+  Deno.exit(1);
+}
+
+const tmp = mkdtempSync(join(tmpdir(), "pptx-to-images-"));
+execFileSync("unzip", ["-oq", inputPath, "-d", tmp], { stdio: "ignore" });
+
+function readXml(path) {
+  return readFileSync(path, "utf8");
+}
+
+function parseRels(relsPath) {
+  // 属性の出現順(Id/Targetどちらが先か)はツールによって異なるため、
+  // タグ内容を丸ごと取ってから個別に属性を拾う。
+  const map = new Map();
+  if (!existsSync(relsPath)) return map;
+  const xml = readXml(relsPath);
+  for (const m of xml.matchAll(/<Relationship\b([^>]*)\/?>/g)) {
+    const attrs = m[1];
+    const id = attrs.match(/\bId="([^"]+)"/)?.[1];
+    const target = attrs.match(/\bTarget="([^"]+)"/)?.[1];
+    if (id && target) map.set(id, target);
+  }
+  return map;
+}
+
+// Targetは "slides/slide1.xml" のようなbaseDir相対か、"/ppt/media/..." の
+// ようにzipルート相対(先頭スラッシュ)のことがある(後者はGoogle Slides書き出し
+// 等で見られる)。先頭スラッシュをOSの絶対パスとして扱うと展開先tmp配下から
+// 外れて壊れるため、zipルート(tmp)からの相対として解決する。
+function resolveTarget(baseDir, target) {
+  return target.startsWith("/") ? join(tmp, target) : resolve(baseDir, target);
+}
+
+// 1. スライド順 (presentation.xml の sldId 出現順)
+const presentationXml = readXml(join(tmp, "ppt", "presentation.xml"));
+const slideRidsInOrder = [...presentationXml.matchAll(/<p:sldId[^>]*r:id="([^"]+)"/g)].map((m) => m[1]);
+
+// 2. rId -> slideN.xml の解決
+const presentationRels = parseRels(join(tmp, "ppt", "_rels", "presentation.xml.rels"));
+
+const slideFiles = slideRidsInOrder
+  .map((rid) => presentationRels.get(rid))
+  .filter(Boolean)
+  .map((target) => resolveTarget(join(tmp, "ppt"), target));
+
+if (slideFiles.length === 0) {
+  console.error("Error: could not find any slides in this PPTX.");
+  rmSync(tmp, { recursive: true, force: true });
+  Deno.exit(1);
+}
+
+mkdirSync(outputDir, { recursive: true });
+const base = basename(inputPath).replace(/\.pptx$/i, "");
+
+let slideNum = 0;
+let totalImages = 0;
+for (const slideFile of slideFiles) {
+  slideNum++;
+  const slideRelsPath = join(dirname(slideFile), "_rels", `${basename(slideFile)}.rels`);
+  const slideRels = parseRels(slideRelsPath);
+  const slideXml = readXml(slideFile);
+
+  // スライド内で画像が出現する順に r:embed の rId を拾う
+  const embedRids = [...slideXml.matchAll(/r:embed="([^"]+)"/g)].map((m) => m[1]);
+
+  let imgIndex = 0;
+  for (const rid of embedRids) {
+    const target = slideRels.get(rid);
+    if (!target) continue;
+    const mediaPath = resolveTarget(dirname(slideFile), target);
+    if (!existsSync(mediaPath)) continue;
+
+    imgIndex++;
+    const ext = mediaPath.match(/\.[^.]+$/)?.[0] ?? "";
+    const suffix = imgIndex > 1 ? `_${imgIndex}` : "";
+    const outName = `${base}_${String(slideNum).padStart(3, "0")}${suffix}${ext}`;
+    copyFileSync(mediaPath, join(outputDir, outName));
+    totalImages++;
+  }
+}
+
+rmSync(tmp, { recursive: true, force: true });
+console.log(`${totalImages} images (from ${slideFiles.length} slides) -> ${outputDir}/`);
