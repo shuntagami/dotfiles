@@ -28,6 +28,10 @@
 	<true/>
 	<key>Default Bookmark Guid</key>
 	<string>9E2A6A82-E423-463B-B510-E122E919C0ED</string>
+	<key>DimBackgroundWindows</key>
+	<false/>
+	<key>DimOnlyText</key>
+	<false/>
 	<key>HapticFeedbackForEsc</key>
 	<false/>
 	<key>HotkeyMigratedFromSingleToMulti</key>
@@ -202,8 +206,6 @@
 				<key>Red Component</key>
 				<real>0.0</real>
 			</dict>
-			<key>Background Image Location</key>
-			<string></string>
 			<key>Blend</key>
 			<real>1</real>
 			<key>Blink Allowed</key>
@@ -666,7 +668,7 @@
 			<key>Terminal Type</key>
 			<string>xterm-256color</string>
 			<key>Transparency</key>
-			<real>0.36627515084758722</real>
+			<real>0.39372069093909756</real>
 			<key>Unlimited Scrollback</key>
 			<true/>
 			<key>Use Bold Font</key>
@@ -724,6 +726,8 @@
 	<true/>
 	<key>SoundForEsc</key>
 	<false/>
+	<key>SplitPaneDimmingAmount</key>
+	<real>0.40721832351116621</real>
 	<key>TabStyleWithAutomaticOption</key>
 	<integer>2</integer>
 	<key>UseLionStyleFullscreen</key>
