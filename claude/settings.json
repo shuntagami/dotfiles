@@ -66,5 +66,18 @@
       "Routine actions under this repo's working directory (marunage-studio) — pnpm/vercel/supabase CLI usage, local dev server, migrations under apps/dashboard/supabase/migrations/ — are routine; production deploys and .env* handling still require care per Sensitive remote targets and Secrets management above"
     ]
   },
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay \"/Users/shun.tagami/dotfiles/static/dog-bark.wav\" 2>/dev/null || true",
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
 }
