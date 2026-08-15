@@ -226,7 +226,7 @@ _sync_global_npm_packages_to_brewfile() {
     if [[ $? -eq 0 ]]; then
       npm_packages_loaded=true
       if [[ -n "$npm_packages" ]]; then
-        printf "%s\n" "$npm_packages" > "$npm_packages_file"
+        printf "%s\n" "$npm_packages" >| "$npm_packages_file"
       fi
     fi
   fi
@@ -238,7 +238,7 @@ _sync_global_npm_packages_to_brewfile() {
     fi
   fi
 
-  if ! sed '/^npm /d' "$brewfile" > "$tmp_brewfile"; then
+  if ! sed '/^npm /d' "$brewfile" >| "$tmp_brewfile"; then
     rm -f "$npm_packages_file" "$tmp_brewfile"
     return 1
   fi
@@ -264,7 +264,7 @@ _dump_system_packages_to_brewfile() {
 
   dumped_brewfile=$(mktemp "${brewfile}.tmp.XXXXXX") || return 1
 
-  if ! brew bundle dump --file=- > "$dumped_brewfile"; then
+  if ! brew bundle dump --file=- >| "$dumped_brewfile"; then
     echo "Failed to dump installed packages; keeping the existing Brewfile." >&2
     rm -f "$dumped_brewfile"
     return 1
@@ -306,7 +306,7 @@ update-brew-env() {
     _sync_cursor_extensions from-brewfile
   elif [[ "$MODE" == "from-system" ]]; then
     local existing_npm_packages_file=$(mktemp)
-    grep '^npm ' "$brewfile" > "$existing_npm_packages_file"
+    grep '^npm ' "$brewfile" >| "$existing_npm_packages_file"
 
     # システムを正として同期（Brewfile 更新 → lock 更新）
     if ! _dump_system_packages_to_brewfile "$brewfile" "$existing_npm_packages_file"; then
