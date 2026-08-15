@@ -4,7 +4,7 @@ model_context_window = 1050000
 model_auto_compact_token_limit = 1000000
 service_tier = "fast"
 
-notify = ["/Users/shun.tagami/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
+notify = ["/Users/shun.tagami/dotfiles/codex/notify-chime.sh", "turn-ended"]
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
 
