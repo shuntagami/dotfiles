@@ -1,0 +1,22 @@
+{
+  "system:feed-refresh:/Users/shun.tagami/dotfiles": {
+    "taskId": "system:feed-refresh:/Users/shun.tagami/dotfiles",
+    "lastRunAt": "2026-08-15T04:31:14.147Z",
+    "lastRunResult": null,
+    "lastRunDurationMs": null,
+    "lastErrorMessage": null,
+    "consecutiveFailures": 0,
+    "totalRuns": 0,
+    "nextScheduledAt": "2026-08-15T05:00:00.000Z"
+  },
+  "system:google-calendar-sync": {
+    "taskId": "system:google-calendar-sync",
+    "lastRunAt": "2026-08-15T04:31:14.147Z",
+    "lastRunResult": null,
+    "lastRunDurationMs": null,
+    "lastErrorMessage": null,
+    "consecutiveFailures": 0,
+    "totalRuns": 0,
+    "nextScheduledAt": "2026-08-15T05:00:00.000Z"
+  }
+}
