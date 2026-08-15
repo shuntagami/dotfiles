@@ -73,7 +73,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "afplay \"/Users/shun.tagami/dotfiles/static/dog-bark.wav\" 2>/dev/null || true",
+            "command": "afplay \"/Users/shun.tagami/dotfiles/static/turn-finished-chime.mp3\" 2>/dev/null || true",
             "async": true
           }
         ]
