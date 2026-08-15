@@ -22,3 +22,7 @@ path=(
 
 typeset -gU path
 export PATH
+
+
+# Added by Antigravity CLI installer
+export PATH="/Users/shun.tagami/.local/bin:$PATH"

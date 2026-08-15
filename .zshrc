@@ -34,3 +34,7 @@ WORDCHARS='*?_-.[]~=&;!#$%^(){}<>'
 for f in common docker-aliases extra functions http-status-codes; do
   [[ -f $DOTFILES/zsh/$f.zsh ]] && source $DOTFILES/zsh/$f.zsh
 done
+
+
+# Added by Antigravity CLI installer
+export PATH="/Users/shun.tagami/.local/bin:$PATH"
