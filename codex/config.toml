@@ -1,5 +1,5 @@
-model = "gpt-5.6-terra"
-model_reasoning_effort = "medium"
+model = "gpt-5.6-sol"
+model_reasoning_effort = "max"
 model_context_window = 1050000
 model_auto_compact_token_limit = 1000000
 service_tier = "fast"
@@ -78,6 +78,9 @@ trust_level = "trusted"
 trust_level = "trusted"
 
 [projects."/Users/shun.tagami/projects/mulmoterminal"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/projects/agent-skills"]
 trust_level = "trusted"
 
 [tui]
