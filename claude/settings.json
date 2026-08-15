@@ -9,7 +9,7 @@
       "mcp__Neon__list_projects"
     ]
   },
-  "model": "sonnet",
+  "model": "opus[1m]",
   "statusLine": {
     "type": "command",
     "command": "jq -r '(.model.display_name // \"?\") as $model | (.workspace.current_dir // .cwd // \"\") as $dir | (env.HOME // \"\") as $home | (if $home != \"\" and ($dir | startswith($home)) then \"~\" + $dir[($home | length):] else $dir end) as $shortdir | (.context_window // {}) as $c | ($c.used_percentage // 0) as $p | (if $p >= 80 then \"\\u001b[31m\" elif $p >= 50 then \"\\u001b[33m\" else \"\\u001b[32m\" end) as $col | \"\\u001b[36m\\($model)\\u001b[0m \\u001b[35m\\($shortdir)\\u001b[0m \\($col)ctx \\($p | floor)%\\u001b[0m\"'"
@@ -27,5 +27,44 @@
   },
   "skipDangerousModePermissionPrompt": true,
   "agentPushNotifEnabled": true,
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Bash(pnpm dev)",
+      "Bash(pnpm install --frozen-lockfile)",
+      "Bash(supabase:*)"
+    ],
+    "soft_deny": [
+      "$defaults",
+      "Bash(vercel deploy --prod)",
+      "Bash(vercel:*) when targeting production"
+    ],
+    "environment": [
+      "### Org-wide",
+      "**Organization**: ele-inc (GitHub org — origin remote github.com/ele-inc/marunage-studio)",
+      "**Cloud provider(s)**: Supabase (project vktggjrrpqoepgsziwsj.supabase.co), Vercel (hosting/deploy)",
+      "**Repository visibility**: private (ele-inc/marunage-studio, confirmed via gh)",
+      "**Internal sharing / snippet hosting**: None configured — treat public paste/gist services as outside the trust boundary",
+      "**Secrets management**: Local `.env.local` (root, symlinked into apps/studio/.env.local) and `apps/dashboard/.env.local`, populated manually from owner via a secure channel — never committed (see .gitignore patterns and README setup steps)",
+      "**Default / protected branches**: main (default); no classic protected-branch rules listed via gh, rulesets not queryable here — treat main as protected by convention",
+      "**CI/CD deploy targets**: Vercel (`vercel deploy --prod`, production at https://marunage-studio.vercel.app); Vercel cron for 学習蒸留 (learning distillation) and Discord sync per vercel.json",
+      "**Network posture**: None configured",
+      "**Source control**: The trusted repo (ele-inc/marunage-studio) and its origin remote only",
+      "**Trusted internal domains**: registry.tiptap.dev (Tiptap Pro npm registry, per README setup and package registry host scan)",
+      "**Trusted cloud buckets**: None configured",
+      "**Key internal services**: api.supabase.com and vktggjrrpqoepgsziwsj.supabase.co (Supabase project backing this app, per hosts-contacted usage); api.vercel.com (Vercel deploy API, per hosts-contacted usage)",
+      "**Internal package registry**: registry.tiptap.dev (Tiptap Pro tracked-changes package, token set via user-level npm config per README — not committed to .npmrc)",
+      "**Sensitive data locations & audiences**: `.env.local`, `.env.local.zmuat-backup`, `.env.production.local`, `apps/dashboard/.env.local`, `apps/studio/.env.local.production` (local secrets, never commit); client deliverables and feedback under `/c/[clientSlug]` portal — share only with the specific client audience; `apps/dashboard/supabase/migrations/` and root `supabase/migrations/` (schema/data-shape history)",
+      "**Data retention / declassification**: None configured",
+      "**Sensitive remote targets**: any host/namespace containing `prod` or `production` as a whole segment (e.g. `.env.production.local`, production Vercel deploy) — treat https://marunage-studio.vercel.app (stated production URL) as a sensitive remote target for deploys",
+      "**Protected deployment namespaces / environments**: production Vercel deployment (`--prod` deploys to https://marunage-studio.vercel.app)",
+      "**Protected IaC scopes**: IAM, RBAC, networking, quota, and node-pool resources; anything whose name or tag carries `prod` or `production` as a whole word or name segment",
+      "### User-specific",
+      "**Primary use of Claude Code**: software development (Next.js/Supabase SaaS platform for client content production and delivery)",
+      "**Trusted repo**: /Users/shun.tagami/projects/marunage-studio (ele-inc/marunage-studio, private) and its origin remote — confidential material (client content, migrations) is fine here; secrets are still never committed regardless of visibility",
+      "**Org-specific CLIs**: vercel, supabase, npx (Tiptap Pro registry install), pnpm (workspace root — `pnpm install --frozen-lockfile`, `pnpm dev`)",
+      "Routine actions under this repo's working directory (marunage-studio) — pnpm/vercel/supabase CLI usage, local dev server, migrations under apps/dashboard/supabase/migrations/ — are routine; production deploys and .env* handling still require care per Sensitive remote targets and Secrets management above"
+    ]
+  },
   "voiceEnabled": true
 }
