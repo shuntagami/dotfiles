@@ -78,6 +78,17 @@
           }
         ]
       }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay \"/Users/shun.tagami/dotfiles/static/waiting-chime.mp3\" 2>/dev/null || true",
+            "async": true
+          }
+        ]
+      }
     ]
   }
 }
