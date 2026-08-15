@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
 
 repo="${SCRIBE_VIDEO_DOWNLOADER_ROOT:-$HOME/projects/elevenlabs-transcribe-bot}"
 script="$repo/scripts/download-video.ts"
@@ -23,4 +23,39 @@ EOF
   exit 1
 fi
 
-exec deno run --allow-all --config "$config" "$script" "$@"
+# ローカルPCから実行する分には自宅IPで叩けるので、elevenlabs-transcribe-bot
+# 側（Cloud Run等のサーバー用途）が使う住宅プロキシは既定で無効化する。
+# サーバー用途と同じ挙動が必要な時だけ DLVIDEO_USE_PROXY=1 で明示的に有効化する。
+if [[ "${DLVIDEO_USE_PROXY:-0}" != "1" ]]; then
+  export YOUTUBE_PROXY=""
+fi
+
+# 動画本体のダウンロードには（音声/メタデータ取得と違って）自動リトライが
+# 実装されていないため、ここで一時的なエラー（bot判定・レート制限・タイムアウト等）
+# だけを対象にラッパー側でリトライする。Video unavailable 等の恒久的なエラーは
+# 無駄なので即座に諦める。
+max_attempts="${DLVIDEO_MAX_ATTEMPTS:-3}"
+log_file="$(mktemp)"
+trap 'rm -f "$log_file"' EXIT
+
+attempt=1
+while :; do
+  deno run --allow-all --config "$config" "$script" "$@" 2>&1 | tee "$log_file"
+  status="${PIPESTATUS[0]}"
+
+  if [[ "$status" -eq 0 ]]; then
+    exit 0
+  fi
+
+  if [[ "$attempt" -ge "$max_attempts" ]]; then
+    exit "$status"
+  fi
+
+  if ! grep -qiE "sign in to confirm|confirm you.?re not a bot|HTTP Error 429|HTTP Error 403|timed out|unable to download webpage|connection reset" "$log_file"; then
+    exit "$status"
+  fi
+
+  attempt=$((attempt + 1))
+  echo "[dlvideo] transient error detected, retrying (${attempt}/${max_attempts})..." >&2
+  sleep $((attempt * 2))
+done
