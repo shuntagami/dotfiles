@@ -1,12 +1,13 @@
-model = "gpt-5.6-sol"
-model_reasoning_effort = "max"
+model = "gpt-5.6-terra"
+model_reasoning_effort = "medium"
 model_context_window = 1050000
 model_auto_compact_token_limit = 1000000
 service_tier = "fast"
 
-notify = ["/Users/shun.tagami/dotfiles/codex/notify-chime.sh", "turn-ended"]
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
+
+notify = ["/Users/shun.tagami/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended", "--previous-notify", "[\"\\/Users\\/shun.tagami\\/dotfiles\\/codex\\/notify-chime.sh\",\"turn-ended\"]"]
 
 [projects."/Users/shun.tagami/dotfiles"]
 trust_level = "trusted"
@@ -81,6 +82,12 @@ trust_level = "trusted"
 trust_level = "trusted"
 
 [projects."/Users/shun.tagami/projects/agent-skills"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/projects/ai-production-studio"]
+trust_level = "trusted"
+
+[projects."/private/tmp/ai-production-resume-smoke.yVj8gP"]
 trust_level = "trusted"
 
 [tui]
