@@ -92,7 +92,7 @@ resume_cwd = "current"
 
 [features]
 goals = true
-js_repl = false
+js_repl = true
 
 [notice]
 fast_default_opt_out = false
