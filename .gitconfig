@@ -2,6 +2,11 @@
 	editor = vim
 	excludesfile = ~/.gitignore_global
 
+	# Global hooks (git-hooks/), so `git worktree add` backfills gitignored
+	# .env files into every new worktree, from any caller (git-w, MulmoTerminal's
+	# plus-button, plain git). See git-hooks/post-checkout for why.
+	hooksPath = ~/dotfiles/git-hooks
+
 	# Treat spaces before tabs and all kinds of trailing whitespace as an error.
 	# [default] trailing-space: looks for spaces at the end of a line
 	# [default] space-before-tab: looks for spaces before tabs at the beginning of a line
@@ -88,8 +93,9 @@
 
 	show-merge = "!sh -c 'merge=$(git find-merge $0 $1) && [ -n \"$merge\" ] && git show $merge'"
 
-	# Worktree helpers: `git w`, `git wl`, `git wf`, `git wd`, `git wclean` are implemented as
-	# scripts in $DOTFILES/bin (auto-discovered via PATH).
+	# Worktree helpers: `git wl`, `git wf`, `git wd`, `git wclean` are implemented as
+	# scripts in $DOTFILES/bin (auto-discovered via PATH). Worktree creation itself
+	# is a bare `git worktree add`; git-hooks/post-checkout backfills .env files.
 
 	empty-push = "!f() { branch=$(git branch --show-current); git commit --allow-empty -m \"empty commit for deploy\" && git push origin $branch; }; f"
 
