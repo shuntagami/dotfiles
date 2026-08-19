@@ -6,13 +6,20 @@
 # gitignored - .env, .env.local, .env.<anything>, at any depth in the tree -
 # is silently missing in the new worktree otherwise.
 #
-# Fires for EVERY `git worktree add`, whichever tool called it: the `git w`
-# wrapper (bin/git-w), MulmoTerminal's plus-button worktree creation, or a
-# bare `git worktree add` typed by hand - because it runs at the git layer,
-# below all of them. bin/git-w keeps its own copy of this same logic
-# (copy_env_files) so re-running `git w <branch>` against an
-# already-existing worktree still re-syncs; this hook only fires once, on
-# the worktree's first checkout.
+# Also best-effort fast-forwards the main worktree's default branch to
+# origin, so the NEXT worktree created (from any tool) forks from something
+# closer to current - several worktrees/clones of one repo sit side by side
+# and only the one you happen to be in gets pulled regularly, so a new
+# worktree cut from a long-stale local main gets a PR that conflicts with
+# whatever already landed. This can only help worktrees created AFTER this
+# one: `git worktree add` has already resolved and created THIS worktree's
+# branch by the time any post-checkout hook runs, so nothing here can change
+# what commit it forked from - there's no earlier hook to do that from.
+#
+# Fires for EVERY `git worktree add`, whichever tool called it: MulmoTerminal's
+# plus-button worktree creation, `git wl`/`git wd`/etc, or a bare
+# `git worktree add` typed by hand - because it runs at the git layer, below
+# all of them.
 #
 # git passes an all-zero SHA as $1 only when there was no previous HEAD in
 # this working tree - true for a brand-new worktree or a fresh clone, never
@@ -29,6 +36,34 @@ main_worktree=$(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{pr
 dest_root=$(pwd)
 [[ "$main_worktree" != "$dest_root" ]] || exit 0
 [[ -d "$main_worktree" ]] || exit 0
+
+# Best effort, never disruptive: skip silently if there's no remote, we're
+# offline, the main worktree isn't ON its default branch, it has uncommitted
+# changes, or the fast-forward isn't possible (local ahead/diverged). None of
+# that should get in the way of the worktree actually being created.
+default_branch=""
+head_ref=$(git -C "$main_worktree" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null) || true
+if [[ -n "$head_ref" ]]; then
+  default_branch=${head_ref#origin/}
+else
+  for b in main master; do
+    if git -C "$main_worktree" rev-parse --verify --quiet "$b" >/dev/null 2>&1; then
+      default_branch="$b"
+      break
+    fi
+  done
+fi
+
+if [[ -n "$default_branch" ]]; then
+  current_branch=$(git -C "$main_worktree" rev-parse --abbrev-ref HEAD 2>/dev/null) || true
+  if [[ "$current_branch" == "$default_branch" ]]; then
+    git -C "$main_worktree" fetch origin "$default_branch" >/dev/null 2>&1 || true
+    if [[ -z "$(git -C "$main_worktree" status --porcelain 2>/dev/null)" ]] &&
+      git -C "$main_worktree" merge --ff-only "origin/$default_branch" >/dev/null 2>&1; then
+      echo "[post-checkout] fast-forwarded $main_worktree's $default_branch to origin/$default_branch" >&2
+    fi
+  fi
+fi
 
 copied=0
 while IFS= read -r -d '' envfile; do
