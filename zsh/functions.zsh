@@ -269,53 +269,6 @@ function mkd() {
 	mkdir -p "$@" && cd "$_";
 }
 
-# git w wrapper: run git-w, then enter the worktree it reports.
-git() {
-  if [[ "$1" != "w" ]]; then
-    command git "$@"
-    return $?
-  fi
-
-  local output rc workdir
-  output=$(command git "$@" 2>&1)
-  rc=$?
-
-  echo "$output"
-  if [[ $rc -ne 0 ]]; then
-    return $rc
-  fi
-
-  workdir=$(echo "$output" | sed -n 's/^  cd //p')
-  if [[ -n "$workdir" && -d "$workdir" ]]; then
-    cd "$workdir"
-  fi
-}
-
-# git worktree wrapper: create worktree + cd into it
-# Usage: gw <branch-or-pr-number>
-gw() {
-  if [[ -z "$1" ]]; then
-    echo 'usage: gw <branch-or-pr-number>'
-    return 1
-  fi
-
-  local output rc
-  output=$(git w "$@" 2>&1)
-  rc=$?
-
-  echo "$output"
-  if [[ $rc -ne 0 ]]; then
-    return $rc
-  fi
-
-  local workdir
-  workdir=$(echo "$output" | sed -n 's/^  cd //p')
-
-  if [[ -n "$workdir" && -d "$workdir" ]]; then
-    cd "$workdir"
-  fi
-}
-
 # Promote uncommitted work in the main worktree to a fresh worktree.
 # Useful when you started Claude/coding directly in the main checkout and
 # realized you want isolation. Stashes (incl. untracked), creates the
