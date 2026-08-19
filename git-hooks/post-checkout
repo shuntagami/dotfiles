@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# post-checkout hook, installed globally via core.hooksPath (see .gitconfig).
+#
+# Backfills gitignored .env files into a brand-new git worktree (or fresh
+# clone). `git worktree add` only checks out tracked files, so anything
+# gitignored - .env, .env.local, .env.<anything>, at any depth in the tree -
+# is silently missing in the new worktree otherwise.
+#
+# Fires for EVERY `git worktree add`, whichever tool called it: the `git w`
+# wrapper (bin/git-w), MulmoTerminal's plus-button worktree creation, or a
+# bare `git worktree add` typed by hand - because it runs at the git layer,
+# below all of them. bin/git-w keeps its own copy of this same logic
+# (copy_env_files) so re-running `git w <branch>` against an
+# already-existing worktree still re-syncs; this hook only fires once, on
+# the worktree's first checkout.
+#
+# git passes an all-zero SHA as $1 only when there was no previous HEAD in
+# this working tree - true for a brand-new worktree or a fresh clone, never
+# for an ordinary branch switch in an existing one. That is the only signal
+# this hook acts on.
+set -euo pipefail
+
+prev_head="${1:-}"
+[[ "$prev_head" == "0000000000000000000000000000000000000000" ]] || exit 0
+
+main_worktree=$(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}') || exit 0
+[[ -n "$main_worktree" ]] || exit 0
+
+dest_root=$(pwd)
+[[ "$main_worktree" != "$dest_root" ]] || exit 0
+[[ -d "$main_worktree" ]] || exit 0
+
+copied=0
+while IFS= read -r -d '' envfile; do
+  rel="${envfile#"$main_worktree"/}"
+  [[ "$rel" != "$envfile" ]] || continue
+
+  dest="$dest_root/$rel"
+  mkdir -p "$(dirname "$dest")"
+  cp -p "$envfile" "$dest"
+  copied=$((copied + 1))
+done < <(find "$main_worktree" \
+    \( -name node_modules -o -name .git -o -name dist -o -name build \
+       -o -name .next -o -name target -o -name vendor -o -name .venv \) -prune -o \
+    -type f \( -name '.env' -o -name '.env.*' \) -print0)
+
+if (( copied > 0 )); then
+  echo "[post-checkout] copied $copied .env file(s) into $dest_root" >&2
+fi
