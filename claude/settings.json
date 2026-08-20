@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "afplay \"/Users/shun.tagami/dotfiles/static/turn-finished-chime.mp3\" 2>/dev/null || true",
+            "command": "afplay -v 0.15 \"/Users/shun.tagami/dotfiles/static/turn-finished-chime.mp3\" 2>/dev/null || true",
             "async": true
           }
         ]
@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "afplay \"/Users/shun.tagami/dotfiles/static/waiting-chime.mp3\" 2>/dev/null || true",
+            "command": "afplay -v 0.15 \"/Users/shun.tagami/dotfiles/static/waiting-chime.mp3\" 2>/dev/null || true",
             "async": true
           }
         ]

@@ -4,7 +4,7 @@
 ORIGINAL_NOTIFY="/Users/shun.tagami/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient"
 CHIME_SOUND="/Users/shun.tagami/dotfiles/static/turn-finished-chime.mp3"
 
-afplay "$CHIME_SOUND" >/dev/null 2>&1 &
+afplay -v 0.15 "$CHIME_SOUND" >/dev/null 2>&1 &
 
 if [ -x "$ORIGINAL_NOTIFY" ]; then
   exec "$ORIGINAL_NOTIFY" "$@"
