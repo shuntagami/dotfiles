@@ -1,6 +1,7 @@
 tap "aws/tap", trusted: true
 tap "bufbuild/buf", trusted: true
 tap "ele-inc/tap", trusted: true
+tap "hashicorp/tap"
 tap "ktr0731/evans", trusted: true
 tap "oncletom/cpdf", "https://github.com/thom4parisot/homebrew-brew.git", trusted: true
 tap "oven-sh/bun", trusted: true
@@ -237,6 +238,8 @@ brew "zsh-syntax-highlighting"
 brew "bufbuild/buf/buf"
 # Transcribe audio/video files using ElevenLabs Scribe API
 brew "ele-inc/tap/scribe", trusted: true
+# Terraform
+brew "hashicorp/tap/terraform", trusted: true
 # Evans: more expressive universal gRPC client
 brew "ktr0731/evans/evans"
 # Coherent PDF Command-line Tools to modify PDF files
