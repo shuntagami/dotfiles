@@ -119,11 +119,13 @@ enabled = true
 [plugins."computer-use@openai-bundled"]
 enabled = true
 
+# The bundled browser clients currently require the desktop-app runtime and
+# are incompatible with this CLI-only setup. Use Playwright MCP below instead.
 [plugins."chrome@openai-bundled"]
-enabled = true
+enabled = false
 
 [plugins."browser@openai-bundled"]
-enabled = true
+enabled = false
 
 [plugins."pdf@openai-primary-runtime"]
 enabled = true
@@ -133,7 +135,16 @@ enabled = true
 
 [mcp_servers.playwright]
 command = "npx"
-args = ["-y", "@playwright/mcp@latest"]
+args = [
+  "-y",
+  "@playwright/mcp@0.0.79",
+  "--browser",
+  "chrome",
+  "--user-data-dir",
+  "/Users/shun.tagami/.codex/playwright-profile",
+  "--output-dir",
+  "/Users/shun.tagami/.codex/playwright-output",
+]
 
 [mcp_servers.playwright.tools.browser_click]
 approval_mode = "auto"
