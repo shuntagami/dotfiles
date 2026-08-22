@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# git: PATH-level wrapper around the real git, installed because git has no
+# hook that fires BEFORE `worktree add` resolves its start point - see
+# git-hooks/post-checkout for the long version of why that matters here.
+#
+# Only `[-C <dir>] worktree add ...` is special-cased: before delegating, best-
+# effort fetch + fast-forward the main worktree's default branch to origin, so
+# the branch being created forks from something close to current instead of
+# whatever stale commit local main happened to be sitting on. Every other
+# invocation execs straight through with zero behavior change.
+#
+# Safety conditions mirror git-hooks/post-checkout exactly (best-effort, never
+# disruptive): skipped silently if there's no remote, we're offline, the main
+# worktree isn't ON its default branch, has uncommitted changes, or can't
+# fast-forward (local ahead/diverged) - none of that should block worktree
+# creation, it should just fall back to whatever main already has.
+#
+# $DOTFILES/bin is prepended ahead of Homebrew's git in ~/.zprofile, so this
+# script - not the real git - is what a plain `git worktree add`, MulmoTerminal's
+# plus-button creation (it shells out to `git -C <repo> worktree add ...`), or
+# any other PATH-based caller actually runs. A caller that resolves git via an
+# absolute path, or a shell whose PATH was never rebuilt from a fresh login
+# (nested non-login shells inherit whatever PATH their parent had), bypasses
+# this entirely - there is no way to intercept those without touching the
+# system git binary itself, which this deliberately does not do.
+set -euo pipefail
+
+self_dir=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd -P)
+
+real_git=""
+IFS=':' read -r -a path_dirs <<< "${PATH:-}"
+for d in "${path_dirs[@]}"; do
+  [[ -n "$d" && -x "$d/git" ]] || continue
+  d_real=$(cd "$d" 2>/dev/null && pwd -P) || continue
+  [[ "$d_real" == "$self_dir" ]] && continue
+  real_git="$d/git"
+  break
+done
+
+if [[ -z "$real_git" ]]; then
+  echo "git: no underlying git executable found in PATH (past $self_dir)" >&2
+  exit 127
+fi
+
+# Recognize `[-C <dir>] [-c ...|--git-dir ...|--work-tree ...|--namespace ...] worktree add`,
+# skipping past common global options that take a value, so `git -C repo worktree add ...`
+# (MulmoTerminal's exact call shape) and a bare `git worktree add` are both caught.
+repo_dir="$PWD"
+args=("$@")
+i=0
+n=${#args[@]}
+while (( i < n )); do
+  case "${args[$i]}" in
+    -C) repo_dir="${args[$((i + 1))]:-$repo_dir}"; i=$((i + 2)) ;;
+    -c | --git-dir | --work-tree | --namespace) i=$((i + 2)) ;;
+    -*) i=$((i + 1)) ;;
+    *) break ;;
+  esac
+done
+
+if [[ "${args[$i]:-}" == "worktree" && "${args[$((i + 1))]:-}" == "add" ]]; then
+  main_worktree=$("$real_git" -C "$repo_dir" worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}') || true
+  if [[ -n "$main_worktree" && -d "$main_worktree" ]]; then
+    default_branch=$("$real_git" -C "$main_worktree" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@') || true
+    if [[ -z "$default_branch" ]]; then
+      for b in main master; do
+        if "$real_git" -C "$main_worktree" rev-parse --verify --quiet "$b" >/dev/null 2>&1; then
+          default_branch="$b"
+          break
+        fi
+      done
+    fi
+    if [[ -n "$default_branch" ]]; then
+      current_branch=$("$real_git" -C "$main_worktree" rev-parse --abbrev-ref HEAD 2>/dev/null) || true
+      if [[ "$current_branch" == "$default_branch" ]]; then
+        "$real_git" -C "$main_worktree" fetch origin "$default_branch" >/dev/null 2>&1 || true
+        if [[ -z "$("$real_git" -C "$main_worktree" status --porcelain 2>/dev/null)" ]]; then
+          "$real_git" -C "$main_worktree" merge --ff-only "origin/$default_branch" >/dev/null 2>&1 || true
+        fi
+      fi
+    fi
+  fi
+fi
+
+exec "$real_git" "$@"
