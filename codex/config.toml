@@ -1,8 +1,8 @@
-model = "gpt-5.6-terra"
-model_reasoning_effort = "medium"
+model = "gpt-5.6-sol"
+model_reasoning_effort = "high"
 model_context_window = 1050000
 model_auto_compact_token_limit = 1000000
-service_tier = "fast"
+service_tier = "default"
 
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
@@ -90,6 +90,9 @@ trust_level = "trusted"
 [projects."/private/tmp/ai-production-resume-smoke.yVj8gP"]
 trust_level = "trusted"
 
+[projects."/Users/shun.tagami/Documents/Codex/2026-08-16/m"]
+trust_level = "trusted"
+
 [tui]
 resume_cwd = "current"
 
@@ -99,7 +102,7 @@ resume_cwd = "current"
 
 [features]
 goals = true
-js_repl = true
+js_repl = false
 
 [notice]
 fast_default_opt_out = false
@@ -131,6 +134,12 @@ enabled = false
 enabled = true
 
 [plugins."template-creator@openai-primary-runtime"]
+enabled = true
+
+[plugins."sites@openai-bundled"]
+enabled = true
+
+[plugins."visualize@openai-bundled"]
 enabled = true
 
 [mcp_servers.playwright]
@@ -167,26 +176,34 @@ startup_timeout_sec = 120
 NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS = "1000"
 NODE_REPL_NODE_MODULE_DIRS = "/Applications/Codex.app/Contents/Resources/cua_node/lib/node_modules"
 NODE_REPL_NODE_PATH = "/Applications/Codex.app/Contents/Resources/cua_node/bin/node"
-NODE_REPL_TRUSTED_CODE_PATHS = "/Users/shun.tagami/.codex"
+NODE_REPL_TRUSTED_CODE_PATHS = "/Users/shun.tagami/.codex:/Applications/Codex.app/Contents/Resources/cua_node/lib/node_modules"
 CODEX_HOME = "/Users/shun.tagami/.codex"
-NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "cb79053fda6deb0f3b5d6f0d90d4257305ebdbd1e378a12e8fbc5bde782eb59b"
+NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "9230e2bd8b24b7ac7a0ba6774c64bf0d78ecdabbdd91d0ed627b02a587bae2df"
 BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
 NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = "Control the in-app browser in conjunction with the Browser Plugin."
 NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = "Control the Chrome browser in conjunction with the Chrome Plugin. Prefer this method of controlling Chrome over alternatives (such as Computer Use) unless the user explicitly mentions an alternative."
+NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE = "Control desktop apps on macOS through Computer Use."
 BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
-BROWSER_USE_CODEX_APP_VERSION = "26.623.81905"
+BROWSER_USE_CODEX_APP_VERSION = "26.810.52044"
+SKY_CUA_SERVICE_PATH = "/Users/shun.tagami/.codex/computer-use/Codex Computer Use.app"
 CODEX_CLI_PATH = "/Applications/Codex.app/Contents/Resources/codex"
 
 [mcp_servers.openaiDeveloperDocs]
 url = "https://developers.openai.com/mcp"
 
+[mcp_servers.computer-use]
+command = "./Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient"
+args = ["mcp"]
+cwd = "."
+enabled = false
+
 [marketplaces.openai-bundled]
-last_updated = "2026-08-15T08:12:57Z"
+last_updated = "2026-08-16T08:23:03Z"
 source_type = "local"
 source = "/Users/shun.tagami/.codex/.tmp/bundled-marketplaces/openai-bundled"
 
 [marketplaces.openai-primary-runtime]
-last_updated = "2026-08-15T09:11:25Z"
+last_updated = "2026-08-16T08:23:37Z"
 source_type = "local"
 source = "/Users/shun.tagami/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
 
@@ -198,6 +215,12 @@ localeOverride = "ja-JP"
 preventSleepWhileRunning = true
 show-context-window-usage = true
 followUpQueueMode = "queue"
+dock-icon-preference = "app-default"
 
 [desktop.open-in-target-preferences]
 global = "cursor"
+
+[shell_environment_policy.set]
+BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
+NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "9230e2bd8b24b7ac7a0ba6774c64bf0d78ecdabbdd91d0ed627b02a587bae2df"
+NODE_REPL_TRUSTED_CODE_PATHS = "/Users/shun.tagami/.codex:/Applications/Codex.app/Contents/Resources/cua_node/lib/node_modules"
