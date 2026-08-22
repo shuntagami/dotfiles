@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vimeo Review Comments"
+  short_description: "Vimeoレビューへタイムコードコメントを安全に一括投稿"
+  default_prompt: "Use $vimeo-review-comments to post a validated list of time-coded comments to a Vimeo Review link."
