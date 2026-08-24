@@ -36,6 +36,8 @@ brew "bat"
 brew "boost"
 # Resource monitor. C++ version and continuation of bashtop and bpytop
 brew "btop"
+# Statistics utility that counts lines of code
+brew "cloc"
 # Core application library for C
 brew "glib"
 # GNU File, Shell, and Text utilities

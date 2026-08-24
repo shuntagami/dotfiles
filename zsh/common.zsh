@@ -71,6 +71,17 @@ git-grep-count() {
 }
 alias ggc="git-grep-count"
 
+# Count lines of code in the current directory
+# Inside a git repo, count only tracked files (respects .gitignore, skips
+# node_modules/build output); otherwise fall back to a plain scan.
+loc() {
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    cloc --vcs=git .
+  else
+    cloc .
+  fi
+}
+
 # Claude Code (always skip permission prompts)
 alias cc="claude --dangerously-skip-permissions"
 alias ccs="claude --dangerously-skip-permissions --model sonnet"
