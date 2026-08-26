@@ -9,7 +9,32 @@
       "mcp__Neon__list_projects"
     ]
   },
-  "model": "claude-fable-5[1m]",
+  "model": "opus[1m]",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay -v 0.15 \"/Users/shun.tagami/dotfiles/static/turn-finished-chime.mp3\" 2>/dev/null || true",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt|idle_prompt|elicitation_dialog|elicitation_url_dialog",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "afplay -v 0.15 \"/Users/shun.tagami/dotfiles/static/waiting-chime.mp3\" 2>/dev/null || true",
+            "async": true
+          }
+        ]
+      }
+    ]
+  },
   "statusLine": {
     "type": "command",
     "command": "jq -r '(.model.display_name // \"?\") as $model | (.workspace.current_dir // .cwd // \"\") as $dir | (env.HOME // \"\") as $home | (if $home != \"\" and ($dir | startswith($home)) then \"~\" + $dir[($home | length):] else $dir end) as $shortdir | (.context_window // {}) as $c | ($c.used_percentage // 0) as $p | (if $p >= 80 then \"\\u001b[31m\" elif $p >= 50 then \"\\u001b[33m\" else \"\\u001b[32m\" end) as $col | \"\\u001b[36m\\($model)\\u001b[0m \\u001b[35m\\($shortdir)\\u001b[0m \\($col)ctx \\($p | floor)%\\u001b[0m\"'"
@@ -20,7 +45,7 @@
     "frontend-design@claude-plugins-official": true
   },
   "effortLevel": "xhigh",
-  "autoCompactWindow": 900000,
+  "autoCompactWindow": 800000,
   "tui": "fullscreen",
   "voice": {
     "enabled": true,
