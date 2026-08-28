@@ -9,7 +9,7 @@
       "mcp__Neon__list_projects"
     ]
   },
-  "model": "opus[1m]",
+  "model": "sonnet",
   "hooks": {
     "Stop": [
       {
