@@ -1,7 +1,10 @@
 #!/bin/bash
-# Codex CLI notify wrapper: forward to the original notify target unchanged
-# so existing integrations keep working. Chime playback disabled.
+# Codex CLI notify wrapper: play a terminal chime, then forward to the
+# original notify target unchanged so existing integrations keep working.
 ORIGINAL_NOTIFY="/Users/shun.tagami/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient"
+CHIME_SOUND="/Users/shun.tagami/dotfiles/static/turn-finished-chime.mp3"
+
+afplay -v 0.15 "$CHIME_SOUND" >/dev/null 2>&1 &
 
 if [ -x "$ORIGINAL_NOTIFY" ]; then
   exec "$ORIGINAL_NOTIFY" "$@"
