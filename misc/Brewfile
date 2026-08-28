@@ -36,34 +36,34 @@ brew "bat"
 brew "boost"
 # Resource monitor. C++ version and continuation of bashtop and bpytop
 brew "btop"
-# Statistics utility that counts lines of code
-brew "cloc"
 # Core application library for C
 brew "glib"
 # GNU File, Shell, and Text utilities
 brew "coreutils"
 # GNU Transport Layer Security (TLS) Library
 brew "gnutls"
-# Validating, recursive, caching DNS resolver
-brew "unbound"
 # GNU Emacs text editor
 brew "emacs"
+# Validating, recursive, caching DNS resolver
+brew "unbound"
 # Emacs dependency management
 brew "cask"
 # YAML Parser
 brew "libyaml"
 # Validate CloudFormation templates against the CloudFormation spec
 brew "cfn-lint"
+# Statistics utility to count lines of code
+brew "cloc"
 # Top-like interface for container metrics
 brew "ctop"
 # Get a file from an HTTP, HTTPS or FTP server
 brew "curl"
 # Command-line tool for getting & setting the default browser
 brew "defaultbrowser"
-# Color management engine supporting ICC profiles
-brew "little-cms2"
 # Image format providing lossless and lossy compression for web images
 brew "webp"
+# Color management engine supporting ICC profiles
+brew "little-cms2"
 # Secure runtime for JavaScript and TypeScript
 brew "deno"
 # Select default apps for documents and URL schemes on macOS
@@ -340,6 +340,7 @@ npm "@openai/codex"
 npm "corepack"
 npm "eslint"
 npm "md-to-pdf"
+npm "mulmoterminal"
 npm "neonctl"
 npm "npm-check-updates"
 npm "playwright"
