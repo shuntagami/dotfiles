@@ -82,6 +82,14 @@ for skill_dir in "${HOME}"/dotfiles/claude/skills/*(/N); do
   ln -sfn "${skill_dir}" ~/.claude/skills/"${skill_dir:t}"
 done
 
+# MulmoTerminal: config.json is written by the app itself (write-temp-then-rename), so a
+# symlink here would get replaced by a real file the moment it saves. Seed it only when
+# missing — on an already-configured machine this must never overwrite live settings that
+# have not been copied back with save-mulmoterminal-config.sh.
+if [[ ! -f ~/.mulmoterminal/config.json ]]; then
+  ~/dotfiles/scripts/install-mulmoterminal-config.sh
+fi
+
 # Screenpipe: manage only prompt/config files that are safe to keep in dotfiles.
 # Databases, recordings, logs, outputs, and connection secrets stay under ~/.screenpipe.
 if [[ -d "${HOME}/dotfiles/screenpipe/pipes" ]]; then

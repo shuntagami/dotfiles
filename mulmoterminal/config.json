@@ -1,0 +1,99 @@
+{
+  "cwdPresets": [
+    {
+      "label": "egt",
+      "path": "/Users/shun.tagami/projects/egt"
+    },
+    {
+      "label": "mulmoterminal",
+      "path": "/Users/shun.tagami/projects/receptron/mulmoterminal"
+    },
+    {
+      "label": "marunage-studio",
+      "path": "/Users/shun.tagami/projects/marunage-studio"
+    },
+    {
+      "label": "legal",
+      "path": "/Users/shun.tagami/projects/legal"
+    },
+    {
+      "label": "ai-production-studio",
+      "path": "/Users/shun.tagami/projects/ai-production-studio"
+    },
+    {
+      "label": "voice-funnel",
+      "path": "/Users/shun.tagami/projects/voice-funnel"
+    },
+    {
+      "label": "dotfiles",
+      "path": "/Users/shun.tagami/dotfiles"
+    },
+    {
+      "label": "launch-consulting",
+      "path": "/Users/shun.tagami/projects/launch-consulting"
+    },
+    {
+      "label": "phase2-review",
+      "path": "/Users/shun.tagami/projects/marunage-studio/.claude/worktrees/phase2-review"
+    },
+    {
+      "label": "youtube-content-gen",
+      "path": "/Users/shun.tagami/projects/youtube-content-gen"
+    },
+    {
+      "label": "agent-skills",
+      "path": "/Users/shun.tagami/projects/agent-skills"
+    },
+    {
+      "label": "marunage-studio-agent-spike",
+      "path": "/Users/shun.tagami/projects/marunage-studio-agent-spike"
+    }
+  ],
+  "providers": [],
+  "soundFile": null,
+  "soundKinds": [],
+  "sounds": {
+    "finished": "preset:coin",
+    "waiting": "preset:meow"
+  },
+  "prRepos": [],
+  "gitlabHosts": [],
+  "repoDirs": {},
+  "launchers": [],
+  "customAgents": [],
+  "quickCommands": [],
+  "userMcpServers": [],
+  "headerStatusColors": {},
+  "headerStatusTint": "background",
+  "themes": [],
+  "buttons": null,
+  "chips": null,
+  "pushEnabled": true,
+  "pushKinds": [
+    "finished",
+    "waiting"
+  ],
+  "worklogEnabled": false,
+  "worklogIntervalHours": 6,
+  "sessionIdleReapDays": 7,
+  "terminalSubmit": "cr",
+  "keymap": {
+    "terminal-new-here": "Alt+ArrowRight",
+    "zoom-toggle": "Alt+ArrowUp",
+    "next-attention": "Alt+ArrowDown"
+  },
+  "copyOnSelect": true,
+  "decisionDigest": true,
+  "questionPaneEnabled": true,
+  "issueWorkComments": false,
+  "prWorkdirFooter": true,
+  "appendSystemPrompt": true,
+  "autoDirIcon": true,
+  "showLoadAverage": true,
+  "cockpitLines": {
+    "summary": 2,
+    "prompt": 2,
+    "response": 3
+  },
+  "fontFamily": null
+}
