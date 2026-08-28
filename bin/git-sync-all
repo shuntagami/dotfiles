@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+# git-sync-all [run [root...] | install [interval_sec] | uninstall | status]
+#
+# Runs `git-sync` (fetch + ff-pull default branch + rebase every worktree
+# onto it) once per distinct repo found under one or more root directories.
+# Finds every `.git` (dir or file - a worktree's is a file) under each root,
+# resolves it to that repo's actual main worktree via `git worktree list`,
+# and dedupes - so it only needs to find ONE entry point per repo. This is
+# what makes worktrees living outside the root safe to ignore explicitly:
+# e.g. MulmoTerminal checks worktrees out under ~/.mulmoterminal/worktrees/,
+# but each one's `.git` file still points back at the real repo's gitdir
+# under ~/projects/<repo>/.git/worktrees/..., so finding the repo under
+# ~/projects is enough - `git worktree list` from there already enumerates
+# every linked worktree, wherever it physically lives.
+#
+# Default root: $GIT_SYNC_ROOT (falls back to $HOME). The scan prunes
+# node_modules/dist/build/.next/target/vendor/.venv, Library/Downloads/
+# Movies/Music/Pictures/Applications/Public, and dotfiles/hidden dirs other
+# than `.git` itself - so it's a fast, home-wide sweep in practice (repos
+# directly under $HOME like ~/dotfiles, plus everything nested under
+# ~/projects), not a full-disk walk. Pass explicit roots as args to scan
+# something else for one run: `git-sync-all run ~/work`.
+#
+# `install` registers a launchd agent that runs this on a timer so remote
+# merges show up locally without a manual `git pull`; `run` is also what a
+# manual one-shot invocation (e.g. a `gsync` shell alias) calls directly.
+
+set -uo pipefail
+
+self_dir=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd -P)
+STATE_DIR="$HOME/.local/state/git-sync"
+LOG_FILE="$STATE_DIR/sync.log"
+LAUNCH_LABEL="com.user.git-sync"
+LAUNCH_AGENT_FILE="$HOME/Library/LaunchAgents/$LAUNCH_LABEL.plist"
+
+find_git_entries() {
+  local root="$1"
+  find "$root" -mindepth 1 -maxdepth 6 \
+    \( -name node_modules -o -name dist -o -name build -o -name .next -o -name target -o -name vendor -o -name .venv \
+       -o -name Library -o -name Downloads -o -name Movies -o -name Music -o -name Pictures -o -name Applications -o -name Public \
+       -o \( -name '.*' ! -name '.git' \) \) -prune -o \
+    -name .git -print -prune 2>/dev/null
+}
+
+run_sync() {
+  local roots=("$@")
+  if [[ ${#roots[@]} -eq 0 ]]; then
+    roots=("${GIT_SYNC_ROOT:-$HOME}")
+  fi
+
+  local root git_entry wt_path main_wt mains=""
+  for root in "${roots[@]}"; do
+    root="${root/#\~/$HOME}"
+    if [[ ! -d "$root" ]]; then
+      echo "[git-sync-all] skip (not found): $root" >&2
+      continue
+    fi
+    while IFS= read -r git_entry; do
+      wt_path=$(dirname "$git_entry")
+      main_wt=$(git -C "$wt_path" worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}') || continue
+      [[ -n "$main_wt" ]] && mains="$mains$main_wt"$'\n'
+    done < <(find_git_entries "$root")
+  done
+
+  printf '%s' "$mains" | sort -u | while IFS= read -r main_wt; do
+    [[ -n "$main_wt" ]] || continue
+    "$self_dir/git-sync" -C "$main_wt"
+  done
+}
+
+install_launchd() {
+  local interval="${1:-600}"
+  mkdir -p "$(dirname "$LAUNCH_AGENT_FILE")" "$STATE_DIR"
+  cat > "$LAUNCH_AGENT_FILE" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>$LAUNCH_LABEL</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>$self_dir/git-sync-all</string>
+    <string>run</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>$interval</integer>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>$LOG_FILE</string>
+  <key>StandardErrorPath</key>
+  <string>$LOG_FILE</string>
+</dict>
+</plist>
+PLIST
+  local domain="gui/$(id -u)"
+  launchctl bootout "$domain" "$LAUNCH_AGENT_FILE" >/dev/null 2>&1 || true
+  if ! launchctl bootstrap "$domain" "$LAUNCH_AGENT_FILE" 2>/dev/null; then
+    launchctl load "$LAUNCH_AGENT_FILE"
+  fi
+  echo "[git-sync-all] installed: runs every ${interval}s against \${GIT_SYNC_ROOT:-\$HOME}, logs at $LOG_FILE"
+}
+
+uninstall_launchd() {
+  local domain="gui/$(id -u)"
+  launchctl bootout "$domain" "$LAUNCH_AGENT_FILE" >/dev/null 2>&1 || true
+  launchctl unload "$LAUNCH_AGENT_FILE" >/dev/null 2>&1 || true
+  rm -f "$LAUNCH_AGENT_FILE"
+  echo "[git-sync-all] uninstalled"
+}
+
+status_launchd() {
+  if [[ ! -f "$LAUNCH_AGENT_FILE" ]]; then
+    echo "[git-sync-all] not installed"
+    return 0
+  fi
+  launchctl print "gui/$(id -u)/$LAUNCH_LABEL" 2>/dev/null | grep -E "state|last exit status" || echo "[git-sync-all] plist present but not loaded"
+  [[ -f "$LOG_FILE" ]] && { echo "--- last 20 log lines ---"; tail -20 "$LOG_FILE"; }
+}
+
+cmd="${1:-run}"
+[[ $# -gt 0 ]] && shift
+case "$cmd" in
+  run) run_sync "$@" ;;
+  install) install_launchd "${1:-600}" ;;
+  uninstall) uninstall_launchd ;;
+  status) status_launchd ;;
+  *)
+    echo "usage: git-sync-all [run [root...] | install [interval_sec] | uninstall | status]" >&2
+    exit 2
+    ;;
+esac

@@ -378,6 +378,10 @@ gwd() {
   git wd "$@"
 }
 
+# One-shot: fetch + ff-pull + rebase every worktree onto the fresh default
+# branch, across every repo git-sync-all finds (see bin/git-sync-all).
+alias gsync="git-sync-all run"
+
 alias ggrep="git grep -A 5 -B 5"
 
 function gngrep() {

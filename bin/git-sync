@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# git sync [-C <repo>] : best-effort, non-disruptive fetch + ff-pull of the
+#                        default branch, then rebase every other linked
+#                        worktree's branch onto the fresh tip.
+#
+# Mirrors the safety conditions bin/git already uses for its worktree-add
+# pre-fetch: best-effort, never disruptive. Skipped silently (never blocks,
+# never leaves a repo mid-operation) when there's no remote, we're offline,
+# a worktree has uncommitted changes to TRACKED files, or a merge/rebase
+# can't fast-forward cleanly. Untracked files don't gate anything here -
+# `merge --ff-only`/`rebase` already refuse safely on their own in the one
+# case that actually matters (an untracked file the sync would overwrite),
+# so pre-blocking on them too would just make a stray scratch file in the
+# worktree (a seed script, a .temp/ dir) silently stall every sync forever.
+# A rebase conflict aborts the rebase and is reported, not left half-done.
+#
+# Usage: git sync [-C <repo>]
+
+set -uo pipefail
+
+repo="$PWD"
+if [[ "${1:-}" == "-C" ]]; then
+  repo="${2:-$PWD}"
+fi
+
+cd "$repo" 2>/dev/null || { echo "[git sync] no such repo: $repo" >&2; exit 1; }
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "[git sync] not a git repo: $repo" >&2; exit 1; }
+
+main_worktree=$(git worktree list --porcelain | awk '/^worktree /{print $2; exit}')
+repo_name=$(basename "$main_worktree")
+
+default_branch=$(git -C "$main_worktree" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@') || true
+if [[ -z "$default_branch" ]]; then
+  for b in main master; do
+    if git -C "$main_worktree" rev-parse --verify --quiet "$b" >/dev/null 2>&1; then
+      default_branch="$b"
+      break
+    fi
+  done
+fi
+if [[ -z "$default_branch" ]]; then
+  echo "[git sync] $repo_name: could not determine default branch, skipping"
+  exit 0
+fi
+
+if ! git -C "$main_worktree" fetch --prune origin >/dev/null 2>&1; then
+  echo "[git sync] $repo_name: fetch failed (offline?), skipping"
+  exit 0
+fi
+
+notify() {
+  local msg="$1"
+  command -v osascript >/dev/null 2>&1 || return 0
+  osascript -e "display notification \"${msg//\"/\\\"}\" with title \"git sync: $repo_name\"" >/dev/null 2>&1 || true
+}
+
+# ff-pull the main worktree if it's on the default branch and clean.
+main_branch=$(git -C "$main_worktree" rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+if [[ "$main_branch" == "$default_branch" ]]; then
+  if [[ -z "$(git -C "$main_worktree" status --porcelain --untracked-files=no 2>/dev/null)" ]]; then
+    before=$(git -C "$main_worktree" rev-parse HEAD)
+    if git -C "$main_worktree" merge --ff-only "origin/$default_branch" >/dev/null 2>&1; then
+      after=$(git -C "$main_worktree" rev-parse HEAD)
+      [[ "$before" != "$after" ]] && echo "[git sync] $repo_name: $default_branch ${before:0:7} -> ${after:0:7}"
+    else
+      echo "[git sync] $repo_name: $default_branch can't fast-forward (diverged), skipping"
+    fi
+  else
+    echo "[git sync] $repo_name: $default_branch has uncommitted changes, skipping pull"
+  fi
+fi
+
+# Rebase every other linked worktree onto the fresh origin/<default> tip.
+target="origin/$default_branch"
+git -C "$main_worktree" rev-parse --verify --quiet "$target" >/dev/null 2>&1 || exit 0
+
+while IFS= read -r wt; do
+  [[ "$wt" == "$main_worktree" ]] && continue
+  branch=$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null || echo HEAD)
+  [[ "$branch" == "HEAD" || "$branch" == "$default_branch" ]] && continue
+
+  if [[ -n "$(git -C "$wt" status --porcelain --untracked-files=no 2>/dev/null)" ]]; then
+    echo "[git sync] $repo_name: $branch has uncommitted changes, skipping rebase"
+    continue
+  fi
+  if [[ -e "$(git -C "$wt" rev-parse --git-path rebase-merge 2>/dev/null)" || -e "$(git -C "$wt" rev-parse --git-path rebase-apply 2>/dev/null)" ]]; then
+    echo "[git sync] $repo_name: $branch already mid-rebase, skipping"
+    continue
+  fi
+  if git -C "$wt" merge-base --is-ancestor "$target" "$branch" 2>/dev/null; then
+    continue  # already up to date with target
+  fi
+
+  before=$(git -C "$wt" rev-parse HEAD)
+  if git -C "$wt" rebase "$target" >/dev/null 2>&1; then
+    after=$(git -C "$wt" rev-parse HEAD)
+    echo "[git sync] $repo_name: $branch rebased onto $default_branch (${before:0:7} -> ${after:0:7})"
+  else
+    git -C "$wt" rebase --abort >/dev/null 2>&1 || true
+    echo "[git sync] $repo_name: $branch CONFLICTS rebasing onto $default_branch — needs manual rebase" >&2
+    notify "$branch needs manual rebase onto $default_branch"
+  fi
+done < <(git worktree list --porcelain | awk '/^worktree /{print $2}')
