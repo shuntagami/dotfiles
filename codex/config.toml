@@ -1,5 +1,5 @@
 model = "gpt-5.6-sol"
-model_reasoning_effort = "high"
+model_reasoning_effort = "xhigh"
 model_context_window = 1050000
 model_auto_compact_token_limit = 1000000
 service_tier = "default"
@@ -94,6 +94,12 @@ trust_level = "trusted"
 trust_level = "trusted"
 
 [projects."/Users/shun.tagami/projects/egt"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/projects/receptron/mulmoterminal"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/projects/voice-funnel"]
 trust_level = "trusted"
 
 [tui]
