@@ -1,20 +1,13 @@
 #!/usr/bin/env bash
 # post-checkout hook, installed globally via core.hooksPath (see .gitconfig).
 #
-# Backfills gitignored .env files into a brand-new git worktree (or fresh
-# clone). `git worktree add` only checks out tracked files, so anything
-# gitignored - .env, .env.local, .env.<anything>, at any depth in the tree -
-# is silently missing in the new worktree otherwise.
+# Backfills gitignored, untracked .env files into a brand-new git worktree.
+# `git worktree add` only checks out tracked files, so .env, .env.local and
+# .env.<anything> files at any depth would otherwise be missing there.
 #
-# Also best-effort fast-forwards the main worktree's default branch to
-# origin, so the NEXT worktree created (from any tool) forks from something
-# closer to current - several worktrees/clones of one repo sit side by side
-# and only the one you happen to be in gets pulled regularly, so a new
-# worktree cut from a long-stale local main gets a PR that conflicts with
-# whatever already landed. This can only help worktrees created AFTER this
-# one: `git worktree add` has already resolved and created THIS worktree's
-# branch by the time any post-checkout hook runs, so nothing here can change
-# what commit it forked from - there's no earlier hook to do that from.
+# Keep this hook local-only and quick. Updating remotes belongs before a
+# worktree is cut (and in the caller that can show progress), not in a hidden
+# post-checkout step where it cannot affect the worktree just created.
 #
 # Fires for EVERY `git worktree add`, whichever tool called it: MulmoTerminal's
 # plus-button worktree creation, `git wl`/`git wd`/etc, or a bare
@@ -25,55 +18,44 @@
 # this working tree - true for a brand-new worktree or a fresh clone, never
 # for an ordinary branch switch in an existing one. That is the only signal
 # this hook acts on.
-set -euo pipefail
+#
+# Do not use `set -e`: copying an optional local file must not turn a worktree
+# that Git successfully created into an apparent failure. Report individual
+# copy failures and leave the created tree usable.
+set -u
 
 prev_head="${1:-}"
 [[ "$prev_head" == "0000000000000000000000000000000000000000" ]] || exit 0
 
-main_worktree=$(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}') || exit 0
+main_worktree=$(git worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p' | head -n 1) || exit 0
 [[ -n "$main_worktree" ]] || exit 0
 
-dest_root=$(pwd)
+dest_root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 [[ "$main_worktree" != "$dest_root" ]] || exit 0
 [[ -d "$main_worktree" ]] || exit 0
 
-# Best effort, never disruptive: skip silently if there's no remote, we're
-# offline, the main worktree isn't ON its default branch, it has uncommitted
-# changes, or the fast-forward isn't possible (local ahead/diverged). None of
-# that should get in the way of the worktree actually being created.
-default_branch=""
-head_ref=$(git -C "$main_worktree" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null) || true
-if [[ -n "$head_ref" ]]; then
-  default_branch=${head_ref#origin/}
-else
-  for b in main master; do
-    if git -C "$main_worktree" rev-parse --verify --quiet "$b" >/dev/null 2>&1; then
-      default_branch="$b"
-      break
-    fi
-  done
-fi
-
-if [[ -n "$default_branch" ]]; then
-  current_branch=$(git -C "$main_worktree" rev-parse --abbrev-ref HEAD 2>/dev/null) || true
-  if [[ "$current_branch" == "$default_branch" ]]; then
-    git -C "$main_worktree" fetch origin "$default_branch" >/dev/null 2>&1 || true
-    if [[ -z "$(git -C "$main_worktree" status --porcelain 2>/dev/null)" ]] &&
-      git -C "$main_worktree" merge --ff-only "origin/$default_branch" >/dev/null 2>&1; then
-      echo "[post-checkout] fast-forwarded $main_worktree's $default_branch to origin/$default_branch" >&2
-    fi
-  fi
-fi
-
 copied=0
+skipped=0
+failed=0
 while IFS= read -r -d '' envfile; do
   rel="${envfile#"$main_worktree"/}"
   [[ "$rel" != "$envfile" ]] || continue
 
+  # A tracked `.env.example` may match the filename pattern but is already
+  # checked out by Git. Copy only files Git itself says are ignored.
+  git -C "$main_worktree" check-ignore --quiet -- "$rel" 2>/dev/null || continue
+
   dest="$dest_root/$rel"
-  mkdir -p "$(dirname "$dest")"
-  cp -p "$envfile" "$dest"
-  copied=$((copied + 1))
+  if [[ -e "$dest" || -L "$dest" ]]; then
+    skipped=$((skipped + 1))
+    continue
+  fi
+  if mkdir -p "$(dirname "$dest")" && cp -p "$envfile" "$dest"; then
+    copied=$((copied + 1))
+  else
+    failed=$((failed + 1))
+    printf '[post-checkout] could not copy %s into %s\n' "$rel" "$dest_root" >&2
+  fi
 done < <(find "$main_worktree" \
     \( -name node_modules -o -name .git -o -name dist -o -name build \
        -o -name .next -o -name target -o -name vendor -o -name .venv \) -prune -o \
@@ -82,3 +64,11 @@ done < <(find "$main_worktree" \
 if (( copied > 0 )); then
   echo "[post-checkout] copied $copied .env file(s) into $dest_root" >&2
 fi
+if (( skipped > 0 )); then
+  echo "[post-checkout] kept $skipped existing .env file(s) in $dest_root" >&2
+fi
+if (( failed > 0 )); then
+  echo "[post-checkout] $failed .env file(s) could not be copied; the worktree itself is ready" >&2
+fi
+
+exit 0
