@@ -64,7 +64,7 @@
   "quickCommands": [],
   "userMcpServers": [],
   "headerStatusColors": {},
-  "headerStatusTint": "background",
+  "headerStatusTint": "none",
   "themes": [],
   "buttons": null,
   "chips": null,
@@ -78,6 +78,7 @@
   "sessionIdleReapDays": 7,
   "terminalSubmit": "cr",
   "keymap": {
+    "terminal-new": "Alt+ArrowLeft",
     "terminal-new-here": "Alt+ArrowRight",
     "zoom-toggle": "Alt+ArrowUp",
     "next-attention": "Alt+ArrowDown"
