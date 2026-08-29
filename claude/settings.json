@@ -37,7 +37,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "jq -r '(.model.display_name // \"?\") as $model | (.workspace.current_dir // .cwd // \"\") as $dir | (env.HOME // \"\") as $home | (if $home != \"\" and ($dir | startswith($home)) then \"~\" + $dir[($home | length):] else $dir end) as $shortdir | (.context_window // {}) as $c | ($c.used_percentage // 0) as $p | (if $p >= 80 then \"\\u001b[31m\" elif $p >= 50 then \"\\u001b[33m\" else \"\\u001b[32m\" end) as $col | \"\\u001b[36m\\($model)\\u001b[0m \\u001b[35m\\($shortdir)\\u001b[0m \\($col)ctx \\($p | floor)%\\u001b[0m\"'"
+    "command": "/Users/shun.tagami/dotfiles/claude/statusline.sh"
   },
   "enabledPlugins": {
     "vercel@claude-plugins-official": true,
