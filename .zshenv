@@ -9,6 +9,11 @@ export VISUAL='vim'
 export PAGER='less'
 export GOPATH="$DOTFILES/pkg/go"
 
+# Claude Code defaults to bypassing permission prompts everywhere. MulmoTerminal
+# passes an explicit --permission-mode, so its documented environment override
+# is also needed there; direct `claude` launches use ~/.claude/settings.json.
+export CLAUDE_PERMISSION_MODE='bypassPermissions'
+
 # Cheap, unconditional guarantee that $DOTFILES/bin wins over Homebrew/system
 # dirs (e.g. so bin/git shadows /opt/homebrew/bin/git - see git-hooks/post-checkout
 # for why) in EVERY zsh shell, not just logins. .zshenv is the one rc file zsh
