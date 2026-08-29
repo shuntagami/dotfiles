@@ -22,6 +22,21 @@
 # Do not use `set -e`: copying an optional local file must not turn a worktree
 # that Git successfully created into an apparent failure. Report individual
 # copy failures and leave the created tree usable.
+#
+# TWO THINGS THIS HOOK MUST NOT DO AGAIN, both measured on marunage-studio,
+# where one `git worktree add` had grown to 17.9s against 0.21s without the
+# hook, copying 1625 files where 3 were wanted:
+#
+#   1. DESCEND INTO ANOTHER WORKTREE. Worktrees cut into `.claude/worktrees/`
+#      live INSIDE the main checkout, and each is a full copy of the project
+#      carrying its own .env files. Walking into them collects those as if they
+#      were the main tree's - and since a file is copied with its relative path
+#      intact, the new tree gets a `.claude/worktrees/...` of its own, which the
+#      NEXT create then walks into as well. That loop fed itself eight levels
+#      deep: 6 real .env files had become 1628.
+#   2. SPAWN A PROCESS PER FILE. `git check-ignore` was called once per match,
+#      so the count above meant 1628 process starts - which was where nearly all
+#      of those 17.9 seconds went, not in the copying.
 set -u
 
 prev_head="${1:-}"
@@ -34,32 +49,49 @@ dest_root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 [[ "$main_worktree" != "$dest_root" ]] || exit 0
 [[ -d "$main_worktree" ]] || exit 0
 
+# Search relative to the main worktree, so the paths handed to check-ignore and
+# rebuilt under $dest_root are the same strings throughout.
+cd "$main_worktree" 2>/dev/null || exit 0
+
+# Every OTHER worktree of this repo that lives inside the main one, asked of git
+# rather than assumed, so a tree cut somewhere other than `.claude/worktrees` is
+# skipped too. `.claude/worktrees` is named outright as well: a worktree that was
+# deleted by hand leaves its directory (and its copied .env files) behind with no
+# registration for git to report.
+prune=()
+while IFS= read -r other; do
+  [[ "$other" == "$main_worktree"/* ]] || continue
+  prune+=( -o -path "./${other#"$main_worktree"/}" )
+done < <(git worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p')
+
 copied=0
 skipped=0
 failed=0
-while IFS= read -r -d '' envfile; do
-  rel="${envfile#"$main_worktree"/}"
-  [[ "$rel" != "$envfile" ]] || continue
-
-  # A tracked `.env.example` may match the filename pattern but is already
-  # checked out by Git. Copy only files Git itself says are ignored.
-  git -C "$main_worktree" check-ignore --quiet -- "$rel" 2>/dev/null || continue
+# ONE check-ignore for the whole batch: it reads NUL-separated paths on stdin and
+# echoes back just the ignored ones. A tracked `.env.example` matches the filename
+# pattern but is already checked out by git, and this is what drops it.
+while IFS= read -r -d '' rel; do
+  rel="${rel#./}"
+  [[ -n "$rel" ]] || continue
 
   dest="$dest_root/$rel"
   if [[ -e "$dest" || -L "$dest" ]]; then
     skipped=$((skipped + 1))
     continue
   fi
-  if mkdir -p "$(dirname "$dest")" && cp -p "$envfile" "$dest"; then
+  if mkdir -p "$(dirname "$dest")" && cp -p "$main_worktree/$rel" "$dest"; then
     copied=$((copied + 1))
   else
     failed=$((failed + 1))
     printf '[post-checkout] could not copy %s into %s\n' "$rel" "$dest_root" >&2
   fi
-done < <(find "$main_worktree" \
+done < <(find . \
     \( -name node_modules -o -name .git -o -name dist -o -name build \
-       -o -name .next -o -name target -o -name vendor -o -name .venv \) -prune -o \
-    -type f \( -name '.env' -o -name '.env.*' \) -print0)
+       -o -name .next -o -name target -o -name vendor -o -name .venv \
+       -o -path ./.claude/worktrees \
+       ${prune[@]+"${prune[@]}"} \) -prune -o \
+    -type f \( -name '.env' -o -name '.env.*' \) -print0 \
+  | git check-ignore -z --stdin 2>/dev/null)
 
 if (( copied > 0 )); then
   echo "[post-checkout] copied $copied .env file(s) into $dest_root" >&2
