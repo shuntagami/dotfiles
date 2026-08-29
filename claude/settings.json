@@ -1,6 +1,5 @@
 {
   "permissions": {
-    "defaultMode": "bypassPermissions",
     "allow": [
       "Bash(npx tsc:*)",
       "Bash(npx vite build:*)",
@@ -8,9 +7,10 @@
       "Bash(git commit:*)",
       "Bash(strings ~/Library/Developer/Xcode/DerivedData/MonitorControl-*/Build/Products/Debug/MonitorControl.app/Contents/Resources/Base.lproj/Main.storyboardc/*.nib)",
       "mcp__Neon__list_projects"
-    ]
+    ],
+    "defaultMode": "bypassPermissions"
   },
-  "model": "claude-fable-5[1m]",
+  "model": "opus[1m]",
   "hooks": {
     "Stop": [
       {
