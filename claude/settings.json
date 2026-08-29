@@ -9,7 +9,7 @@
       "mcp__Neon__list_projects"
     ]
   },
-  "model": "sonnet",
+  "model": "claude-fable-5[1m]",
   "hooks": {
     "Stop": [
       {
