@@ -1,0 +1,10 @@
+{
+  "badgeColor": "#374151",
+  "headerColor": "#4b5563",
+  "headerTextColor": "#ffffff",
+  "cellColor": "#f3f4f6",
+  "cellBorderColor": "#6b7280",
+  "dotColor": "#9ca3af",
+  "buttonColor": "#d1d5db",
+  "headerStatusTint": "none"
+}
