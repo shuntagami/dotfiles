@@ -35,8 +35,13 @@ echo "対象 ${#roots[@]} 件:"
 for r in "${roots[@]}"; do echo "  ${r/#$HOME/~}"; done
 echo ""
 
-# Spotlight: sudo 不要。任意ディレクトリでの効果は環境依存なので、確実を期すなら
-# システム設定 → Spotlight → 検索プライバシー にも同じパスを登録すること。
+# Spotlight: sudo 不要。ディレクトリ単位の除外を CLI から行う手段はこれだけで、mdutil の
+# オプションはすべてボリューム単位、プライバシー一覧の実体
+# (/System/Volumes/Data/.Spotlight-V100/VolumeConfiguration.plist) は SIP 配下で書き換え不可。
+#
+# 効果はこのマシンで実測済み (macOS 26.6.2): マーカーを置いた 2 箇所は mdfind のヒットが 0、
+# 除外していない apps は 3。索引自体はボリューム全体で有効なので、除外が効いている。
+# GUI (システム設定 → Spotlight → 検索プライバシー) での追加は不要。
 for r in "${roots[@]}"; do
   touch "$r/.metadata_never_index" 2>/dev/null \
     && echo "spotlight  ${r/#$HOME/~}" \
