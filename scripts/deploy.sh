@@ -154,6 +154,12 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   mkdir -p ~/Library/Application\ Support/ngrok
   ln -sf ~/dotfiles/misc/ngrok.yml ~/Library/Application\ Support/ngrok/ngrok.yml
 
+  # git worktree を Spotlight と Time Machine の対象から外す。worktree の置き場所は
+  # リポジトリが増えるたびに増える (Claude Code は <repo>/.claude/worktrees に作り、
+  # 置き場所を変える設定が無い) ので、deploy のたびに探し直して当てる。
+  # 何度実行しても安全 (除外済みはスキップする)。
+  bash ~/dotfiles/scripts/exclude-worktrees-from-indexing.sh
+
   # watch-downloads-copy: auto-copy plain text files from Downloads to clipboard
   chmod +x ~/dotfiles/bin/watch-downloads-copy
   launchctl unload ~/Library/LaunchAgents/com.user.watch-downloads.plist 2>/dev/null
