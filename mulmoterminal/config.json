@@ -5,16 +5,16 @@
       "path": "/Users/shun.tagami/projects/marunage-studio"
     },
     {
+      "label": "voice-funnel",
+      "path": "/Users/shun.tagami/projects/voice-funnel"
+    },
+    {
       "label": "launch-consulting",
       "path": "/Users/shun.tagami/projects/launch-consulting"
     },
     {
       "label": "mulmoterminal",
       "path": "/Users/shun.tagami/projects/receptron/mulmoterminal"
-    },
-    {
-      "label": "voice-funnel",
-      "path": "/Users/shun.tagami/projects/voice-funnel"
     },
     {
       "label": "egt",
@@ -27,10 +27,6 @@
     {
       "label": "ai-production-studio",
       "path": "/Users/shun.tagami/projects/ai-production-studio"
-    },
-    {
-      "label": "legal",
-      "path": "/Users/shun.tagami/projects/legal"
     },
     {
       "label": "phase2-review",
@@ -66,7 +62,34 @@
   "headerStatusColors": {},
   "headerStatusTint": "none",
   "themes": [],
-  "buttons": null,
+  "buttons": [
+    {
+      "id": "pick-file",
+      "label": "Insert a file path",
+      "run": "open",
+      "icon": "attach_file",
+      "open": {
+        "pickFile": true
+      }
+    },
+    {
+      "id": "pr",
+      "label": "Open this branch's PR",
+      "run": "open",
+      "icon": "merge",
+      "when": "isGitRepo",
+      "open": {
+        "pr": true
+      }
+    },
+    {
+      "id": "restart",
+      "label": "エージェントを再起動",
+      "run": "action",
+      "icon": "restart_alt",
+      "action": "restart"
+    }
+  ],
   "chips": null,
   "pushEnabled": true,
   "pushKinds": [
@@ -86,7 +109,7 @@
   },
   "copyOnSelect": true,
   "decisionDigest": true,
-  "questionPaneEnabled": true,
+  "questionPaneEnabled": false,
   "issueWorkComments": false,
   "prWorkdirFooter": true,
   "appendSystemPrompt": true,
