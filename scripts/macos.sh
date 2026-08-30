@@ -534,9 +534,12 @@ defaults write com.apple.Safari com.apple.Safari.ContentPageGroupIdentifier.WebK
 # Spotlight                                                                   #
 ###############################################################################
 
-# Disable Spotlight indexing for any volume that gets mounted and has not yet
-# been indexed before
-sudo defaults write /.Spotlight-V100/VolumeConfiguration Exclusions -array "/Volumes"
+# 削除: `sudo defaults write /.Spotlight-V100/VolumeConfiguration Exclusions -array "/Volumes"`
+# `-array` は配列を丸ごと置き換えるため、検索プライバシー一覧に既に入っているもの
+# (screenpipe が自分の録画データを外している ~/.screenpipe など) を消してしまう。
+# 現在の macOS では SIP がこのパスへの書き込みを拒否するので、そもそも成功しない。
+# ディレクトリ単位の除外は scripts/exclude-worktrees-from-indexing.sh の
+# .metadata_never_index 方式を使うこと (このマシンで実効性を実測済み)。
 
 # Only show useful categories in Spotlight
 # Enabled: Applications, System Preferences, Calculator, Folders, Documents
