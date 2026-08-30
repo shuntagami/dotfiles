@@ -1,36 +1,36 @@
 {
   "cwdPresets": [
     {
-      "label": "egt",
-      "path": "/Users/shun.tagami/projects/egt"
+      "label": "marunage-studio",
+      "path": "/Users/shun.tagami/projects/marunage-studio"
+    },
+    {
+      "label": "launch-consulting",
+      "path": "/Users/shun.tagami/projects/launch-consulting"
     },
     {
       "label": "mulmoterminal",
       "path": "/Users/shun.tagami/projects/receptron/mulmoterminal"
     },
     {
-      "label": "marunage-studio",
-      "path": "/Users/shun.tagami/projects/marunage-studio"
-    },
-    {
-      "label": "legal",
-      "path": "/Users/shun.tagami/projects/legal"
-    },
-    {
-      "label": "ai-production-studio",
-      "path": "/Users/shun.tagami/projects/ai-production-studio"
-    },
-    {
       "label": "voice-funnel",
       "path": "/Users/shun.tagami/projects/voice-funnel"
+    },
+    {
+      "label": "egt",
+      "path": "/Users/shun.tagami/projects/egt"
     },
     {
       "label": "dotfiles",
       "path": "/Users/shun.tagami/dotfiles"
     },
     {
-      "label": "launch-consulting",
-      "path": "/Users/shun.tagami/projects/launch-consulting"
+      "label": "ai-production-studio",
+      "path": "/Users/shun.tagami/projects/ai-production-studio"
+    },
+    {
+      "label": "legal",
+      "path": "/Users/shun.tagami/projects/legal"
     },
     {
       "label": "phase2-review",
@@ -81,7 +81,8 @@
     "terminal-new": "Alt+ArrowLeft",
     "terminal-new-here": "Alt+ArrowRight",
     "zoom-toggle": "Alt+ArrowUp",
-    "next-attention": "Alt+ArrowDown"
+    "next-attention": "Alt+ArrowDown",
+    "terminal-close": "Cmd+."
   },
   "copyOnSelect": true,
   "decisionDigest": true,
