@@ -156,7 +156,7 @@ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts
 各ステップを独立して実行することもできます。
 
 ```bash
-~/dotfiles/scripts/install-packages.sh  # パッケージのインストール（Homebrew, anyenvなど）
+~/dotfiles/scripts/install-packages.sh  # パッケージのインストール（Homebrewなど）
 ~/dotfiles/scripts/deploy.sh            # dotfilesのシンボリックリンク作成
 ~/dotfiles/scripts/macos.sh             # macOSシステム設定の適用
 ~/dotfiles/vscode/setup.sh              # VSCode/Cursorのセットアップ
@@ -173,7 +173,6 @@ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts
 | **シェル**         | [Zsh](https://www.zsh.org/) + [Prezto](https://github.com/sorin-ionescu/prezto)（補完・ハイライト・サジェスト）                                                        |
 | **エディタ**       | [Vim](https://github.com/vim/vim)（[dein.vim](https://github.com/Shougo/dein.vim)）/ [VSCode](https://github.com/microsoft/vscode) / [Cursor](https://www.cursor.com/) |
 | **パッケージ管理** | [Homebrew](https://github.com/Homebrew/brew) / [apt](https://github.com/Debian/apt)                                                                                    |
-| **バージョン管理** | [anyenv](https://github.com/anyenv/anyenv)（Node.js, Ruby, Python）                                                                                                    |
 | **ターミナル**     | [iTerm2](https://github.com/gnachman/iTerm2)                                                                                                                           |
 | **キーボード**     | [Karabiner-Elements](https://github.com/pqrs-org/Karabiner-Elements) / [Hammerspoon](https://github.com/Hammerspoon/hammerspoon)                                       |
 | **AI**             | [Claude Desktop](https://claude.ai/) / Cursor / MCP                                                                                                                    |
