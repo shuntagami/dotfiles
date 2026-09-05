@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "afplay -v 0.15 \"/Users/shun.tagami/dotfiles/static/turn-finished-chime.mp3\" 2>/dev/null || true",
+            "command": "python3 /Users/shun.tagami/dotfiles/scripts/agent-notify.py claude",
             "async": true
           }
         ]
@@ -25,11 +25,11 @@
     ],
     "Notification": [
       {
-        "matcher": "permission_prompt|idle_prompt|elicitation_dialog|elicitation_url_dialog",
+        "matcher": "permission_prompt|elicitation_dialog|elicitation_url_dialog",
         "hooks": [
           {
             "type": "command",
-            "command": "afplay -v 0.15 \"/Users/shun.tagami/dotfiles/static/waiting-chime.mp3\" 2>/dev/null || true",
+            "command": "python3 /Users/shun.tagami/dotfiles/scripts/agent-notify.py claude",
             "async": true
           }
         ]
