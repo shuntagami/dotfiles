@@ -17,7 +17,6 @@ SOUNDS = {
     "waiting": ROOT / "static/waiting-chime.mp3",
 }
 WAITING_TYPES = {"permission_prompt", "elicitation_dialog", "elicitation_url_dialog"}
-SETTLE_SECONDS = 2
 VOLUME = "0.15"
 
 
@@ -101,15 +100,16 @@ def claude_completion(path, payload):
     return f"claude:{payload['session_id']}:{identity}" if identity else None
 
 
-def settled_completion(read, sleep=time.sleep):
+def confirmed_completion(read, sleep=time.sleep):
     # Legacy notify can precede the rollout flush; async Stop can precede turn_duration.
-    # Retry briefly, then require the SAME completion after a quiet confirmation window.
-    for _ in range(6):
+    # Retry only to observe that explicit record. Elapsed time never proves completion:
+    # an existing record returns immediately, and a missing record stays silent.
+    for attempt in range(6):
         token = read()
         if token:
-            sleep(SETTLE_SECONDS)
-            return token if read() == token else None
-        sleep(0.5)
+            return token
+        if attempt < 5:
+            sleep(0.5)
     return None
 
 
@@ -164,7 +164,7 @@ def main():
         else:
             return
         if path:
-            token = settled_completion(lambda: check(path, payload))
+            token = confirmed_completion(lambda: check(path, payload))
             if token:
                 play_once(token, "finished")
     except (OSError, ValueError, KeyError, TypeError, AttributeError, IndexError):

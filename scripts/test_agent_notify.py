@@ -121,12 +121,22 @@ class AgentNotifyTest(unittest.TestCase):
         for kind in notify.WAITING_TYPES:
             self.assertIsNotNone(notify.claude_waiting(self.path, {**self.claude, "notification_type": kind}))
 
-    def test_retry_for_flush_and_cancel_if_work_resumes(self):
+    def test_confirmed_completion_does_not_wait(self):
         sleep = Mock()
-        self.assertEqual(notify.settled_completion(Mock(side_effect=[None, "done", "done"]), sleep), "done")
-        self.assertIsNone(notify.settled_completion(Mock(side_effect=["done", None]), sleep))
-        self.assertIsNone(notify.settled_completion(Mock(side_effect=["old", "new"]), sleep))
-        self.assertIsNone(notify.settled_completion(lambda: None, sleep))
+        self.assertEqual(notify.confirmed_completion(lambda: "done", sleep), "done")
+        sleep.assert_not_called()
+
+    def test_retry_observes_completion_record_after_flush(self):
+        self.write(self.codex_rows(end="item_completed"))
+        sleep = Mock(side_effect=lambda _: self.write(self.codex_rows()))
+        self.assertIsNotNone(notify.confirmed_completion(lambda: notify.codex_completion(self.path, self.codex), sleep))
+        sleep.assert_called_once()
+
+    def test_elapsed_time_alone_never_announces_completion(self):
+        self.write(self.codex_rows(end="item_completed"))
+        sleep = Mock()
+        self.assertIsNone(notify.confirmed_completion(lambda: notify.codex_completion(self.path, self.codex), sleep))
+        self.assertEqual(sleep.call_count, 5)
 
     def test_repeated_notification_plays_once_and_uses_correct_sound(self):
         with patch.object(Path, "home", return_value=Path(self.temp.name)), patch.object(notify.subprocess, "run", return_value=Mock(returncode=0)) as play:
