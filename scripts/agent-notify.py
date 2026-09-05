@@ -63,9 +63,8 @@ def codex_completion(path, payload):
             boundary = event
     if not boundary or boundary.get("type") != "task_complete" or boundary.get("turn_id") != payload["turn-id"]:
         return None
-    reply = boundary.get("last_agent_message")
-    if not reply or reply != payload.get("last-assistant-message"):
-        return None
+    # The turn ID identifies the completion. Notification and rollout reply text can
+    # differ even for that same turn; requiring equal text silently drops real finishes.
     return f"codex:{payload['thread-id']}:{payload['turn-id']}"
 
 

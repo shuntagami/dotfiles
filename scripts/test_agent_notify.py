@@ -50,10 +50,28 @@ class AgentNotifyTest(unittest.TestCase):
             self.write(self.codex_rows(source=source))
             self.assertIsNone(notify.codex_completion(self.path, self.codex))
 
-    def test_codex_rejects_another_turn_or_intermediate_reply(self):
-        for kwargs in ({"turn": "older-turn"}, {"reply": "Working on it"}, {"reply": None}):
-            self.write(self.codex_rows(**kwargs))
-            self.assertIsNone(notify.codex_completion(self.path, self.codex))
+    def test_codex_rejects_another_turn(self):
+        self.write(self.codex_rows(turn="older-turn"))
+        self.assertIsNone(notify.codex_completion(self.path, self.codex))
+
+    def test_codex_reply_representation_does_not_change_completion(self):
+        # Real notifications and task_complete records had different reply lengths
+        # despite identical turn IDs. The boundary, not text equality, proves completion.
+        for reply in ("Different representation", None, ""):
+            with self.subTest(reply=reply):
+                self.write(self.codex_rows(reply=reply))
+                self.assertEqual(notify.codex_completion(self.path, self.codex), "codex:thread:turn")
+
+    def test_codex_main_announces_mismatched_reply_once(self):
+        self.write(self.codex_rows(reply="Plain reply"))
+        payload = {**self.codex, "last-assistant-message": "**Formatted reply**"}
+        with patch.object(notify.sys, "argv", ["script", "codex", "turn-ended", json.dumps(payload)]), \
+             patch.object(notify, "codex_path", return_value=self.path), \
+             patch.object(Path, "home", return_value=Path(self.temp.name)), \
+             patch.object(notify.subprocess, "run", return_value=Mock(returncode=0)) as play:
+            notify.main()
+            notify.main()
+            play.assert_called_once()
 
     def test_codex_new_work_cancels_finish(self):
         self.write(self.codex_rows() + [{"type": "event_msg", "payload": {"type": "task_started", "turn_id": "next"}}])
