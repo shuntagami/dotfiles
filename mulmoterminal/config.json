@@ -55,7 +55,12 @@
   "prRepos": [],
   "gitlabHosts": [],
   "repoDirs": {},
-  "launchers": [],
+  "launchers": [
+    {
+      "label": "Cursor CLI",
+      "command": "cursor-agent"
+    }
+  ],
   "customAgents": [],
   "quickCommands": [],
   "userMcpServers": [],
