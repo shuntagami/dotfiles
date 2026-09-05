@@ -166,10 +166,16 @@ brew "mkcert"
 brew "mp4v2"
 # Libraries and data formats for array-oriented scientific data
 brew "netcdf"
-# HTTP/2 C Library
-brew "nghttp2"
 # Open-source, cross-platform JavaScript runtime environment
 brew "node"
+# PDF rendering library (based on the xpdf-3.0 code base)
+brew "poppler"
+# Image processing library
+brew "vips"
+# Netlify command-line tool
+brew "netlify-cli"
+# HTTP/2 C Library
+brew "nghttp2"
 # High performance message passing library
 brew "open-mpi"
 # PAM module for reattaching to the user's GUI (Aqua) session
@@ -178,8 +184,6 @@ brew "pam-reattach"
 brew "peco"
 # Paste PNG into files
 brew "pngpaste"
-# PDF rendering library (based on the xpdf-3.0 code base)
-brew "poppler"
 # Cross-platform application and UI framework
 brew "qt@5"
 # PDF rendering library (based on the xpdf-3.0 code base)
@@ -218,8 +222,6 @@ brew "tesseract-lang"
 brew "tmux"
 # Vi 'workalike' with many additional features
 brew "vim"
-# Image processing library
-brew "vips"
 # Executes a program periodically, showing output fullscreen
 brew "watch"
 # Internet file retriever

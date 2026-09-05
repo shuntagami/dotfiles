@@ -10,7 +10,7 @@
     ],
     "defaultMode": "bypassPermissions"
   },
-  "model": "opus[1m]",
+  "model": "claude-fable-5-1[1m]",
   "hooks": {
     "Stop": [
       {
@@ -45,7 +45,7 @@
     "slack@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true
   },
-  "effortLevel": "xhigh",
+  "effortLevel": "medium",
   "autoCompactWindow": 800000,
   "tui": "fullscreen",
   "voice": {
