@@ -98,6 +98,10 @@ if [[ -d "${HOME}/dotfiles/screenpipe/pipes" ]]; then
     pipe_name="${pipe_md:h:t}"
     mkdir -p "${HOME}/.screenpipe/pipes/${pipe_name}"
     ln -sf "${pipe_md}" "${HOME}/.screenpipe/pipes/${pipe_name}/pipe.md"
+    for pipe_extension in "${pipe_md:h}"/extensions/*.ts(.N); do
+      mkdir -p "${HOME}/.screenpipe/pipes/${pipe_name}/.pi/extensions"
+      ln -sf "${pipe_extension}" "${HOME}/.screenpipe/pipes/${pipe_name}/.pi/extensions/${pipe_extension:t}"
+    done
   done
 fi
 
