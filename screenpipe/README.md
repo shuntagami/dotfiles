@@ -1,10 +1,11 @@
 # Screenpipe設定
 
-このディレクトリでは、ScreenpipeのPipeプロンプトと、実行時に使われる標準スキルの参照スナップショットを管理する。
+このディレクトリでは、ScreenpipeのPipeプロンプト、独自のPi拡張、実行時に使われる標準スキルの参照スナップショットを管理する。
 
 管理するもの:
 
 - `pipes/*/pipe.md`
+- `pipes/*/extensions/*.ts`（dotfiles独自のPi拡張）
 - `runtime-skills/*/SKILL.md`
 
 管理しないもの:
@@ -19,6 +20,7 @@
 - Slack webhookやAPIキーなどの接続情報
 
 `~/dotfiles/scripts/deploy.sh` を実行すると、各 `pipe.md` が `~/.screenpipe/pipes/*/pipe.md` へシンボリックリンクされる。
+`pipes/*/extensions/*.ts` も対応するPipeの `.pi/extensions/` へリンクする。
 
 ## 会議コーチ
 
@@ -70,6 +72,25 @@ ScreenpipeのローカルAPIは、その端末で記録された画面・音声�
 `hourly-work-report` はSlack投稿に端末名を含めるため、複数端末から投稿されてもどの端末の記録か分かる。
 
 `work-start` / `break-start` などの作業状態ログ（`~/.screenpipe/work-state/`）は端末をまたいで揃えたいので、Syncthing で同期している。セットアップ手順は [docs/multi-machine-sync.md](../docs/multi-machine-sync.md) を参照。
+
+## 1時間ごとの作業レポート
+
+`hourly-work-report` は、各端末のScreenpipeに登録したプリセット `gemini-3-8-flash`（モデルID: `gemini-3.8-flash`）を使う。プリセットとAPIキーはdotfilesのdeployでは同期されないので、各端末でScreenpipeのAI設定から登録する。
+
+- Provider: `custom`
+- URL: `https://generativelanguage.googleapis.com/v1beta/openai/`
+- Model: `gemini-3.8-flash`
+- API key: 有効なGemini APIキー
+
+`extensions/dotfiles-gemini-native.ts` はこのPipeの `custom / gemini-3.8-flash` を、PiのGeminiネイティブ接続へ切り替える。プリセットから渡される同じ `CUSTOM_API_KEY` を利用する。Pi 0.84.1のOpenAI互換接続ではツール呼び出しの `thought_signature` が失われ、2回目の生成がHTTP 400になるため。標準スキルや依存パッケージは変更しない。
+
+Slackの送信先は、作業開始・終了の通知と同じ `~/.screenpipe/work-state/config.env` の `SLACK_WEBHOOK_URL`。レポートだけ送信先を分ける場合は `HOURLY_WORK_SLACK_WEBHOOK_URL` を設定する。現在のScreenpipeの `/connections/slack` はWebhookを返さないため、接続状態が「connected」でもこのローカル設定が必要。
+
+活動の取得には `SCREENPIPE_LOCAL_API_URL`（未指定時は `http://localhost:3030`）と、Pipe実行時に注入される `SCREENPIPE_LOCAL_API_KEY` を使う。時間配分はAPIの `minutes` を使用する。APIエラーや記録を確認できない状態では、投稿せずエラーを実行ログに残す。
+
+送信前の本文は `~/.screenpipe/pipes/hourly-work-report/output/report.txt` に保存する。実行時の追加指示で「ドライラン」を指定すると、送信ステップを `SCREENPIPE_HOURLY_DRY_RUN=1` で実行してSlack投稿を省略する。
+
+GeminiからHTTP 400 / `API_KEY_INVALID` が返る場合は、キーの文字列だけでなくGoogle Cloud側のAPI制限も確認する。2026-09-07の復旧では、既存キーに `generativelanguage.googleapis.com` のAPI制限を設定すると、同じキーでモデル一覧取得と `gemini-3.8-flash` の生成がHTTP 200になった。新しいキーやサービスアカウントは作成していない。制限を変更する前に、そのキーを他のGoogle APIで共用していないことを確認する。
 
 ## 休憩ログ
 

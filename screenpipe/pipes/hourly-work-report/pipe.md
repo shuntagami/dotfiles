@@ -2,7 +2,7 @@
 schedule: every 1h
 enabled: true
 preset:
-  - gemini-3.1-pro
+  - gemini-3-8-flash
 connections:
   - slack
 title: 作業内容
@@ -40,6 +40,9 @@ Slack投稿には必ず端末名を入れ、どの端末上の1時間レポー�
 - まず `/activity-summary` を使う。
 - その後、必ず `/search` を1回使って、画面テキスト、ウィンドウ名、URL、入力、音声文字起こしの断片を確認する。
 - API呼び出しは、Screenpipe API 2回 + Slack投稿 1回まで。
+- APIのHTTPエラーを空の活動記録として扱わない。失敗したステップで終了し、エラーを報告する。
+- `data_status` が `ok` 以外なら、その状態を実行ログに残して投稿せず終了する。「記録が取れていない」と「作業していない」を混同しない。
+- 時間配分には `total_active_minutes` とアプリ・ウィンドウの `minutes` を使う。フレーム数や検索件数から時間を計算しない。記録が短い場合は、その範囲だけを報告する。
 - アプリ名だけで判断しない。ウィンドウ名、URL、表示テキスト、入力、会話断片、時間のまとまりから判断する。
 - 「Cursorを開いていた」「Slackを見ていた」のようなアプリ利用報告で終わらせない。
 - 推測しすぎない。根拠が弱い場合は「成果は読み取れず」「判定弱め」と書く。
@@ -48,6 +51,7 @@ Slack投稿には必ず端末名を入れ、どの端末上の1時間レポー�
 - 投稿は短く、11行以内に収める。
 - アプリ内通知やテスト通知を送らない。
 - Slack投稿文を作成しただけでは完了ではない。必ずSlack webhookへPOSTし、成功を確認してから終了する。
+- ただし、追加の実行指示でドライランを指定された場合は、ステップ3を `SCREENPIPE_HOURLY_DRY_RUN=1` で実行する。投稿文を `output/report.txt` に保存して検証し、Slackへ送らない。
 
 # ステップ0: 勤務状態の確認
 
@@ -195,7 +199,9 @@ import * as fs from "fs";
 import { hostname } from "os";
 
 const KEY = process.env.SCREENPIPE_LOCAL_API_KEY;
-const headers = { Authorization: `Bearer ${KEY}` };
+if (!KEY) throw new Error("SCREENPIPE_LOCAL_API_KEY が設定されていません");
+const API = (process.env.SCREENPIPE_LOCAL_API_URL || "http://localhost:3030").replace(/\/+$/, "");
+const headers = { Authorization: `Bearer ${KEY}`, "X-Screenpipe-Client": "api" };
 const device = process.env.SCREENPIPE_DEVICE_NAME ?? hostname();
 const now = new Date();
 const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
@@ -304,23 +310,35 @@ const start = encodeURIComponent(rangeStart.toISOString());
 const end = encodeURIComponent(now.toISOString());
 
 const r = await fetch(
-  `http://localhost:3030/activity-summary?start_time=${start}&end_time=${end}`,
-  { headers }
+  `${API}/activity-summary?start_time=${start}&end_time=${end}&include_memories=false&include_snippets=false`,
+  { headers, signal: AbortSignal.timeout(30000) }
 );
 
-const data = r.ok ? await r.json() : null;
-fs.writeFileSync("/tmp/hourly_work_activity.json", JSON.stringify(data ?? {}, null, 2));
+if (!r.ok) throw new Error(`activity-summary 取得失敗: HTTP ${r.status}`);
+const data = await r.json();
+if (data.data_status !== "ok") {
+  throw new Error(`活動記録を確認できないため投稿しません: data_status=${data.data_status}`);
+}
+const range = { start: rangeStart.toISOString(), end: now.toISOString() };
+fs.mkdirSync("output", { recursive: true });
+const contextFd = fs.openSync("output/hourly-work-context.json", "w", 0o600);
+try {
+  fs.fchmodSync(contextFd, 0o600);
+  fs.writeFileSync(contextFd, JSON.stringify({ range, data }, null, 2));
+} finally {
+  fs.closeSync(contextFd);
+}
 
 const apps = (data?.apps ?? []).slice(0, 12).map((a) => ({
   name: a.name,
-  minutes: a.active_minutes,
+  minutes: a.minutes,
 }));
 
 const windows = (data?.windows ?? []).slice(0, 24).map((w) => ({
   app: w.app_name ?? w.app,
   title: w.window_name ?? w.name ?? w.title,
   url: w.browser_url,
-  minutes: w.active_minutes,
+  minutes: w.minutes,
   text: String(w.key_text ?? w.text ?? "").slice(0, 180),
 }));
 
@@ -336,14 +354,16 @@ const audio = (
   data?.audioSummary?.topTranscriptions ??
   []
 ).slice(0, 8).map((a) => ({
-  speaker: a.speaker_name ?? a.speaker?.name,
+  speaker: a.speaker_name ?? (typeof a.speaker === "string" ? a.speaker : a.speaker?.name),
   timestamp: a.timestamp,
   text: String(a.transcription ?? a.text ?? "").replace(/\s+/g, " ").slice(0, 220),
 }));
 
 console.log(JSON.stringify({
   device,
-  range: { start: rangeStart.toISOString(), end: now.toISOString() },
+  range,
+  data_status: data.data_status,
+  total_active_minutes: data.total_active_minutes,
   work,
   breaks,
   apps,
@@ -363,87 +383,46 @@ console.log(JSON.stringify({
 import * as fs from "fs";
 
 const KEY = process.env.SCREENPIPE_LOCAL_API_KEY;
-
-const workFile = `${process.env.HOME}/.screenpipe/work-state/work.jsonl`;
-
-function currentWorkSession() {
-  if (!fs.existsSync(workFile)) return { configured: false, active: false, started_at: null };
-
-  const events = fs
-    .readFileSync(workFile, "utf8")
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .map((line) => {
-      try {
-        return JSON.parse(line);
-      } catch {
-        return null;
-      }
-    })
-    .filter(Boolean);
-
-  if (events.length === 0) return { configured: false, active: false, started_at: null };
-
-  let current = null;
-  for (const event of events) {
-    if (event.type === "work_start") current = event;
-    if (event.type === "work_end") current = null;
-  }
-
-  return {
-    configured: true,
-    active: Boolean(current),
-    started_at: current?.at ?? null,
-  };
-}
-
-const now = new Date();
-const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-const work = currentWorkSession();
-if (!work.active) {
-  process.exit(0);
-}
-const workStart = work.started_at ? new Date(work.started_at) : null;
-const rangeStart = workStart && workStart > oneHourAgo ? workStart : oneHourAgo;
-
+if (!KEY) throw new Error("SCREENPIPE_LOCAL_API_KEY が設定されていません");
+const API = (process.env.SCREENPIPE_LOCAL_API_URL || "http://localhost:3030").replace(/\/+$/, "");
+const { range } = JSON.parse(fs.readFileSync("output/hourly-work-context.json", "utf8"));
 const params = new URLSearchParams({
   content_type: "all",
-  limit: "40",
-  start_time: rangeStart.toISOString(),
-  end_time: now.toISOString(),
+  limit: "20",
+  start_time: range.start,
+  end_time: range.end,
   max_content_length: "500",
-  on_screen: "true",
+  fields: "type,content.timestamp,content.app_name,content.window_name,content.browser_url,content.text,content.transcription,content.text_content,content.input_text",
 });
 
-const r = await fetch(`http://localhost:3030/search?${params}`, {
-  headers: { Authorization: `Bearer ${KEY}` },
+const r = await fetch(`${API}/search?${params}`, {
+  headers: { Authorization: `Bearer ${KEY}`, "X-Screenpipe-Client": "api" },
+  signal: AbortSignal.timeout(30000),
 });
+if (!r.ok) throw new Error(`search 取得失敗: HTTP ${r.status}`);
+const data = await r.json();
+if (!Array.isArray(data.data)) throw new Error("search の応答に data 配列がありません");
 
-const data = r.ok ? await r.json() : { data: [] };
-
-const recent = (data.data ?? []).slice(0, 40).map((d) => {
-  const content = d.content ?? {};
+const recent = data.data.slice(0, 20).map((d) => {
+  // fields 指定時は content.timestamp などがフラットなキーで返る。
+  const content = d.content ?? Object.fromEntries(
+    Object.entries(d).filter(([key]) => key.startsWith("content.")).map(([key, value]) => [key.slice(8), value])
+  );
   const text = String(
-    content.text ??
-    content.transcription ??
-    content.text_content ??
-    content.input_text ??
-    ""
+    content.text ?? content.transcription ?? content.text_content ?? content.input_text ?? ""
   ).replace(/\s+/g, " ");
-
   return {
     type: d.type,
-    timestamp: content.timestamp ?? content.start_time ?? content.created_at,
-    app: content.app_name ?? content.app,
-    window: content.window_name ?? content.window,
+    timestamp: content.timestamp,
+    app: content.app_name,
+    window: content.window_name,
     url: content.browser_url,
     text: text.slice(0, 360),
   };
 }).sort((a, b) => {
   const at = Date.parse(a.timestamp ?? "");
   const bt = Date.parse(b.timestamp ?? "");
-  if (Number.isNaN(at) || Number.isNaN(bt)) return 0;
-  return at - bt;
+  return Number.isNaN(at) || Number.isNaN(bt) ? 0 : at - bt;
 });
 
 console.log(JSON.stringify(recent, null, 2));
@@ -473,62 +452,62 @@ console.log(JSON.stringify(recent, null, 2));
 
 # ステップ3: Slackに投稿する
 
-Slack投稿文を作成し、Screenpipeの接続設定に保存されたSlack webhookへ送信する。
+ステップ1・2を踏まえた最終投稿文を `output/report.txt` に保存してから、以下を実行する。ファイルには投稿本文だけを書き、コードフェンスや説明を付けない。
 
-以下のコードを実行する前に、`text` を必ず実際のSlack投稿文に置き換える。プレースホルダーのまま送信してはいけない。
+Webhookは、既存の作業通知と同じ `~/.screenpipe/work-state/config.env` の `SLACK_WEBHOOK_URL` を利用する。時間レポート専用の `HOURLY_WORK_SLACK_WEBHOOK_URL` がある場合はそちらを優先する。どちらも同名の環境変数で上書きできる。
+
+現在の `/connections/slack` は接続状態を返すAPIであり、Webhookの取得には使わない。送信先が未設定ならエラーで終了する。
 
 重要:
 
-- `text` を作成しただけで止まらない。
-- `cat` でJSONを作るだけで止まらない。
-- `http://localhost:11435/notify` へテスト通知を送らない。
-- Slack webhookへPOSTするところまで必ず実行する。
-- Slackのレスポンスが成功でない場合は、投稿したと主張しない。
+- 通常実行では、本文やJSONを作るだけで止まらず、WebhookへPOSTするところまで実行する。
+- ドライランでは `SCREENPIPE_HOURLY_DRY_RUN=1` をこのコードの実行環境に設定する。
+- ドライランの完了をSlack送信成功と表現しない。
+- 投稿に失敗した場合は、投稿したと主張しない。
+- アプリ内通知やテスト通知を送らない。
 
 ```bun
-const KEY = process.env.SCREENPIPE_LOCAL_API_KEY;
-const headers = { Authorization: `Bearer ${KEY}` };
+import * as fs from "fs";
 
-const connRes = await fetch("http://localhost:3030/connections/slack", { headers });
-const conn = connRes.ok ? await connRes.json() : null;
-const webhookUrl = conn?.credentials?.webhook_url;
-
-if (!webhookUrl) {
-  console.error("Slackのwebhook_urlが設定されていません");
-  process.exit(1);
+const text = fs.readFileSync("output/report.txt", "utf8").trim();
+if (!text || text.includes("未置換_送信禁止") || text.split(/\r?\n/).length > 11) {
+  throw new Error("Slack投稿文が空、未置換、または11行を超えています");
 }
 
-const text = `未置換_送信禁止`;
-
-if (text.includes("未置換_送信禁止")) {
-  console.error("Slackに投稿する前にtextを最終レポート文へ置き換えてください");
-  process.exit(1);
+if (process.env.SCREENPIPE_HOURLY_DRY_RUN === "1") {
+  console.log("ドライラン完了: output/report.txt に保存しました。Slackには送信していません。");
+  process.exit(0);
 }
+
+const configFile = `${process.env.HOME}/.screenpipe/work-state/config.env`;
+const config = {};
+if (fs.existsSync(configFile)) {
+  for (const rawLine of fs.readFileSync(configFile, "utf8").split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const idx = line.indexOf("=");
+    if (idx === -1) continue;
+    config[line.slice(0, idx).trim()] = line.slice(idx + 1).trim().replace(/^['"]|['"]$/g, "");
+  }
+}
+const webhookUrl = process.env.HOURLY_WORK_SLACK_WEBHOOK_URL || config.HOURLY_WORK_SLACK_WEBHOOK_URL
+  || process.env.SLACK_WEBHOOK_URL || config.SLACK_WEBHOOK_URL;
+if (!webhookUrl) throw new Error("作業通知用の SLACK_WEBHOOK_URL が設定されていません");
 
 const postRes = await fetch(webhookUrl, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ text }),
+  signal: AbortSignal.timeout(15000),
 });
-
-if (!postRes.ok) {
-  console.error(`Slack投稿に失敗しました: ${postRes.status}`);
-  process.exit(1);
-}
-
-const postText = await postRes.text();
-if (postText.trim() !== "ok") {
-  console.error(`Slack投稿の応答が想定外です: ${postText}`);
-  process.exit(1);
+if (!postRes.ok) throw new Error(`Slack投稿に失敗しました: HTTP ${postRes.status}`);
+if ((await postRes.text()).trim() !== "ok") {
+  throw new Error("Slack投稿の応答が想定外です");
 }
 
 console.log("Slackに1時間レポートを送信しました。");
 ```
 
-`text` には、ステップ1と必要ならステップ2の結果を踏まえて作った最終投稿文を入れること。
+通常実行でSlack投稿に成功した場合のみ、正確に `Slackに1時間レポートを送信しました。` と出力する。
 
-Slack投稿に成功した場合のみ、正確に以下を出力する。
-
-`Slackに1時間レポートを送信しました。`
-
-投稿に失敗した場合は、投稿したと主張しない。
+ドライランの場合は `ドライラン完了: output/report.txt に保存しました。Slackには送信していません。` と出力する。
