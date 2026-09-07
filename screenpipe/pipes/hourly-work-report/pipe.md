@@ -200,7 +200,7 @@ import { hostname } from "os";
 
 const KEY = process.env.SCREENPIPE_LOCAL_API_KEY;
 if (!KEY) throw new Error("SCREENPIPE_LOCAL_API_KEY が設定されていません");
-const API = process.env.SCREENPIPE_LOCAL_API_URL || "http://localhost:3030";
+const API = (process.env.SCREENPIPE_LOCAL_API_URL || "http://localhost:3030").replace(/\/+$/, "");
 const headers = { Authorization: `Bearer ${KEY}`, "X-Screenpipe-Client": "api" };
 const device = process.env.SCREENPIPE_DEVICE_NAME ?? hostname();
 const now = new Date();
@@ -321,7 +321,13 @@ if (data.data_status !== "ok") {
 }
 const range = { start: rangeStart.toISOString(), end: now.toISOString() };
 fs.mkdirSync("output", { recursive: true });
-fs.writeFileSync("output/hourly-work-context.json", JSON.stringify({ range, data }, null, 2), { mode: 0o600 });
+const contextFd = fs.openSync("output/hourly-work-context.json", "w", 0o600);
+try {
+  fs.fchmodSync(contextFd, 0o600);
+  fs.writeFileSync(contextFd, JSON.stringify({ range, data }, null, 2));
+} finally {
+  fs.closeSync(contextFd);
+}
 
 const apps = (data?.apps ?? []).slice(0, 12).map((a) => ({
   name: a.name,
@@ -378,7 +384,7 @@ import * as fs from "fs";
 
 const KEY = process.env.SCREENPIPE_LOCAL_API_KEY;
 if (!KEY) throw new Error("SCREENPIPE_LOCAL_API_KEY が設定されていません");
-const API = process.env.SCREENPIPE_LOCAL_API_URL || "http://localhost:3030";
+const API = (process.env.SCREENPIPE_LOCAL_API_URL || "http://localhost:3030").replace(/\/+$/, "");
 const { range } = JSON.parse(fs.readFileSync("output/hourly-work-context.json", "utf8"));
 const params = new URLSearchParams({
   content_type: "all",
