@@ -47,7 +47,7 @@
   ],
   "providers": [],
   "soundFile": null,
-  "soundKinds": ["finished", "waiting"],
+  "soundKinds": ["finished"],
   "sounds": {
     "finished": "preset:coin",
     "waiting": "preset:meow"
