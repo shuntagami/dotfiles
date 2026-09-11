@@ -21,6 +21,9 @@ with (root / "commands.log").open("a") as log:
 stage = name
 if name in ("defaults", "launchctl"):
     stage += " " + args[0]
+if stage == "defaults read" and os.environ.get("FAIL_STAGE") == "missing domain":
+    print("Domain " + args[1] + " does not exist", file=sys.stderr)
+    sys.exit(1)
 if stage == os.environ.get("FAIL_STAGE"):
     sys.exit(42)
 if name == "swiftc":
@@ -94,10 +97,20 @@ class InstallerRecoveryTests(unittest.TestCase):
 
     def test_missing_preferences_skip_backup(self):
         """An app with no preferences domain can be installed without an empty backup."""
-        result, log, _, backup = self.run_installer("defaults export")
+        result, log, _, backup = self.run_installer("missing domain")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse(backup)
         self.assertTrue(any(line.startswith("launchctl bootstrap ") for line in log))
+
+    def test_backup_errors_abort_before_teardown(self):
+        """Unexpected preference read/export errors preserve the running app and agent."""
+        for failure in ("defaults read", "defaults export"):
+            with self.subTest(failure=failure):
+                result, log, running, backup = self.run_installer(failure)
+                self.assertEqual(result.returncode, 42, result.stderr)
+                self.assertFalse(backup)
+                self.assertTrue(running)
+                self.assertFalse(any(line.startswith(("osascript ", "launchctl ", "open ")) for line in log))
 
 
 if __name__ == "__main__":

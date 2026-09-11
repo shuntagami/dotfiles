@@ -39,12 +39,19 @@ swiftc -O -F /System/Library/PrivateFrameworks \
 
 mkdir -p "${SUPPORT_DIR}" "${HOME}/Library/LaunchAgents" "${HOME}/Library/Logs/dotfiles"
 if [[ ! -f "${SUPPORT_DIR}/monitorcontrol-before.plist" ]]; then
-  # A newly installed app may not have a preferences domain yet. Export into
-  # the temporary directory so failed exports cannot leave an empty backup.
-  if defaults export "${DOMAIN}" "${BUILD_DIR}/monitorcontrol-before.plist"; then
+  # Only a confirmed missing domain can skip the backup. Other read/export
+  # errors must stop setup before the existing app or agent is touched.
+  if defaults read "${DOMAIN}" >/dev/null 2>"${BUILD_DIR}/domain-error"; then
+    defaults export "${DOMAIN}" "${BUILD_DIR}/monitorcontrol-before.plist"
     mv "${BUILD_DIR}/monitorcontrol-before.plist" "${SUPPORT_DIR}/monitorcontrol-before.plist"
   else
-    echo "No MonitorControl preferences backup available; continuing setup."
+    read_result=$?
+    if [[ "$(<"${BUILD_DIR}/domain-error")" == *"Domain ${DOMAIN} does not exist"* ]]; then
+      echo "MonitorControl has no saved preferences yet; skipping backup."
+    else
+      cat "${BUILD_DIR}/domain-error" >&2
+      exit "${read_result}"
+    fi
   fi
 fi
 launchctl bootout "gui/$(id -u)/${LABEL}" 2>/dev/null || true
