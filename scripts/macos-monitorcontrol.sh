@@ -17,7 +17,19 @@ readonly LABEL="local.dotfiles.monitorcontrol-mode"
 readonly PLIST="${HOME}/Library/LaunchAgents/${LABEL}.plist"
 readonly DOMAIN="app.monitorcontrol.MonitorControl"
 readonly BUILD_DIR="$(mktemp -d)"
-trap 'rm -rf "${BUILD_DIR}"' EXIT
+monitorcontrol_stop_requested=false
+
+# Preserve the failing command's status and restore the app if setup stopped it.
+cleanup() {
+  local result=$?
+  trap - EXIT
+  rm -rf "${BUILD_DIR}" || true
+  if [[ "${result}" -ne 0 && "${monitorcontrol_stop_requested}" == true ]]; then
+    open -g -a MonitorControl || true
+  fi
+  exit "${result}"
+}
+trap cleanup EXIT
 
 # Compile and validate before replacing the running helper.
 swiftc -O -F /System/Library/PrivateFrameworks \
@@ -34,6 +46,7 @@ install -m 755 "${BUILD_DIR}/monitorcontrol-mode" "${SUPPORT_DIR}/monitorcontrol
 
 # Keep the existing custom volume shortcuts. Brightness is managed dynamically.
 if pgrep -x MonitorControl >/dev/null; then
+  monitorcontrol_stop_requested=true
   osascript -e 'tell application "MonitorControl" to quit'
   for _ in {1..40}; do
     if ! pgrep -x MonitorControl >/dev/null; then break; fi

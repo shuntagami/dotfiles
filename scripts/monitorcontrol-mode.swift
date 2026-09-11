@@ -19,35 +19,42 @@ struct Screen {
     let builtIn: Bool
     let mirror: CGDirectDisplayID
     let mirrored: Bool
-    let suffix: String
+    let suffix: String?
 }
 
+/// Reads the localized display name used by MonitorControl's preference keys.
 func rawName(_ id: CGDirectDisplayID) -> String? {
     guard let info = displayInfo(id)?.takeRetainedValue() as? [String: Any],
           let names = info["DisplayProductName"] as? [String: String] else { return nil }
     return names[Locale.current.identifier] ?? names["en_US"] ?? names.values.first
 }
 
+/// Keeps every online display, even when its preference-key name is unavailable.
 func screens() -> [Screen] {
     var ids = [CGDirectDisplayID](repeating: 0, count: 32)
     var count: UInt32 = 0
     guard CGGetOnlineDisplayList(32, &ids, &count) == .success else { return [] }
-    return ids.prefix(Int(count)).compactMap { id in
-        guard var name = rawName(id) else { return nil }
+    return ids.prefix(Int(count)).map { id in
+        var name = rawName(id)
         let mirror = CGDisplayMirrorsDisplay(id)
-        if mirror != 0, let otherName = rawName(mirror) { name += " | " + otherName }
-        let suffix = "(\(name.filter { !$0.isWhitespace })\(CGDisplayVendorNumber(id))\(CGDisplayModelNumber(id))@\(id))"
+        if mirror != 0 {
+            // Both names are needed to reproduce MonitorControl's mirror key.
+            name = name.flatMap { ownName in rawName(mirror).map { ownName + " | " + $0 } }
+        }
+        let suffix = name.map { "(\($0.filter { !$0.isWhitespace })\(CGDisplayVendorNumber(id))\(CGDisplayModelNumber(id))@\(id))" }
         return Screen(id: id, builtIn: CGDisplayIsBuiltin(id) != 0, mirror: mirror,
                       mirrored: CGDisplayIsInMirrorSet(id) != 0 || CGDisplayIsInHWMirrorSet(id) != 0,
                       suffix: suffix)
     }
 }
 
+/// Classifies the topology without relying on display names.
 func mode(_ displays: [Screen]) -> String {
     guard displays.contains(where: { !$0.builtIn }) else { return "laptop" }
     return displays.contains(where: { $0.builtIn && $0.mirrored }) ? "mirror" : "extended"
 }
 
+/// Builds shared settings and any display-specific keys whose names are known.
 func preferences(_ displays: [Screen]) -> [String: Any] {
     let mirror = mode(displays) == "mirror"
     var values: [String: Any] = [
@@ -60,36 +67,57 @@ func preferences(_ displays: [Screen]) -> [String: Any] {
         "disableCombinedBrightness": mirror,
     ]
     for display in displays {
-        values["isDisabled" + display.suffix] = mirror && display.builtIn
+        if let suffix = display.suffix {
+            values["isDisabled" + suffix] = mirror && display.builtIn
+        }
     }
     return values
 }
 
+/// Reads one value from MonitorControl's preference domain.
 func readPref(_ key: String) -> Any? {
     CFPreferencesCopyAppValue(key as CFString, domain as CFString)
 }
 
+/// Updates one key without replacing unrelated application preferences.
 func writePref(_ key: String, _ value: Any) {
     CFPreferencesSetAppValue(key as CFString, value as CFPropertyList, domain as CFString)
 }
 
+/// Reads physical Apple-panel brightness, returning nil for unsupported displays.
 func brightness(_ id: CGDirectDisplayID) -> Float? {
     var value: Float = 0
     return getBrightness(id, &value) == 0 ? value : nil
 }
 
-func openMonitorControl() {
+/// Launches an executable and reports both launch errors and nonzero exit status.
+func runCommand(_ executable: String, _ arguments: [String]) -> Bool {
     let process = Process()
-    process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-    process.arguments = ["-g", "-a", "MonitorControl"]
+    process.executableURL = URL(fileURLWithPath: executable)
+    process.arguments = arguments
     do {
         try process.run()
         process.waitUntilExit()
+        return process.terminationStatus == 0
     } catch {
-        fputs("Could not launch MonitorControl: \(error)\n", stderr)
+        fputs("Could not launch \(executable): \(error)\n", stderr)
+        return false
     }
 }
 
+/// Returns false when Launch Services cannot reopen MonitorControl, allowing retries.
+@discardableResult
+func openMonitorControl() -> Bool {
+    runCommand("/usr/bin/open", ["-g", "-a", "MonitorControl"])
+}
+
+/// Restores an exact saved zero; the visibility floor applies only to external sync.
+func restoredBrightness(external: Float?, saved: Float) -> Float {
+    if let external = external { return max(0.05, min(1, external)) }
+    return max(0, min(1, saved))
+}
+
+/// Applies a stable topology while MonitorControl is stopped, then restarts it.
 func apply(_ displays: [Screen]) -> Bool {
     guard !displays.isEmpty else { return false }
     let currentMode = mode(displays)
@@ -114,20 +142,20 @@ func apply(_ displays: [Screen]) -> Bool {
         ?? (state.string(forKey: "mode") == "mirror")
     for display in displays where display.builtIn {
         if currentMode == "mirror" {
-            if !wasBlanked, let value = brightness(display.id), value > 0 {
+            if !wasBlanked, let value = brightness(display.id) {
                 state.set(value, forKey: "builtInBrightness")
             }
         } else if currentMode == "extended" || wasBlanked {
             let external = displays.first(where: { !$0.builtIn })
-            let externalValue = external.flatMap { readPref("value16" + $0.suffix) as? NSNumber }?.floatValue
+            let externalValue = external?.suffix.flatMap { readPref("value16" + $0) as? NSNumber }?.floatValue
             let saved = (!wasBlanked ? brightness(display.id) : nil)
                 ?? (state.object(forKey: "builtInBrightness") as? NSNumber)?.floatValue ?? 0.5
-            let target = max(0.05, min(1, externalValue ?? saved))
+            let target = restoredBrightness(external: externalValue, saved: saved)
             guard setBrightness(display.id, target) == 0 else {
                 openMonitorControl()
                 return false
             }
-            writePref("value16" + display.suffix, target)
+            if let suffix = display.suffix { writePref("value16" + suffix, target) }
             state.set(false, forKey: "builtInBlanked")
         }
     }
@@ -154,28 +182,32 @@ func apply(_ displays: [Screen]) -> Bool {
     }
     state.set(currentMode, forKey: "mode")
     state.synchronize()
-    openMonitorControl()
+    guard openMonitorControl() else { return false }
     print("Applied \(currentMode) brightness policy")
     fflush(stdout)
     return true
 }
 
+/// Includes name availability so recovering display metadata triggers reapplication.
 func signature(_ displays: [Screen]) -> String {
-    displays.map { "\($0.id):\($0.builtIn):\($0.mirror):\($0.mirrored):\($0.suffix)" }.sorted().joined(separator: ";")
+    displays.map { "\($0.id):\($0.builtIn):\($0.mirror):\($0.mirrored):\($0.suffix ?? "unknown")" }.sorted().joined(separator: ";")
 }
 
+/// Prints the detected topology, panel brightness, and effective managed settings.
 func status() {
     let displays = screens()
     CFPreferencesAppSynchronize(domain as CFString)
     print("mode=\(mode(displays))")
     for display in displays {
-        print("\(display.suffix) builtIn=\(display.builtIn) brightness=\(brightness(display.id).map(String.init(describing:)) ?? "DDC") disabled=\(String(describing: readPref("isDisabled" + display.suffix)))")
+        let disabled = display.suffix.flatMap { readPref("isDisabled" + $0) }
+        print("\(display.suffix ?? "display \(display.id)") builtIn=\(display.builtIn) brightness=\(brightness(display.id).map(String.init(describing:)) ?? "DDC") disabled=\(String(describing: disabled))")
     }
     for key in ["enableBrightnessSync", "keyboardBrightness", "multiKeyboardBrightness", "multiSliders"] {
         print("\(key)=\(String(describing: readPref(key)))")
     }
 }
 
+/// Exercises topology decisions, zero restoration, and subprocess failure handling.
 func selfTest() {
     let laptop = Screen(id: 1, builtIn: true, mirror: 0, mirrored: false, suffix: "(Laptop)")
     let mirroredLaptop = Screen(id: 1, builtIn: true, mirror: 2, mirrored: true, suffix: "(Laptop|External)")
@@ -186,10 +218,22 @@ func selfTest() {
         let values = preferences(layout)
         precondition(values["enableBrightnessSync"] as? Bool == (expected != "mirror"))
         for display in layout {
-            precondition(values["isDisabled" + display.suffix] as? Bool == (expected == "mirror" && display.builtIn))
+            precondition(values["isDisabled" + display.suffix!] as? Bool == (expected == "mirror" && display.builtIn))
         }
     }
-    print("Passed: laptop, extended, mirrored laptop, and lid-closed external display policies")
+    let unnamedLaptop = Screen(id: 1, builtIn: true, mirror: 2, mirrored: true, suffix: nil)
+    let unnamedExternal = Screen(id: 2, builtIn: false, mirror: 0, mirrored: false, suffix: nil)
+    precondition(mode([unnamedLaptop, external]) == "mirror")
+    precondition(mode([laptop, unnamedExternal]) == "extended")
+    precondition(preferences([unnamedLaptop, external])["isDisabled(External)"] as? Bool == false)
+    precondition(signature([unnamedLaptop, external]) != signature([mirroredLaptop, external]))
+    precondition(restoredBrightness(external: nil, saved: 0) == 0)
+    precondition(restoredBrightness(external: nil, saved: 0.25) == 0.25)
+    precondition(restoredBrightness(external: 0, saved: 0) == 0.05)
+    precondition(runCommand("/usr/bin/true", []))
+    precondition(!runCommand("/usr/bin/false", []))
+    precondition(!runCommand("/nonexistent/monitorcontrol-test", []))
+    print("Passed: display policies, missing names, zero restoration, and process failures")
 }
 
 switch CommandLine.arguments.dropFirst().first ?? "--status" {

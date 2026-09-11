@@ -18,6 +18,8 @@ macOS標準のコントロールセンターは内蔵画面の明るさを操作
 
 起動設定は `~/Library/LaunchAgents/local.dotfiles.monitorcontrol-mode.plist`、実行ファイルは `~/Library/Application Support/dotfiles/monitorcontrol-mode` に生成する。ログは `~/Library/Logs/dotfiles/monitorcontrol-mode*.log`。ビルド済みファイルはgitに含めない。
 
+セットアップ時に表示構成・明るさ復元・プロセス起動の自己テストを実行する。セットアップ途中の失敗からMonitorControlを復旧できるかは、`python3 scripts/test_monitorcontrol_setup.py -v` で検証できる（macOS・MonitorControl導入済みの環境が必要。テスト中のコマンドと保存先は隔離する）。
+
 現在の状態:
 
 ```sh
