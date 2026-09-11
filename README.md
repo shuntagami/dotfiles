@@ -157,7 +157,7 @@ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts
 
 ```bash
 ~/dotfiles/scripts/install-packages.sh  # パッケージのインストール（Homebrewなど）
-~/dotfiles/scripts/deploy.sh            # dotfilesのシンボリックリンク作成
+~/dotfiles/scripts/deploy.sh            # dotfilesのリンク作成・アプリ設定の反映（MonitorControlなど）
 ~/dotfiles/scripts/macos.sh             # macOSシステム設定の適用
 ~/dotfiles/vscode/setup.sh              # VSCode/Cursorのセットアップ
 ```

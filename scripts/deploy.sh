@@ -141,6 +141,10 @@ if [[ ! -f ~/.ssh/config.local ]]; then
 fi
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
+  # Rebuild and reload the display-mode brightness policy on each deploy.
+  # The installer skips machines where MonitorControl is not installed.
+  bash "${HOME}/dotfiles/scripts/macos-monitorcontrol.sh"
+
   # Finicky is the system URL router: Discord links go to Chrome and all other
   # links fall through to Dia according to ~/.finicky.js.
   if command -v defaultbrowser >/dev/null 2>&1 && [[ -d /Applications/Finicky.app ]]; then
