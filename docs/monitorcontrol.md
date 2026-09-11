@@ -1,6 +1,6 @@
 # モニターの明るさ
 
-`zsh scripts/deploy.sh` で、ほかのdotfilesと一緒に設定・更新する。`scripts/setup.sh` もdeploy経由で適用する。単独で更新する場合は `bash scripts/macos-monitorcontrol.sh` を実行する。`scripts/macos.sh` からも呼ばれる。MonitorControlとXcode Command Line Toolsが必要で、MonitorControl未導入のMacではスキップする。
+`zsh scripts/deploy.sh` で、ほかのdotfilesと一緒に設定・更新する。`scripts/setup.sh` もdeploy経由で適用する。単独で更新する場合は `bash scripts/macos-monitorcontrol.sh` を実行する。`scripts/macos.sh` からは重複実行しない。MonitorControlとXcode Command Line Toolsが必要で、MonitorControl未導入のMacではスキップする。
 
 別のMacでは、この変更を含むブランチを取得したうえで `zsh scripts/deploy.sh` を実行する。同じ切り替えルールを各Macに導入する仕組みで、アプリ画面で変更した設定や現在の明るさをMac間でリアルタイム同期するものではない。表示機器のID、消灯前の明るさ、バックアップ、ログは各Macで保持する。
 

@@ -690,7 +690,7 @@ defaults write com.clipy-app.Clipy kCPYPrefMaxHistorySizeKey -int 50
 # MonitorControl                                                               #
 ###############################################################################
 
-bash "${HOME}/dotfiles/scripts/macos-monitorcontrol.sh"
+# App settings are applied by scripts/deploy.sh, including MonitorControl.
 
 ###############################################################################
 # Login items (auto-start on boot)                                            #

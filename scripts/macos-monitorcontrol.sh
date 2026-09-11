@@ -39,7 +39,13 @@ swiftc -O -F /System/Library/PrivateFrameworks \
 
 mkdir -p "${SUPPORT_DIR}" "${HOME}/Library/LaunchAgents" "${HOME}/Library/Logs/dotfiles"
 if [[ ! -f "${SUPPORT_DIR}/monitorcontrol-before.plist" ]]; then
-  defaults export "${DOMAIN}" "${SUPPORT_DIR}/monitorcontrol-before.plist"
+  # A newly installed app may not have a preferences domain yet. Export into
+  # the temporary directory so failed exports cannot leave an empty backup.
+  if defaults export "${DOMAIN}" "${BUILD_DIR}/monitorcontrol-before.plist"; then
+    mv "${BUILD_DIR}/monitorcontrol-before.plist" "${SUPPORT_DIR}/monitorcontrol-before.plist"
+  else
+    echo "No MonitorControl preferences backup available; continuing setup."
+  fi
 fi
 launchctl bootout "gui/$(id -u)/${LABEL}" 2>/dev/null || true
 install -m 755 "${BUILD_DIR}/monitorcontrol-mode" "${SUPPORT_DIR}/monitorcontrol-mode"

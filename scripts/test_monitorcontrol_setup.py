@@ -65,30 +65,39 @@ class InstallerRecoveryTests(unittest.TestCase):
                        PATH=str(fake_bin) + os.pathsep + os.environ["PATH"])
             result = subprocess.run(["/bin/bash", str(script)], env=env, capture_output=True, text=True)
             log = (root / "commands.log").read_text().splitlines()
-            return result, log, (root / "app-running").exists()
+            backup = root / "Library/Application Support/dotfiles/monitorcontrol-before.plist"
+            return result, log, (root / "app-running").exists(), backup.exists()
 
     def test_failures_after_quit_reopen_app(self):
         """Each post-quit failure must preserve exit status and reopen MonitorControl."""
         for failure in ("defaults write", "python3", "plutil", "launchctl bootstrap"):
             with self.subTest(failure=failure):
-                result, log, running = self.run_installer(failure)
+                result, log, running, _ = self.run_installer(failure)
                 self.assertEqual(result.returncode, 42, result.stderr)
                 self.assertEqual(log.count("open -g -a MonitorControl"), 1)
                 self.assertTrue(running)
 
     def test_compile_failure_leaves_app_running(self):
         """Failure before teardown must not stop or reopen the existing app."""
-        result, log, running = self.run_installer("swiftc")
+        result, log, running, _ = self.run_installer("swiftc")
         self.assertEqual(result.returncode, 42, result.stderr)
         self.assertFalse(any(line.startswith(("osascript ", "open ")) for line in log))
         self.assertTrue(running)
 
     def test_success_leaves_launch_to_agent(self):
         """A successful installer delegates startup to the registered LaunchAgent."""
-        result, log, _ = self.run_installer("")
+        result, log, _, backup = self.run_installer("")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(any(line.startswith("launchctl bootstrap ") for line in log))
         self.assertNotIn("open -g -a MonitorControl", log)
+        self.assertTrue(backup)
+
+    def test_missing_preferences_skip_backup(self):
+        """An app with no preferences domain can be installed without an empty backup."""
+        result, log, _, backup = self.run_installer("defaults export")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(backup)
+        self.assertTrue(any(line.startswith("launchctl bootstrap ") for line in log))
 
 
 if __name__ == "__main__":
