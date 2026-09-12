@@ -1,0 +1,12 @@
+{
+  "displayName": "Shun-Tagami-Mac-mini",
+  "settings": {
+    "UseVirtualMonitors": true,
+    "NumberOfVirtualMonitors": 1,
+    "MatchScreenResolution": true,
+    "ChangeResolution": true,
+    "UseDynamicResolutionUpdate": true,
+    "UseHIDPIResolution": true,
+    "StartInFullscreen": true
+  }
+}
