@@ -36,7 +36,7 @@ while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
 echo "==> Installing packages..."
 bash "${DOTFILES}/scripts/install-packages.sh"
 
-# Phase 2: Deploy dotfiles (symlinks)
+# Phase 2: Deploy dotfiles and app settings (including MonitorControl on macOS)
 echo "==> Deploying dotfiles..."
 zsh "${DOTFILES}/scripts/deploy.sh"
 
@@ -47,9 +47,6 @@ if [[ "$(uname)" == "Darwin" ]]; then
 
   echo "==> Configuring macOS notifications..."
   bash "${DOTFILES}/scripts/macos-notifications.sh"
-
-  echo "==> Configuring MonitorControl..."
-  bash "${DOTFILES}/scripts/macos-monitorcontrol.sh"
 fi
 
 # if [[ "$(uname)" == "Darwin" ]]; then
