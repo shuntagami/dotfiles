@@ -155,16 +155,7 @@ enabled = true
 
 [mcp_servers.playwright]
 command = "npx"
-args = [
-  "-y",
-  "@playwright/mcp@0.0.79",
-  "--browser",
-  "chrome",
-  "--user-data-dir",
-  "/Users/shun.tagami/.codex/playwright-profile",
-  "--output-dir",
-  "/Users/shun.tagami/.codex/playwright-output",
-]
+args = ["-y", "@playwright/mcp@latest"]
 
 [mcp_servers.playwright.tools.browser_click]
 approval_mode = "auto"
