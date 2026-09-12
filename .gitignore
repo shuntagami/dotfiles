@@ -18,3 +18,6 @@ screenpipe/**/connections.json
 
 # vfr-sync-rife: RIFEバイナリ+モデル(35MB)はコミットしない。install_rife.shで取得
 claude/skills/vfr-sync-rife/bin/
+
+# Claude Code内部ディレクトリ（worktree管理など）
+.claude/worktrees/
