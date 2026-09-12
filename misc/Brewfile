@@ -300,6 +300,8 @@ cask "hammerspoon"
 cask "iterm2"
 # Remote desktop application
 cask "jump-desktop"
+# Remote desktop app
+cask "jump-desktop-connect"
 # Keyboard customiser
 cask "karabiner-elements"
 # Screen and video recording software
