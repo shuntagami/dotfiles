@@ -145,6 +145,11 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   # The installer skips machines where MonitorControl is not installed.
   bash "${HOME}/dotfiles/scripts/macos-monitorcontrol.sh"
 
+  # Apply the registered Mac mini connection's display policy without interrupting sessions.
+  if command -v node >/dev/null 2>&1; then
+    node "${HOME}/dotfiles/scripts/jump-desktop-display.mjs" --deploy
+  fi
+
   # Finicky is the system URL router: Discord links go to Chrome and all other
   # links fall through to Dia according to ~/.finicky.js.
   if command -v defaultbrowser >/dev/null 2>&1 && [[ -d /Applications/Finicky.app ]]; then

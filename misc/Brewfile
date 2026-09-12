@@ -239,7 +239,7 @@ brew "zsh-autosuggestions"
 # Fish shell like syntax highlighting for zsh
 brew "zsh-syntax-highlighting"
 # The best way of working with Protocol Buffers.
-brew "bufbuild/buf/buf"
+brew "bufbuild/buf/buf", trusted: true
 # Transcribe audio/video files using ElevenLabs Scribe API
 brew "ele-inc/tap/scribe", trusted: true
 # Terraform
@@ -298,6 +298,10 @@ cask "gyazo"
 cask "hammerspoon"
 # Terminal emulator as alternative to Apple's Terminal app
 cask "iterm2"
+# Remote desktop application
+cask "jump-desktop"
+# Remote desktop app
+cask "jump-desktop-connect"
 # Keyboard customiser
 cask "karabiner-elements"
 # Screen and video recording software

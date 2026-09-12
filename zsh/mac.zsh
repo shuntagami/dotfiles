@@ -341,4 +341,9 @@ noboldh() {
 }
 alias trims='perl -i -CSAD -pe '\''s/[\h\p{Z}\x{00A0}\x{2000}-\x{200B}\x{202F}\x{205F}\x{2060}\x{3000}\x{FEFF}]+$//'\'''
 
-alias vnc-macmini='open vnc://100.81.153.22'
+# Keep Apple's Screen Sharing as a fallback. MagicDNS avoids coupling the
+# shortcut to a particular Tailscale IP address.
+alias vnc-macmini='open vnc://shun-tagami-mac-mini'
+alias jump-macmini='open -a "Jump Desktop"'
+alias jump-display-apply='node ~/dotfiles/scripts/jump-desktop-display.mjs'
+alias jump-display-check='node ~/dotfiles/scripts/jump-desktop-display.mjs --check'

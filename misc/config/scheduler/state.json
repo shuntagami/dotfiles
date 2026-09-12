@@ -1,0 +1,132 @@
+{
+  "system:feed-refresh:/Users/shun.tagami/dotfiles/misc": {
+    "taskId": "system:feed-refresh:/Users/shun.tagami/dotfiles/misc",
+    "lastRunAt": "2026-09-10T02:00:00.000Z",
+    "lastRunResult": "success",
+    "lastRunDurationMs": 1,
+    "lastErrorMessage": null,
+    "consecutiveFailures": 0,
+    "totalRuns": 1,
+    "nextScheduledAt": "2026-09-10T03:00:00.000Z"
+  },
+  "system:feed-refresh:/Users/shun.tagami/projects/launch-consulting": {
+    "taskId": "system:feed-refresh:/Users/shun.tagami/projects/launch-consulting",
+    "lastRunAt": "2026-09-10T02:00:00.000Z",
+    "lastRunResult": "success",
+    "lastRunDurationMs": 4,
+    "lastErrorMessage": null,
+    "consecutiveFailures": 0,
+    "totalRuns": 1,
+    "nextScheduledAt": "2026-09-10T03:00:00.000Z"
+  },
+  "system:feed-refresh:/Users/shun.tagami/projects/marunage-studio": {
+    "taskId": "system:feed-refresh:/Users/shun.tagami/projects/marunage-studio",
+    "lastRunAt": "2026-09-10T02:00:00.000Z",
+    "lastRunResult": "success",
+    "lastRunDurationMs": 1,
+    "lastErrorMessage": null,
+    "consecutiveFailures": 0,
+    "totalRuns": 1,
+    "nextScheduledAt": "2026-09-10T03:00:00.000Z"
+  },
+  "system:feed-refresh:/Users/shun.tagami/projects/voice-funnel": {
+    "taskId": "system:feed-refresh:/Users/shun.tagami/projects/voice-funnel",
+    "lastRunAt": "2026-09-10T02:00:00.000Z",
+    "lastRunResult": "success",
+    "lastRunDurationMs": 1,
+    "lastErrorMessage": null,
+    "consecutiveFailures": 0,
+    "totalRuns": 1,
+    "nextScheduledAt": "2026-09-10T03:00:00.000Z"
+  },
+  "system:feed-refresh:/Users/shun.tagami/projects/receptron/mulmoterminal": {
+    "taskId": "system:feed-refresh:/Users/shun.tagami/projects/receptron/mulmoterminal",
+    "lastRunAt": "2026-09-10T02:00:00.000Z",
+    "lastRunResult": "success",
+    "lastRunDurationMs": 0,
+    "lastErrorMessage": null,
+    "consecutiveFailures": 0,
+    "totalRuns": 1,
+    "nextScheduledAt": "2026-09-10T03:00:00.000Z"
+  },
+  "system:feed-refresh:/Users/shun.tagami/projects/egt": {
+    "taskId": "system:feed-refresh:/Users/shun.tagami/projects/egt",
+    "lastRunAt": "2026-09-10T02:00:00.000Z",
+    "lastRunResult": "success",
+    "lastRunDurationMs": 1,
+    "lastErrorMessage": null,
+    "consecutiveFailures": 0,
+    "totalRuns": 1,
+    "nextScheduledAt": "2026-09-10T03:00:00.000Z"
+  },
+  "system:feed-refresh:/Users/shun.tagami/dotfiles": {
+    "taskId": "system:feed-refresh:/Users/shun.tagami/dotfiles",
+    "lastRunAt": "2026-09-10T02:00:00.000Z",
+    "lastRunResult": "success",
+    "lastRunDurationMs": 0,
+    "lastErrorMessage": null,
+    "consecutiveFailures": 0,
+    "totalRuns": 1,
+    "nextScheduledAt": "2026-09-10T03:00:00.000Z"
+  },
+  "system:feed-refresh:/Users/shun.tagami/projects/ai-production-studio": {
+    "taskId": "system:feed-refresh:/Users/shun.tagami/projects/ai-production-studio",
+    "lastRunAt": "2026-09-10T02:00:00.000Z",
+    "lastRunResult": "success",
+    "lastRunDurationMs": 1,
+    "lastErrorMessage": null,
+    "consecutiveFailures": 0,
+    "totalRuns": 1,
+    "nextScheduledAt": "2026-09-10T03:00:00.000Z"
+  },
+  "system:feed-refresh:/Users/shun.tagami/projects/marunage-studio/.claude/worktrees/phase2-review": {
+    "taskId": "system:feed-refresh:/Users/shun.tagami/projects/marunage-studio/.claude/worktrees/phase2-review",
+    "lastRunAt": "2026-09-10T02:00:00.000Z",
+    "lastRunResult": "success",
+    "lastRunDurationMs": 1,
+    "lastErrorMessage": null,
+    "consecutiveFailures": 0,
+    "totalRuns": 1,
+    "nextScheduledAt": "2026-09-10T03:00:00.000Z"
+  },
+  "system:feed-refresh:/Users/shun.tagami/projects/youtube-content-gen": {
+    "taskId": "system:feed-refresh:/Users/shun.tagami/projects/youtube-content-gen",
+    "lastRunAt": "2026-09-10T02:00:00.000Z",
+    "lastRunResult": "success",
+    "lastRunDurationMs": 1,
+    "lastErrorMessage": null,
+    "consecutiveFailures": 0,
+    "totalRuns": 1,
+    "nextScheduledAt": "2026-09-10T03:00:00.000Z"
+  },
+  "system:feed-refresh:/Users/shun.tagami/projects/agent-skills": {
+    "taskId": "system:feed-refresh:/Users/shun.tagami/projects/agent-skills",
+    "lastRunAt": "2026-09-10T02:00:00.000Z",
+    "lastRunResult": "success",
+    "lastRunDurationMs": 0,
+    "lastErrorMessage": null,
+    "consecutiveFailures": 0,
+    "totalRuns": 1,
+    "nextScheduledAt": "2026-09-10T03:00:00.000Z"
+  },
+  "system:feed-refresh:/Users/shun.tagami/projects/marunage-studio-agent-spike": {
+    "taskId": "system:feed-refresh:/Users/shun.tagami/projects/marunage-studio-agent-spike",
+    "lastRunAt": "2026-09-10T02:00:00.000Z",
+    "lastRunResult": "success",
+    "lastRunDurationMs": 0,
+    "lastErrorMessage": null,
+    "consecutiveFailures": 0,
+    "totalRuns": 1,
+    "nextScheduledAt": "2026-09-10T03:00:00.000Z"
+  },
+  "system:google-calendar-sync": {
+    "taskId": "system:google-calendar-sync",
+    "lastRunAt": "2026-09-10T02:00:00.000Z",
+    "lastRunResult": "success",
+    "lastRunDurationMs": 1,
+    "lastErrorMessage": null,
+    "consecutiveFailures": 0,
+    "totalRuns": 1,
+    "nextScheduledAt": "2026-09-10T03:00:00.000Z"
+  }
+}
