@@ -1,4 +1,6 @@
-# モニターの明るさ
+# モニターの明るさ・音量
+
+音量はMac標準の音量アップ／ダウン・ミュートキーで操作する。セットアップ時にMonitorControlの `keyboardVolume=0`（標準メディアキー）を設定する。`1` はカスタムショートカット専用で、標準の音量キーは反応しなくなる。
 
 `zsh scripts/deploy.sh` で、ほかのdotfilesと一緒に設定・更新する。`scripts/setup.sh` もdeploy経由で適用する。単独で更新する場合は `bash scripts/macos-monitorcontrol.sh` を実行する。`scripts/macos.sh` からは重複実行しない。MonitorControlとXcode Command Line Toolsが必要で、MonitorControl未導入のMacではスキップする。
 

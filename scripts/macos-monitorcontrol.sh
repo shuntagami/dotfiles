@@ -57,7 +57,7 @@ fi
 launchctl bootout "gui/$(id -u)/${LABEL}" 2>/dev/null || true
 install -m 755 "${BUILD_DIR}/monitorcontrol-mode" "${SUPPORT_DIR}/monitorcontrol-mode"
 
-# Keep the existing custom volume shortcuts. Brightness is managed dynamically.
+# Use standard Mac volume keys. Brightness is managed dynamically.
 if pgrep -x MonitorControl >/dev/null; then
   monitorcontrol_stop_requested=true
   osascript -e 'tell application "MonitorControl" to quit'
@@ -70,11 +70,8 @@ if pgrep -x MonitorControl >/dev/null; then
     exit 1
   fi
 fi
-defaults write "${DOMAIN}" keyboardVolume -int 1
+defaults write "${DOMAIN}" keyboardVolume -int 0
 defaults write "${DOMAIN}" multiKeyboardVolume -int 1
-defaults write "${DOMAIN}" KeyboardShortcuts_volumeUp -string '{"carbonKeyCode":126,"carbonModifiers":2304}'
-defaults write "${DOMAIN}" KeyboardShortcuts_volumeDown -string '{"carbonKeyCode":125,"carbonModifiers":2304}'
-defaults write "${DOMAIN}" KeyboardShortcuts_mute -string '{"carbonKeyCode":46,"carbonModifiers":2304}'
 
 python3 - "${PLIST}" "${LABEL}" "${SUPPORT_DIR}" "${HOME}/Library/Logs/dotfiles" <<'PY'
 import plistlib
