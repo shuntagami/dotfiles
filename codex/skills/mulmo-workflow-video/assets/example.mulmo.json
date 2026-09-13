@@ -1,0 +1,15 @@
+{
+  "$mulmocast": {"version": "1.1"},
+  "lang": "ja",
+  "title": "申請を確認して完了するまで",
+  "canvasSize": {"width": 1920, "height": 1080},
+  "speechParams": {"speakers": {"Presenter": {"provider": "openai", "model": "gpt-4o-mini-tts", "voiceId": "marin", "speechOptions": {"instruction": "同僚に画面を見せるように、自然で聞き取りやすい日本語で説明する。"}}}},
+  "imageParams": {"provider": "openai", "images": {}},
+  "movieParams": {"provider": "replicate"},
+  "soundEffectParams": {"provider": "replicate"},
+  "audioParams": {"introPadding": 0, "padding": 0, "closingPadding": 0, "outroPadding": 0, "bgmVolume": 0, "audioVolume": 1, "suppressSpeech": false, "movieVolume": 0},
+  "beats": [
+    {"id": "01-purpose", "speaker": "Presenter", "text": "この動画では、申請内容を確認して、完了するまでの手順を説明します。", "image": {"type": "image", "source": {"kind": "path", "path": "media/purpose.png"}}},
+    {"id": "02-complete", "speaker": "Presenter", "text": "対象と内容を確認し、完了ボタンを押します。完了済みの表示まで確認してください。", "image": {"type": "movie", "source": {"kind": "path", "path": "media/complete.mp4"}}}
+  ]
+}
