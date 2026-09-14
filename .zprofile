@@ -1,3 +1,7 @@
+# The following lines were added by Docker Desktop to add commands to your PATH.
+export PATH="$PATH:/Users/shun.tagami/.docker/bin"
+# End of Docker Desktop section.
+
 # ~/.zprofile — login-time setup.
 # Runs after macOS /etc/zprofile's path_helper, so PATH ordering set here wins.
 
