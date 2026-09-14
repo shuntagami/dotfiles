@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "kind": "workflow",
+  "coverage": ["対象確認", "完了操作", "完了表示の確認"],
+  "fps": 30,
+  "header_px": 64,
+  "caption_px": 136,
+  "background": "#f8f5ee",
+  "bar_color": "#142d46",
+  "pronunciations": {},
+  "beats": {
+    "01-purpose": {"title": "何を確認する動画か"},
+    "02-complete": {"title": "内容を確認して完了", "in": 0, "out": 12}
+  },
+  "verify_times": []
+}
