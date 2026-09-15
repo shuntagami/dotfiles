@@ -17,7 +17,7 @@ SOUNDS = {
     "waiting": ROOT / "static/waiting-chime.mp3",
 }
 WAITING_TYPES = {"permission_prompt", "elicitation_dialog", "elicitation_url_dialog"}
-VOLUME = "0.20"
+VOLUME = "0.40"
 
 
 def records(path):
