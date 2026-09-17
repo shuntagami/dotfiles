@@ -105,7 +105,8 @@
     "terminal-new-here": "Alt+ArrowRight",
     "zoom-toggle": "Alt+ArrowUp",
     "next-attention": "Alt+ArrowDown",
-    "terminal-close": "Cmd+."
+    "terminal-close": "Cmd+.",
+    "files-find": "Cmd+Shift+P"
   },
   "copyOnSelect": true,
   "decisionDigest": true,
