@@ -5,24 +5,40 @@
       "path": "/Users/shun.tagami/projects/marunage-studio"
     },
     {
-      "label": "voice-funnel",
-      "path": "/Users/shun.tagami/projects/voice-funnel"
+      "label": "mulmoterminal",
+      "path": "/Users/shun.tagami/projects/receptron/mulmoterminal"
     },
     {
       "label": "launch-consulting",
       "path": "/Users/shun.tagami/projects/launch-consulting"
     },
     {
-      "label": "mulmoterminal",
-      "path": "/Users/shun.tagami/projects/receptron/mulmoterminal"
-    },
-    {
       "label": "egt",
       "path": "/Users/shun.tagami/projects/egt"
     },
     {
+      "label": "mulmoclaude",
+      "path": "/Users/shun.tagami/projects/receptron/mulmoclaude"
+    },
+    {
       "label": "dotfiles",
       "path": "/Users/shun.tagami/dotfiles"
+    },
+    {
+      "label": "youtube-content-gen",
+      "path": "/Users/shun.tagami/projects/youtube-content-gen"
+    },
+    {
+      "label": "vercel-functions",
+      "path": "/Users/shun.tagami/projects/vercel-functions"
+    },
+    {
+      "label": "ELE_kiku_log",
+      "path": "/Users/shun.tagami/projects/ELE_kiku_log"
+    },
+    {
+      "label": "voice-funnel",
+      "path": "/Users/shun.tagami/projects/voice-funnel"
     },
     {
       "label": "ai-production-studio",
@@ -31,10 +47,6 @@
     {
       "label": "phase2-review",
       "path": "/Users/shun.tagami/projects/marunage-studio/.claude/worktrees/phase2-review"
-    },
-    {
-      "label": "youtube-content-gen",
-      "path": "/Users/shun.tagami/projects/youtube-content-gen"
     },
     {
       "label": "agent-skills",
@@ -97,6 +109,8 @@
     "waiting"
   ],
   "worklogEnabled": false,
+  "feedRefreshEnabled": true,
+  "calendarSyncEnabled": true,
   "worklogIntervalHours": 6,
   "sessionIdleReapDays": 7,
   "terminalSubmit": "cr",
@@ -116,10 +130,12 @@
   "appendSystemPrompt": true,
   "autoDirIcon": true,
   "showLoadAverage": true,
+  "toolbarPins": [],
   "cockpitLines": {
     "summary": 2,
     "prompt": 2,
     "response": 3
   },
-  "fontFamily": null
+  "fontFamily": null,
+  "defaultAgent": null
 }
