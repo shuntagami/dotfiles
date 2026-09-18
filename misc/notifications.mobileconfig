@@ -1,6 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
+<!--
+  Per-app notification settings for macOS, managed in dotfiles.
+
+  Installed by scripts/macos-notifications.sh, which runs from deploy.sh. That
+  script hashes the PayloadContent below, so changing a setting here is noticed
+  on the next deploy and the profile is reopened for approval. There is no
+  version or UUID to bump by hand, and editing these comments changes nothing
+  and asks for nothing. Approving replaces the installed copy, matched on
+  PayloadIdentifier.
+
+  Note for editors: a double hyphen cannot appear inside an XML comment. plutil
+  accepts it anyway, so the file lints clean and every strict parser rejects it.
+
+  Apple's schema for the payload:
+  https://github.com/apple/device-management/blob/release/mdm/profiles/com.apple.notificationsettings.yaml
+  AlertType: 0 = none, 1 = temporary banner, 2 = persistent banner.
+-->
 <dict>
   <key>PayloadContent</key>
   <array>

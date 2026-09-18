@@ -149,6 +149,11 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     node "${HOME}/dotfiles/scripts/jump-desktop-display.mjs" --deploy
   fi
 
+  # Notifications: which sites may notify in Chrome, and whether macOS lets the
+  # apps show anything. Idempotent and non-interactive -- it only opens the
+  # configuration profile when that profile is missing or has changed.
+  bash "${HOME}/dotfiles/scripts/macos-notifications.sh"
+
   # No URL router here any more, and no default-browser step either.
   #
   # Finicky used to sit here: it was registered as the system handler, then sent
