@@ -33,7 +33,13 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 0
 fi
 
-readonly DOTFILES_DIR="${DOTFILES:-${HOME}/dotfiles}"
+# Resolved from THIS FILE's location rather than from $DOTFILES or ~/dotfiles.
+# deploy.sh, which calls this, addresses everything as ~/dotfiles/..., and an env
+# var read only here would mean the two disagree about which checkout is being
+# deployed -- the caller running one copy of the script while the script reads
+# another copy's profile. A path relative to the script cannot disagree with the
+# script.
+readonly DOTFILES_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly PROFILE_PATH="${DOTFILES_DIR}/misc/notifications.mobileconfig"
 readonly PROFILE_IDENTIFIER="local.dotfiles.notifications"
 readonly STATE_DIR="${XDG_STATE_HOME:-${HOME}/.local/state}/dotfiles"
@@ -69,29 +75,68 @@ fi
 # and approving it once, and there is no way around that from a script.
 #
 # Which makes "only when needed" the whole game, since this runs on every
-# deploy. Two conditions ask for approval: the profile is absent, or its settings
-# have changed since we last asked. The second needs a witness, because the
-# installed payload cannot be read back without root -- so we record a hash of
-# the file and compare.
+# deploy. Approval is asked for in three cases: nothing is installed, the
+# settings changed, or the last thing we asked for was never approved.
+#
+# The third case is why the recorded state carries a TIMESTAMP as well as a
+# hash. The installed payload cannot be read back without root, so the hash
+# alone cannot say which version is on the machine -- and writing it at ask time
+# would then make a DECLINED update look up to date until the settings moved
+# again. `profiles list -verbose` reports an installationDate, so comparing it
+# against the moment we asked answers what the hash cannot: cancel the dialog
+# and the date stays older than the ask, and the next deploy asks again.
+#
+# What this still cannot verify is that the installed payload MATCHES ours: only
+# that something was installed after we asked for it. Reading the payload back
+# needs root, and a deploy step should not ask for it.
 #
 # The hash covers PayloadContent ONLY, not the whole file. Comments and
 # formatting are then free: re-approving a profile whose settings did not move
 # is friction with nothing behind it, and friction is what gets a deploy step
 # ignored. Anything macOS actually enforces lives in that payload.
-#
-# The gap that leaves: approve nothing and the state file still says we asked, so
-# a declined UPDATE looks up to date until the settings change again. `profiles
-# list` catches the case that matters (nothing installed at all).
 profile_installed() {
   profiles list 2>/dev/null | grep -q "${PROFILE_IDENTIFIER}"
+}
+
+# Epoch seconds of our profile's installationDate, or empty when it is absent or
+# unreadable. `profiles list -verbose` groups one profile's attributes under a
+# shared [N] index, so the identifier and the date are matched through it.
+profile_installed_at() {
+  profiles list -verbose 2>/dev/null | python3 -c '
+import datetime, re, sys
+
+wanted = sys.argv[1]
+identifiers, dates = {}, {}
+for line in sys.stdin:
+    found = re.search(r"\[(\d+)\] attribute: (\w+): (.*)$", line.rstrip())
+    if not found:
+        continue
+    index, key, value = found.group(1), found.group(2), found.group(3).strip()
+    if key == "profileIdentifier":
+        identifiers[index] = value
+    elif key == "installationDate":
+        dates[index] = value
+
+for index, identifier in identifiers.items():
+    if identifier != wanted or index not in dates:
+        continue
+    try:
+        print(int(datetime.datetime.strptime(dates[index], "%Y-%m-%d %H:%M:%S %z").timestamp()))
+    except ValueError:
+        pass
+    break
+' "${PROFILE_IDENTIFIER}"
 }
 
 ask_to_install_profile() {
   local reason="$1" hash="$2"
   echo "Notification profile: ${reason}"
-  mkdir -p "${STATE_DIR}"
-  printf '%s\n' "${hash}" > "${PROFILE_STATE}"
   if open "${PROFILE_PATH}"; then
+    # Recorded only now, with the moment of the ask, and only because `open`
+    # succeeded. The date comparison above is what turns this into "approved";
+    # on its own it means no more than "asked for".
+    mkdir -p "${STATE_DIR}"
+    printf '%s %s\n' "${hash}" "$(date +%s)" > "${PROFILE_STATE}"
     echo "  Opened ${PROFILE_PATH} -- approve it in System Settings (Device Management)."
     echo "  It does not take effect until approved."
   else
@@ -103,12 +148,22 @@ if [[ ! -f "${PROFILE_PATH}" ]]; then
   echo "Notification profile missing at ${PROFILE_PATH}; skipped."
 else
   profile_hash="$(plutil -extract PayloadContent xml1 -o - "${PROFILE_PATH}" 2>/dev/null | shasum -a 256 | awk '{print $1}')"
-  asked_hash="$(cat "${PROFILE_STATE}" 2>/dev/null || true)"
+  # "<hash> <epoch>". A state file from before the timestamp existed carries the
+  # hash alone; its ask time reads as 0, which no installationDate predates, so
+  # an already-approved profile is not re-asked for on the strength of an
+  # upgrade.
+  state="$(cat "${PROFILE_STATE}" 2>/dev/null || true)"
+  asked_hash="${state%% *}"
+  asked_at="${state##* }"
+  [[ "${asked_at}" =~ ^[0-9]+$ ]] || asked_at=0
+  installed_at="$(profile_installed_at)"
 
   if ! profile_installed; then
     ask_to_install_profile "not installed" "${profile_hash}"
   elif [[ "${asked_hash}" != "${profile_hash}" ]]; then
     ask_to_install_profile "its settings changed since it was installed" "${profile_hash}"
+  elif [[ -n "${installed_at}" ]] && ((installed_at < asked_at)); then
+    ask_to_install_profile "the last update to it was never approved" "${profile_hash}"
   else
     echo "Notification profile up to date (${PROFILE_IDENTIFIER})."
   fi
