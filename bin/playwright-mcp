@@ -14,16 +14,92 @@ set -euo pipefail
 # The probe is the CDP endpoint itself, not ssh and not ping: an endpoint that
 # answers /json/version is the only thing that means "a browser the agent can
 # drive". A tunnel can be up with nothing behind it.
+#
+# And "answers" has to mean more than "curl exited 0". Without --fail, curl
+# reports success for a 404 or an error page, so anything at all listening on
+# this port would send every browser call to something that is not a browser.
+# The endpoint has to return 2xx AND a body carrying webSocketDebuggerUrl, which
+# is the field Playwright actually connects through.
 
 readonly PORT="${AGENT_BROWSER_PORT:-9222}"
 readonly ENDPOINT="http://127.0.0.1:${PORT}"
+readonly HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly LOCK_DIR="${TMPDIR:-/tmp}/agent-browser-up.lock"
+readonly START_BUDGET_SECONDS="${AGENT_BROWSER_START_BUDGET:-40}"
 
-if curl -s -m 2 "${ENDPOINT}/json/version" >/dev/null 2>&1; then
+cdp_is_a_browser() {
+  curl -sf -m 2 "${ENDPOINT}/json/version" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    sys.exit(0 if json.load(sys.stdin).get("webSocketDebuggerUrl") else 1)
+except Exception:
+    sys.exit(1)
+' 2>/dev/null
+}
+
+wait_for_cdp() {
+  local deadline=$(( $(date +%s) + $1 ))
+  while (( $(date +%s) < deadline )); do
+    cdp_is_a_browser && return 0
+    sleep 1
+  done
+  return 1
+}
+
+# mkdir is the atomic primitive available here: macOS ships no flock(1). The
+# lock matters because a MulmoTerminal grid runs many agents, and each one
+# starts its own copy of this wrapper -- without it they would race to open
+# the same tunnel and leave the losers' ssh processes behind.
+take_lock() {
+  if mkdir "${LOCK_DIR}" 2>/dev/null; then
+    trap 'rmdir "${LOCK_DIR}" 2>/dev/null || true' EXIT
+    return 0
+  fi
+  # A lock older than the start budget belonged to something that died holding
+  # it. Waiting on it forever would make every later agent fall back to local.
+  local age
+  age=$(( $(date +%s) - $(stat -f %m "${LOCK_DIR}" 2>/dev/null || date +%s) ))
+  if (( age > START_BUDGET_SECONDS )); then
+    rmdir "${LOCK_DIR}" 2>/dev/null || true
+    mkdir "${LOCK_DIR}" 2>/dev/null || return 1
+    trap 'rmdir "${LOCK_DIR}" 2>/dev/null || true' EXIT
+    return 0
+  fi
+  return 1
+}
+
+# Fast path: already up, which is the usual case once the first agent of the day
+# has started it.
+if cdp_is_a_browser; then
   exec npx -y @playwright/mcp@latest --cdp-endpoint "${ENDPOINT}" "$@"
 fi
 
-# No remote browser: let the MCP server start its own, and keep it out of the
-# profile a person uses. --isolated gives it a throwaway context, so a leak here
-# cannot inherit logins -- though it is still THIS machine's Chrome bundle, which
-# is the collision agent-browser exists to avoid.
+# Not up. Bring it up rather than asking someone to: an agent started from a
+# MulmoTerminal cell should reach the remote browser without anyone typing a
+# command first. Bounded, because a MacBook in a bag must cost a few seconds,
+# not a hung MCP server.
+if [[ "${AGENT_BROWSER_AUTO:-1}" != "0" ]]; then
+  if take_lock; then
+    # A hard ceiling on top of the ssh timeouts inside `up`: this wrapper sits in
+    # the MCP server's startup path, so it must fail fast rather than hang an
+    # agent that would have been fine with a local browser.
+    if command -v timeout >/dev/null 2>&1; then
+      timeout "${START_BUDGET_SECONDS}" "${HERE}/agent-browser" up >/dev/null 2>&1 || true
+    else
+      "${HERE}/agent-browser" up >/dev/null 2>&1 || true
+    fi
+  else
+    # Another agent is starting it. Wait for theirs instead of opening a second.
+    wait_for_cdp "${START_BUDGET_SECONDS}" || true
+  fi
+fi
+
+if cdp_is_a_browser; then
+  exec npx -y @playwright/mcp@latest --cdp-endpoint "${ENDPOINT}" "$@"
+fi
+
+# No remote browser and none to be had: let the MCP server start its own, and
+# keep it out of the profile a person uses. --isolated gives it a throwaway
+# context, so a leak here cannot inherit logins -- though it is still THIS
+# machine's Chrome bundle, which is the collision agent-browser exists to avoid.
 exec npx -y @playwright/mcp@latest --isolated "$@"

@@ -69,8 +69,27 @@ cmd_status() {
   echo "browser on ${REMOTE}: ${remote_state}"
   if tunnel_running; then
     local version
-    version="$(curl -s -m 3 "http://127.0.0.1:${PORT}/json/version" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("Browser","?"))' 2>/dev/null || true)"
+    version="$(curl -sf -m 3 "http://127.0.0.1:${PORT}/json/version" 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["Browser"] if d.get("webSocketDebuggerUrl") else "")' 2>/dev/null || true)"
     [[ -n "${version}" ]] && echo "CDP answers: ${version}"
+  fi
+}
+
+# Undo only what THIS run started. A browser or tunnel that was already up
+# belongs to someone else's session and is left alone -- and a failed `up` must
+# not leave a browser behind on the other machine, which is the same unowned
+# process this script exists to prevent, just relocated.
+started_browser=false
+started_tunnel=false
+
+rollback() {
+  if [[ "${started_tunnel}" == true ]] && tunnel_running; then
+    kill "$(cat "${TUNNEL_PID_FILE}")" 2>/dev/null || true
+    rm -f "${TUNNEL_PID_FILE}"
+    echo "  rolled back: tunnel stopped" >&2
+  fi
+  if [[ "${started_browser}" == true ]]; then
+    remote "pkill -f 'remote-debugging-port=${PORT}'" 2>/dev/null \
+      && echo "  rolled back: browser on ${REMOTE} stopped" >&2 || true
   fi
 }
 
@@ -98,7 +117,8 @@ cmd_up() {
       >/dev/null 2>&1 </dev/null & disown; exit 0" || true
     sleep 2
     remote "pgrep -f 'remote-debugging-port=${PORT}' >/dev/null" \
-      || { echo "Browser did not start on ${REMOTE}." >&2; exit 1; }
+      || { echo "Browser did not start on ${REMOTE}." >&2; started_browser=true; rollback; exit 1; }
+    started_browser=true
     echo "Started Chrome for Testing on ${REMOTE}."
   fi
 
@@ -112,17 +132,19 @@ cmd_up() {
       -N -L "127.0.0.1:${PORT}:127.0.0.1:${PORT}" "${REMOTE}" \
       >"${TUNNEL_LOG}" 2>&1 &
     echo $! > "${TUNNEL_PID_FILE}"
+    started_tunnel=true
     sleep 1
-    tunnel_running || { echo "Tunnel failed." >&2; exit 1; }
+    tunnel_running || { echo "Tunnel failed ($(tail -1 "${TUNNEL_LOG}" 2>/dev/null))." >&2; rollback; exit 1; }
     echo "Tunnel up."
   fi
 
   # Reported rather than assumed: a tunnel that connects and a CDP that answers
   # are different claims, and only the second one means the agent can drive it.
   local version
-  version="$(curl -s -m 5 "http://127.0.0.1:${PORT}/json/version" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("Browser","?"))' 2>/dev/null || true)"
+  version="$(curl -sf -m 5 "http://127.0.0.1:${PORT}/json/version" 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["Browser"] if d.get("webSocketDebuggerUrl") else "")' 2>/dev/null || true)"
   if [[ -z "${version}" ]]; then
     echo "Tunnel is up but CDP did not answer on 127.0.0.1:${PORT}." >&2
+    rollback
     exit 1
   fi
   echo "CDP answers: ${version}"

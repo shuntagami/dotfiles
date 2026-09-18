@@ -2,11 +2,8 @@
   "mcpServers": {
     "playwright": {
       "type": "stdio",
-      "command": "npx",
-      "args": [
-        "-y",
-        "@playwright/mcp@latest"
-      ]
+      "command": "/Users/shun.tagami/dotfiles/bin/playwright-mcp",
+      "args": []
     },
     "supabase": {
       "type": "stdio",
