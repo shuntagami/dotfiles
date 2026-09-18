@@ -9,3 +9,16 @@ Host macmini
   PubkeyAuthentication no
   # VNC: vnc://100.81.153.22
   # VNC by name: vnc://shun-tagami-mac-mini
+
+# The MacBook, reached over Tailscale (MagicDNS, so no IP is baked in here).
+# This direction exists so the Mac mini can start and tunnel the browser an
+# AGENT drives -- see bin/agent-browser. Key auth rather than password, because
+# the tunnel has to come up unattended.
+Host shun-tagami-mbp mbp
+  HostName shun-tagami-mbp.tail33e6cf.ts.net
+  User shun.tagami
+  IdentityFile ~/.ssh/id_ed25519
+  IdentitiesOnly yes
+  # Keeps a long-lived -L tunnel from dying quietly on a sleeping link.
+  ServerAliveInterval 30
+  ServerAliveCountMax 3

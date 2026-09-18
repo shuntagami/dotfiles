@@ -18,11 +18,8 @@
     "playwright": {
       "enabled": true,
       "type": "stdio",
-      "command": "npx",
-      "args": [
-        "-y",
-        "@playwright/mcp@latest"
-      ],
+      "command": "/Users/shun.tagami/dotfiles/bin/playwright-mcp",
+      "args": [],
       "codex": {
         "tools": {
           "browser_click": {
