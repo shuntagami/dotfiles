@@ -51,28 +51,52 @@ done
 say() { printf '%s\n' "$*"; }
 run() { if [[ "${dry_run}" == true ]]; then say "    [dry-run] $*"; else "$@"; fi; }
 
-# The default branch as the REMOTE names it. origin/HEAD is the honest source;
-# it is what `git default` in .gitconfig reads too.
-default_branch="$(git symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || true)"
-if [[ -z "${default_branch}" ]]; then
-  for candidate in main master; do
-    git show-ref --verify --quiet "refs/heads/${candidate}" && default_branch="${candidate}" && break
-  done
-fi
-if [[ -z "${default_branch}" ]]; then
-  echo "git-dm: cannot tell which branch is the default (no origin/HEAD, no main or master)." >&2
-  exit 1
-fi
-
 current_branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
 main_worktree="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"
 this_worktree="$(git rev-parse --show-toplevel)"
 
-say "[dm] fetch + prune (default branch: ${default_branch})"
-run git fetch --prune
-# Worktrees whose directory a human already deleted still hold their branch
-# until the record goes. Pruning first turns some "cannot delete" into "deleted".
-run git worktree prune
+# Run even under --dry-run, and deliberately. Neither touches a branch or a
+# worktree of yours: one updates remote-tracking refs, the other drops records
+# for worktree directories that are already gone. Skipping them would leave the
+# dry-run predicting from stale state -- and a dry-run that does not predict the
+# real run is the one thing it must not be.
+say "[dm] fetch + prune"
+# Stopping here is the point: every decision below is about what the remote has
+# taken, so out-of-date remote state is not a degraded answer, it is a wrong
+# one. Said in our own words because `set -e` would otherwise end the run on
+# git's message alone, which explains the fetch but not why that ends the
+# cleanup.
+if ! git fetch --prune; then
+  echo "git-dm: could not fetch from origin, so what the remote has taken is unknown." >&2
+  echo "git-dm: nothing was deleted." >&2
+  exit 1
+fi
+git worktree prune
+
+# Which branch is the default, asked of the REMOTE. refs/remotes/origin/HEAD is
+# a local ref set at clone time and refreshed only by `git remote set-head`, so
+# it can name a branch the remote stopped defaulting to years ago -- and here
+# that ref decides what counts as merged, which decides what gets deleted.
+# `|| true` because of `pipefail`: without it a failing ls-remote fails the whole
+# pipeline, `set -e` ends the script on the assignment, and the message below --
+# the one that says WHY nothing was deleted -- never gets to speak. git's own
+# "does not appear to be a git repository" is about the fetch, not about this.
+default_branch="$(git ls-remote --symref origin HEAD 2>/dev/null | sed -n 's@^ref: refs/heads/\(.*\)[[:space:]]HEAD$@\1@p' | head -1 || true)"
+if [[ -z "${default_branch}" ]]; then
+  echo "git-dm: cannot read origin's default branch (git ls-remote --symref origin HEAD)." >&2
+  echo "git-dm: nothing is deleted without knowing what to compare against." >&2
+  exit 1
+fi
+
+# Everything downstream compares against this one ref, resolved once. It exists
+# after the fetch above, and if it somehow does not, that is a reason to stop
+# rather than to guess.
+compare_ref="refs/remotes/origin/${default_branch}"
+if ! git show-ref --verify --quiet "${compare_ref}"; then
+  echo "git-dm: ${compare_ref} is missing even after fetching." >&2
+  exit 1
+fi
+say "[dm] default branch: ${default_branch}"
 
 # branch -> worktree path, read from porcelain so a path with spaces survives.
 worktree_of() {
@@ -125,10 +149,6 @@ drop_branch() {
   case " ${handled} " in *" ${branch} "*) return 0 ;; esac
   handled="${handled} ${branch}"
 
-  if ! free_the_branch "${branch}"; then
-    skipped=$((skipped + 1))
-    return 0
-  fi
   # Containment is checked HERE, against the default branch, and the delete is
   # then unconditional -- because `git branch -d` asks a different question.
   # With an upstream present it refuses unless the branch is merged into THAT,
@@ -136,8 +156,22 @@ drop_branch() {
   # though every one of its commits is already in main. Nothing can be lost by
   # deleting a branch the default branch fully contains, and that is the thing
   # worth verifying.
+  #
+  # A FAILED comparison is not an answer. Reading it as zero would turn "I could
+  # not tell" into "fully merged, delete it quietly" -- the wrong direction for
+  # a command that deletes. And it is asked before the worktree is touched, so a
+  # branch that cannot be judged does not first lose its worktree.
   local ahead
-  ahead="$(git rev-list --count "refs/remotes/origin/${default_branch}..refs/heads/${branch}" 2>/dev/null || echo 0)"
+  if ! ahead="$(git rev-list --count "${compare_ref}..refs/heads/${branch}" 2>/dev/null)"; then
+    say "  skip ${branch} -- cannot compare it with ${default_branch}"
+    skipped=$((skipped + 1))
+    return 0
+  fi
+
+  if ! free_the_branch "${branch}"; then
+    skipped=$((skipped + 1))
+    return 0
+  fi
   if [[ "${ahead}" != "0" ]]; then
     # Reached from the gone-upstream pass: a squash merge leaves the work
     # upstream under a different SHA, so its commits look absent. This cannot
@@ -145,7 +179,7 @@ drop_branch() {
     # every squash merge -- so it says what it is dropping and leaves the
     # judgement to whoever reads it. `git reflog` can still bring it back.
     say "  note ${branch} has ${ahead} commit(s) not in ${default_branch} (squash-merged, or not merged):"
-    git --no-pager log --oneline --max-count=3 "refs/remotes/origin/${default_branch}..refs/heads/${branch}" 2>/dev/null | sed 's/^/        /'
+    git --no-pager log --oneline --max-count=3 "${compare_ref}..refs/heads/${branch}" 2>/dev/null | sed 's/^/        /'
   fi
   say "  delete ${branch} ${why}"
   if run git branch -D "${branch}"; then
@@ -158,7 +192,7 @@ drop_branch() {
 say "[dm] branches merged into ${default_branch}"
 while IFS= read -r branch; do
   [[ -n "${branch}" ]] && drop_branch "${branch}" "(merged)"
-done < <(git for-each-ref --format='%(refname:short)' --merged "refs/remotes/origin/${default_branch}" refs/heads)
+done < <(git for-each-ref --format='%(refname:short)' --merged "${compare_ref}" refs/heads)
 
 say "[dm] branches whose upstream is gone"
 while IFS= read -r branch; do
