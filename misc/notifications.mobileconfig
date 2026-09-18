@@ -35,7 +35,7 @@
       <key>NotificationSettings</key>
       <array>
         <!-- Google Chrome itself: web notifications from any site that was
-             granted permission (Slack in the browser, for example). -->
+             granted permission (Slack / Discord in the browser, for example). -->
         <dict>
           <key>BundleIdentifier</key>
           <string>com.google.Chrome</string>

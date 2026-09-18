@@ -58,7 +58,10 @@ readonly USERNOTED_PREFS="${HOME}/Library/Group Containers/group.com.apple.usern
 #
 # The write REPLACES the array. That is the intent -- this list is the source of
 # truth, so add an origin here rather than in the browser.
-readonly CHROME_NOTIFICATION_URLS=("https://app.slack.com")
+readonly CHROME_NOTIFICATION_URLS=(
+  "https://app.slack.com"
+  "https://discord.com"
+)
 
 if defaults write com.google.Chrome NotificationsAllowedForUrls -array "${CHROME_NOTIFICATION_URLS[@]}"; then
   echo "Chrome: notifications allowed for ${CHROME_NOTIFICATION_URLS[*]}"
