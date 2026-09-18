@@ -25,7 +25,21 @@ readonly PORT="${AGENT_BROWSER_PORT:-9222}"
 readonly ENDPOINT="http://127.0.0.1:${PORT}"
 readonly HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly LOCK_DIR="${TMPDIR:-/tmp}/agent-browser-up.lock"
-readonly START_BUDGET_SECONDS="${AGENT_BROWSER_START_BUDGET:-40}"
+
+# The budget is used in arithmetic and handed to timeout(1), so a value like
+# "40s" or "" would not merely be ignored -- under `set -e` it kills this script,
+# and with it the browser tool for every agent that starts.
+#
+# So it is checked, and a bad one WARNS and falls back rather than exiting. This
+# wrapper sits in the MCP server's startup path: refusing to start over a typo in
+# an env var costs the agent its browser entirely, when a local browser would
+# have done. The warning goes to stderr, where the MCP log keeps it.
+budget_seconds="${AGENT_BROWSER_START_BUDGET:-40}"
+if [[ ! "${budget_seconds}" =~ ^[1-9][0-9]{0,4}$ ]]; then
+  echo "playwright-mcp: AGENT_BROWSER_START_BUDGET=\"${budget_seconds}\" is not a positive whole number of seconds (max 99999); using 40." >&2
+  budget_seconds=40
+fi
+readonly START_BUDGET_SECONDS="${budget_seconds}"
 
 cdp_is_a_browser() {
   curl -sf -m 2 "${ENDPOINT}/json/version" 2>/dev/null | python3 -c '
@@ -50,9 +64,24 @@ wait_for_cdp() {
 # lock matters because a MulmoTerminal grid runs many agents, and each one
 # starts its own copy of this wrapper -- without it they would race to open
 # the same tunnel and leave the losers' ssh processes behind.
+lock_owned=false
+
+# exec REPLACES this process, so an EXIT trap never runs on the paths that end in
+# one -- which is every successful path here. The lock would then sit until the
+# staleness check below let another agent steal it, and a stolen lock is a lock
+# two agents believe they hold. So it is released explicitly before each exec,
+# and only by the process that took it.
+release_lock() {
+  [[ "${lock_owned}" == true ]] || return 0
+  rmdir "${LOCK_DIR}" 2>/dev/null || true
+  lock_owned=false
+  trap - EXIT
+}
+
 take_lock() {
   if mkdir "${LOCK_DIR}" 2>/dev/null; then
-    trap 'rmdir "${LOCK_DIR}" 2>/dev/null || true' EXIT
+    lock_owned=true
+    trap release_lock EXIT
     return 0
   fi
   # A lock older than the start budget belonged to something that died holding
@@ -62,7 +91,8 @@ take_lock() {
   if (( age > START_BUDGET_SECONDS )); then
     rmdir "${LOCK_DIR}" 2>/dev/null || true
     mkdir "${LOCK_DIR}" 2>/dev/null || return 1
-    trap 'rmdir "${LOCK_DIR}" 2>/dev/null || true' EXIT
+    lock_owned=true
+    trap release_lock EXIT
     return 0
   fi
   return 1
@@ -83,10 +113,34 @@ if [[ "${AGENT_BROWSER_AUTO:-1}" != "0" ]]; then
     # A hard ceiling on top of the ssh timeouts inside `up`: this wrapper sits in
     # the MCP server's startup path, so it must fail fast rather than hang an
     # agent that would have been fine with a local browser.
+    #
+    # timeout(1) is coreutils, not macOS -- absent on a machine that has not run
+    # the Brewfile yet. python3 is already required here (the CDP probe parses
+    # JSON with it), so it carries the ceiling when timeout does not. Without a
+    # fallback, exactly the machine least likely to reach the MacBook would be
+    # the one where a hung `up` blocks the agent forever.
+    # `|| up_status=$?` rather than a bare call: under `set -e` a failing command
+    # outside a condition ends the script, so the status would never be read and
+    # the fallback below never reached.
+    up_status=0
     if command -v timeout >/dev/null 2>&1; then
-      timeout "${START_BUDGET_SECONDS}" "${HERE}/agent-browser" up >/dev/null 2>&1 || true
+      timeout "${START_BUDGET_SECONDS}" "${HERE}/agent-browser" up >/dev/null 2>&1 || up_status=$?
     else
-      "${HERE}/agent-browser" up >/dev/null 2>&1 || true
+      python3 - "${START_BUDGET_SECONDS}" "${HERE}/agent-browser" up >/dev/null 2>&1 <<'CEILING' || up_status=$?
+import subprocess, sys
+try:
+    sys.exit(subprocess.run(sys.argv[2:], timeout=int(sys.argv[1])).returncode)
+except subprocess.TimeoutExpired:
+    sys.exit(124)
+except Exception:
+    sys.exit(1)
+CEILING
+    fi
+    # Tolerated, not hidden: falling back to a local browser is the designed
+    # answer, but a run that was CUT OFF is worth saying out loud -- it is the
+    # difference between "the MacBook is away" and "something there is stuck".
+    if ((up_status == 124)); then
+      echo "playwright-mcp: agent-browser up exceeded ${START_BUDGET_SECONDS}s and was stopped; using a local browser." >&2
     fi
   else
     # Another agent is starting it. Wait for theirs instead of opening a second.
@@ -95,6 +149,7 @@ if [[ "${AGENT_BROWSER_AUTO:-1}" != "0" ]]; then
 fi
 
 if cdp_is_a_browser; then
+  release_lock
   exec npx -y @playwright/mcp@latest --cdp-endpoint "${ENDPOINT}" "$@"
 fi
 
@@ -102,4 +157,5 @@ fi
 # keep it out of the profile a person uses. --isolated gives it a throwaway
 # context, so a leak here cannot inherit logins -- though it is still THIS
 # machine's Chrome bundle, which is the collision agent-browser exists to avoid.
+release_lock
 exec npx -y @playwright/mcp@latest --isolated "$@"
