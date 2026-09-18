@@ -10,7 +10,7 @@
     ],
     "defaultMode": "bypassPermissions"
   },
-  "model": "claude-fable-5-1[1m]",
+  "model": "sonnet",
   "hooks": {
     "Stop": [
       {
@@ -51,10 +51,11 @@
       "effortLevel": "xhigh"
     },
     "claude-fable-5-1": {
-      "effortLevel": "high"
+      "effortLevel": "xhigh"
     }
   },
   "autoCompactWindow": 800000,
+  "fastMode": true,
   "tui": "fullscreen",
   "voice": {
     "enabled": true,
