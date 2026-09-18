@@ -65,34 +65,61 @@ wait_for_cdp() {
 # starts its own copy of this wrapper -- without it they would race to open
 # the same tunnel and leave the losers' ssh processes behind.
 lock_owned=false
+readonly LOCK_OWNER_FILE="${LOCK_DIR}/owner"
+readonly LOCK_TOKEN="$$-$(date +%s)-${RANDOM}"
+# Deliberately LONGER than the ceiling on `up`: a lock is only ever stolen from a
+# process that should already be gone. If the two were equal, the owner's release
+# and the thief's steal would race for the same instant.
+readonly LOCK_STALE_AFTER=$(( START_BUDGET_SECONDS + 15 ))
 
 # exec REPLACES this process, so an EXIT trap never runs on the paths that end in
 # one -- which is every successful path here. The lock would then sit until the
-# staleness check below let another agent steal it, and a stolen lock is a lock
-# two agents believe they hold. So it is released explicitly before each exec,
-# and only by the process that took it.
+# staleness check below let another agent steal it.
+#
+# And a stolen lock is why ownership is written down rather than remembered. The
+# sequence to defend against: A takes the lock and stalls, B judges it stale and
+# replaces it, then A wakes up and deletes what is now B's lock -- leaving B
+# convinced it holds a lock that a third agent can take. Two `up` runs then race,
+# the second one's tunnel fails on the busy port, and its rollback kills the
+# browser the first one had working. That is this PR's own failure mode, arrived
+# at through the lock meant to prevent it.
+#
+# So: release only a lock still carrying OUR token, and steal only from an owner
+# that is demonstrably gone.
 release_lock() {
   [[ "${lock_owned}" == true ]] || return 0
-  rmdir "${LOCK_DIR}" 2>/dev/null || true
   lock_owned=false
   trap - EXIT
+  local holder
+  holder="$(sed -n 1p "${LOCK_OWNER_FILE}" 2>/dev/null || true)"
+  [[ "${holder}" == "${LOCK_TOKEN}" ]] || return 0
+  rm -f "${LOCK_OWNER_FILE}" 2>/dev/null || true
+  rmdir "${LOCK_DIR}" 2>/dev/null || true
+}
+
+claim_lock() {
+  printf '%s\n%s\n' "${LOCK_TOKEN}" "$$" > "${LOCK_OWNER_FILE}"
+  lock_owned=true
+  trap release_lock EXIT
 }
 
 take_lock() {
   if mkdir "${LOCK_DIR}" 2>/dev/null; then
-    lock_owned=true
-    trap release_lock EXIT
+    claim_lock
     return 0
   fi
-  # A lock older than the start budget belonged to something that died holding
-  # it. Waiting on it forever would make every later agent fall back to local.
-  local age
+
+  local owner_pid age
+  owner_pid="$(sed -n 2p "${LOCK_OWNER_FILE}" 2>/dev/null || true)"
   age=$(( $(date +%s) - $(stat -f %m "${LOCK_DIR}" 2>/dev/null || date +%s) ))
-  if (( age > START_BUDGET_SECONDS )); then
+
+  # Old AND ownerless. An owner still running is waited for however old the lock
+  # looks: `up` talks to another machine, and slow is not the same as dead.
+  if (( age > LOCK_STALE_AFTER )) && { [[ -z "${owner_pid}" ]] || ! kill -0 "${owner_pid}" 2>/dev/null; }; then
+    rm -f "${LOCK_OWNER_FILE}" 2>/dev/null || true
     rmdir "${LOCK_DIR}" 2>/dev/null || true
     mkdir "${LOCK_DIR}" 2>/dev/null || return 1
-    lock_owned=true
-    trap release_lock EXIT
+    claim_lock
     return 0
   fi
   return 1
