@@ -175,10 +175,9 @@ drop_branch() {
     return 0
   fi
 
-  if ! free_the_branch "${branch}"; then
-    skipped=$((skipped + 1))
-    return 0
-  fi
+  # Decided BEFORE the worktree is touched. A branch this keeps must keep its
+  # worktree too: removing the directory and then announcing the branch is being
+  # kept would be the worst of both answers.
   if [[ "${ahead}" != "0" ]] && [[ "${force_gone}" != true ]]; then
     # Commits the default branch does not contain. Which means one of two
     # things, and nothing here can tell them apart: a squash merge left the work
@@ -194,6 +193,12 @@ drop_branch() {
     skipped=$((skipped + 1))
     return 0
   fi
+
+  if ! free_the_branch "${branch}"; then
+    skipped=$((skipped + 1))
+    return 0
+  fi
+
   if [[ "${ahead}" != "0" ]]; then
     say "  note ${branch} has ${ahead} commit(s) not in ${default_branch} (--force-gone):"
     git --no-pager log --oneline --max-count=3 "${compare_ref}..refs/heads/${branch}" 2>/dev/null | sed 's/^/        /'
