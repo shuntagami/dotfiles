@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
-# git-dm [--dry-run] [--keep-worktrees]        (usage: `git dm -h`)
+# git-dm [--dry-run] [--keep-worktrees] [--force-gone]   (usage: `git dm -h`)
 #
 # Delete the local branches that are finished with: merged into the default
 # branch, or left behind with a gone upstream.
+#
+# A branch carrying commits the default branch does not have is KEPT and listed:
+# a squash merge and an unmerged branch look identical from here, and only one
+# of them is safe to drop. --force-gone deletes those too, once you have read
+# the list.
 #
 # This replaces a one-line alias that could not express two things.
 #
@@ -33,10 +38,12 @@ set -euo pipefail
 
 dry_run=false
 keep_worktrees=false
+force_gone=false
 for arg in "$@"; do
   case "${arg}" in
     --dry-run) dry_run=true ;;
     --keep-worktrees) keep_worktrees=true ;;
+    --force-gone) force_gone=true ;;
     -h | --help)
       sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
@@ -172,13 +179,23 @@ drop_branch() {
     skipped=$((skipped + 1))
     return 0
   fi
+  if [[ "${ahead}" != "0" ]] && [[ "${force_gone}" != true ]]; then
+    # Commits the default branch does not contain. Which means one of two
+    # things, and nothing here can tell them apart: a squash merge left the work
+    # upstream under a different SHA, or the branch was never merged at all.
+    #
+    # So it stops, and says what it is looking at. Deleting would cost the
+    # branch ref AND -- for a branch a worktree holds -- that directory, on a
+    # guess. `git reflog` is a way back, not a reason to go. Re-run with
+    # --force-gone once you have read the list and recognised it.
+    say "  keep ${branch} -- ${ahead} commit(s) not in ${default_branch}:"
+    git --no-pager log --oneline --max-count=3 "${compare_ref}..refs/heads/${branch}" 2>/dev/null | sed 's/^/        /'
+    say "       squash-merged, or never merged. --force-gone deletes it anyway."
+    skipped=$((skipped + 1))
+    return 0
+  fi
   if [[ "${ahead}" != "0" ]]; then
-    # Reached from the gone-upstream pass: a squash merge leaves the work
-    # upstream under a different SHA, so its commits look absent. This cannot
-    # tell that from a branch that was never merged -- refusing would block
-    # every squash merge -- so it says what it is dropping and leaves the
-    # judgement to whoever reads it. `git reflog` can still bring it back.
-    say "  note ${branch} has ${ahead} commit(s) not in ${default_branch} (squash-merged, or not merged):"
+    say "  note ${branch} has ${ahead} commit(s) not in ${default_branch} (--force-gone):"
     git --no-pager log --oneline --max-count=3 "${compare_ref}..refs/heads/${branch}" 2>/dev/null | sed 's/^/        /'
   fi
   say "  delete ${branch} ${why}"
