@@ -59,6 +59,7 @@ brew "ctop"
 # Get a file from an HTTP, HTTPS or FTP server
 brew "curl"
 # Command-line tool for getting & setting the default browser
+brew "defaultbrowser"
 # Image format providing lossless and lossy compression for web images
 brew "webp"
 # Color management engine supporting ICC profiles
@@ -281,7 +282,6 @@ cask "docker-desktop"
 cask "dropbox"
 # Collaborative team software
 cask "figma@beta"
-# Utility for customizing which browser to start
 # GIT client
 cask "fork"
 # Set of tools to manage resources and applications hosted on Google Cloud
@@ -314,7 +314,6 @@ cask "slack-cli"
 cask "spotify"
 # Mesh VPN based on WireGuard
 cask "tailscale-app"
-# Web browser
 # Open-source code editor
 cask "visual-studio-code"
 # Video communication and virtual meeting platform
@@ -324,6 +323,7 @@ vscode "dbaeumer.vscode-eslint"
 vscode "docker.docker"
 vscode "eamodio.gitlens"
 vscode "editorconfig.editorconfig"
+vscode "ele-inc.marunage-feedback"
 vscode "esbenp.prettier-vscode"
 vscode "formulahendry.auto-close-tag"
 vscode "formulahendry.auto-complete-tag"
