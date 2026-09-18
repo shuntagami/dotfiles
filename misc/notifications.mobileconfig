@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>PayloadContent</key>
+  <array>
+    <dict>
+      <key>PayloadType</key>
+      <string>com.apple.notificationsettings</string>
+      <key>PayloadIdentifier</key>
+      <string>local.dotfiles.notifications.settings</string>
+      <key>PayloadUUID</key>
+      <string>CBFF37C6-22BD-4B85-A9C3-2F6204E0C18A</string>
+      <key>PayloadVersion</key>
+      <integer>1</integer>
+      <key>PayloadDisplayName</key>
+      <string>Notification settings</string>
+      <key>NotificationSettings</key>
+      <array>
+        <!-- Google Chrome itself: web notifications from any site that was
+             granted permission (Slack in the browser, for example). -->
+        <dict>
+          <key>BundleIdentifier</key>
+          <string>com.google.Chrome</string>
+          <key>NotificationsEnabled</key>
+          <true/>
+          <key>AlertType</key>
+          <integer>1</integer>
+          <key>ShowInNotificationCenter</key>
+          <true/>
+          <key>ShowInLockScreen</key>
+          <true/>
+          <key>BadgesEnabled</key>
+          <true/>
+          <key>SoundsEnabled</key>
+          <true/>
+        </dict>
+        <!-- Chrome's SECOND notification identity. Chrome ships a separate
+             helper app for notifications a site asked to keep on screen
+             (requireInteraction), because macOS allows one alert style per
+             app. System Settings lists it under the same name and icon as
+             Chrome, which is why "Google Chrome" appears there twice: leave
+             this one off and that whole class of notification silently never
+             arrives. Persistent banner (2) is what the helper is for. -->
+        <dict>
+          <key>BundleIdentifier</key>
+          <string>com.google.Chrome.framework.AlertNotificationService</string>
+          <key>NotificationsEnabled</key>
+          <true/>
+          <key>AlertType</key>
+          <integer>2</integer>
+          <key>ShowInNotificationCenter</key>
+          <true/>
+          <key>ShowInLockScreen</key>
+          <true/>
+          <key>BadgesEnabled</key>
+          <true/>
+          <key>SoundsEnabled</key>
+          <true/>
+        </dict>
+        <dict>
+          <key>BundleIdentifier</key>
+          <string>com.tinyspeck.slackmacgap</string>
+          <key>NotificationsEnabled</key>
+          <true/>
+          <key>AlertType</key>
+          <integer>1</integer>
+          <key>ShowInNotificationCenter</key>
+          <true/>
+          <key>ShowInLockScreen</key>
+          <true/>
+          <key>BadgesEnabled</key>
+          <true/>
+          <key>SoundsEnabled</key>
+          <true/>
+        </dict>
+        <dict>
+          <key>BundleIdentifier</key>
+          <string>com.hnc.Discord</string>
+          <key>NotificationsEnabled</key>
+          <true/>
+          <key>AlertType</key>
+          <integer>1</integer>
+          <key>ShowInNotificationCenter</key>
+          <true/>
+          <key>ShowInLockScreen</key>
+          <true/>
+          <key>BadgesEnabled</key>
+          <true/>
+          <key>SoundsEnabled</key>
+          <true/>
+        </dict>
+      </array>
+    </dict>
+  </array>
+  <key>PayloadType</key>
+  <string>Configuration</string>
+  <key>PayloadIdentifier</key>
+  <string>local.dotfiles.notifications</string>
+  <key>PayloadUUID</key>
+  <string>355F2D8D-8485-45DF-A2B0-A4F46A9D9655</string>
+  <key>PayloadVersion</key>
+  <integer>1</integer>
+  <key>PayloadDisplayName</key>
+  <string>dotfiles: notifications</string>
+  <key>PayloadDescription</key>
+  <string>Allows notifications (banner, Notification Center, Lock Screen, badge, sound) for Google Chrome, Chrome's separate notification helper, Slack and Discord. Managed in dotfiles/misc/notifications.mobileconfig.</string>
+  <key>PayloadOrganization</key>
+  <string>dotfiles</string>
+  <key>PayloadScope</key>
+  <string>User</string>
+  <key>PayloadRemovalDisallowed</key>
+  <false/>
+</dict>
+</plist>

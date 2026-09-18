@@ -9,10 +9,40 @@ fi
 
 readonly NOTIFICATION_PREFS_DOMAIN="com.apple.ncprefs"
 readonly SETTINGS_URL="x-apple.systempreferences:com.apple.Notifications-Settings.extension"
+# Apps configured by driving System Settings (the UI automation at the bottom of
+# this file), which matches rows by the NAME shown in that list. Google Chrome is
+# deliberately NOT here: it occupies two rows under one name, so a name match
+# cannot address the second. The configuration profile further down does it by
+# bundle id instead.
 readonly TARGET_APPS=("Discord" "Slack")
 
 tmp_dir="$(mktemp -d /tmp/dotfiles-macos-notifications.XXXXXX)"
 trap 'rm -rf "${tmp_dir}"' EXIT
+
+###############################################################################
+# Chrome: let Slack in the browser notify, in every profile                   #
+###############################################################################
+
+# Chrome reads enterprise policies from its own preference domain, so which SITES
+# may notify is something dotfiles can own. Clicking "Allow" in the browser is
+# not: that lands in one profile's Preferences file -- there are five profiles on
+# this machine -- and goes away when that profile is reset.
+#
+# Measured, not assumed. The policy list carries no `can_be_recommended` for
+# NotificationsAllowedForUrls, which suggested a user-domain write would be
+# ignored as merely "recommended". Against a throwaway profile, with a control
+# run, Notification.permission for a listed origin reads "granted" with this set
+# and "default" without it. It applies.
+#
+# The write REPLACES the array, which is the intent: this file is the source of
+# truth for the list. Add an origin here rather than in the browser.
+readonly CHROME_NOTIFICATION_URLS=("https://app.slack.com")
+
+if defaults write com.google.Chrome NotificationsAllowedForUrls -array "${CHROME_NOTIFICATION_URLS[@]}"; then
+  echo "Chrome: notifications allowed for ${CHROME_NOTIFICATION_URLS[*]}"
+else
+  echo "Could not write Chrome's notification policy."
+fi
 
 ###############################################################################
 # Allow notifications while mirroring or sharing the display                 #
@@ -221,6 +251,37 @@ fi
 
 if [[ "${settings_was_running}" == "false" ]]; then
   osascript -e 'tell application "System Settings" to quit' >/dev/null 2>&1 || true
+fi
+
+###############################################################################
+# macOS: per-app notification settings, as a configuration profile            #
+###############################################################################
+
+# The declarative half of this script. A com.apple.notificationsettings payload
+# names apps by BUNDLE ID, which is the only way to reach Chrome's second
+# notification identity: Chrome ships a separate helper app for notifications a
+# site asked to keep on screen, and System Settings lists it under the same name
+# and icon as Chrome itself. That is why "Google Chrome" appears there twice, and
+# why the UI automation above cannot address the pair -- it would configure
+# whichever row comes first and leave the other off, which silently loses that
+# whole class of notification. A bundle id is unambiguous, and the payload also
+# applies to apps that are not installed yet.
+#
+# Apple allows this payload on macOS with neither supervision nor MDM, but
+# `profiles -I` was removed in Big Sur, so installing means opening the file and
+# approving it once. Install only when missing, and say what is left to do.
+readonly PROFILE_IDENTIFIER="local.dotfiles.notifications"
+readonly PROFILE_PATH="${DOTFILES:-${HOME}/dotfiles}/misc/notifications.mobileconfig"
+
+if [[ ! -f "${PROFILE_PATH}" ]]; then
+  echo "Notification profile missing at ${PROFILE_PATH}; skipped."
+elif profiles list 2>/dev/null | grep -q "${PROFILE_IDENTIFIER}"; then
+  echo "Notification profile already installed (${PROFILE_IDENTIFIER})."
+elif open "${PROFILE_PATH}"; then
+  echo "Opened ${PROFILE_PATH} -- approve it in System Settings (Device Management / Profiles)."
+  echo "It does not apply until approved."
+else
+  echo "Could not open ${PROFILE_PATH}. Double-click it to install."
 fi
 
 echo "macOS notification settings complete."

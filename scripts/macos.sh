@@ -575,6 +575,9 @@ sudo mdutil -E / > /dev/null
 # Google Chrome & Google Chrome Canary                                        #
 ###############################################################################
 
+# Notification settings for Chrome are NOT here: which sites may notify, and
+# whether macOS lets Chrome show anything at all, live in
+# scripts/macos-notifications.sh -- the script setup.sh actually runs.
 # Disable the all too sensitive backswipe on trackpads
 defaults write com.google.Chrome AppleEnableSwipeNavigateWithScrolls -bool false
 defaults write com.google.Chrome.canary AppleEnableSwipeNavigateWithScrolls -bool false
