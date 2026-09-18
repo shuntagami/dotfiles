@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+# git-dm [--dry-run] [--keep-worktrees]        (usage: `git dm -h`)
+#
+# Delete the local branches that are finished with: merged into the default
+# branch, or left behind with a gone upstream.
+#
+# This replaces a one-line alias that could not express two things.
+#
+#   - `git branch` marks a branch checked out in ANOTHER worktree with "+ ",
+#     the same way it marks the current one with "* ". The alias stripped only
+#     the "*", so every worktree branch arrived at `git branch -d` as the
+#     literal name "+ feat/x", and git answered "branch '+ feat/x' not found".
+#     Names come from for-each-ref here, where there is no prefix to strip.
+#
+#   - A branch a worktree holds cannot be deleted while that worktree exists,
+#     whatever its name. And a worktree is what the finished branch was FOR, so
+#     a cleanup that cannot take the worktree with it cannot finish: every agent
+#     worktree leaves a branch that no amount of re-running will remove.
+#
+# A third thing was wrong quietly: `git branch --merged` with no argument means
+# merged into HEAD. The alias announced "merged into default branch" while
+# deleting whatever was merged into the branch you happened to be standing on.
+# The default branch is resolved and passed explicitly.
+#
+# `git worktree remove` DELETES A DIRECTORY, so it runs only for a worktree that
+# holds nothing: no modified files and no untracked ones. Anything else is
+# skipped with its path, because a path is what someone needs to go look.
+#
+# `git dm --help` prints git's man lookup rather than this header: git resolves
+# --help itself for an external command. `git dm -h` reaches the script.
+
+set -euo pipefail
+
+dry_run=false
+keep_worktrees=false
+for arg in "$@"; do
+  case "${arg}" in
+    --dry-run) dry_run=true ;;
+    --keep-worktrees) keep_worktrees=true ;;
+    -h | --help)
+      sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
+      exit 0
+      ;;
+    *)
+      echo "git-dm: unknown option ${arg}" >&2
+      exit 2
+      ;;
+  esac
+done
+
+say() { printf '%s\n' "$*"; }
+run() { if [[ "${dry_run}" == true ]]; then say "    [dry-run] $*"; else "$@"; fi; }
+
+# The default branch as the REMOTE names it. origin/HEAD is the honest source;
+# it is what `git default` in .gitconfig reads too.
+default_branch="$(git symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || true)"
+if [[ -z "${default_branch}" ]]; then
+  for candidate in main master; do
+    git show-ref --verify --quiet "refs/heads/${candidate}" && default_branch="${candidate}" && break
+  done
+fi
+if [[ -z "${default_branch}" ]]; then
+  echo "git-dm: cannot tell which branch is the default (no origin/HEAD, no main or master)." >&2
+  exit 1
+fi
+
+current_branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+main_worktree="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"
+this_worktree="$(git rev-parse --show-toplevel)"
+
+say "[dm] fetch + prune (default branch: ${default_branch})"
+run git fetch --prune
+# Worktrees whose directory a human already deleted still hold their branch
+# until the record goes. Pruning first turns some "cannot delete" into "deleted".
+run git worktree prune
+
+# branch -> worktree path, read from porcelain so a path with spaces survives.
+worktree_of() {
+  git worktree list --porcelain | awk -v want="refs/heads/$1" '
+    /^worktree /{ path = substr($0, 10) }
+    /^branch /  { if (substr($0, 8) == want) { print path; exit } }
+  '
+}
+
+deleted=0
+skipped=0
+# A branch can be both merged AND upstream-gone, so it appears in both passes.
+# In a real run the second pass no longer sees what the first one deleted, but a
+# dry-run deletes nothing and would print it twice -- and a dry-run that does not
+# predict the real run is worse than none.
+handled=""
+
+# Removes the worktree holding $1 when it is safe to, and says why when not.
+# Returns 0 when the branch is now free to delete.
+free_the_branch() {
+  local branch="$1" worktree
+  worktree="$(worktree_of "${branch}")"
+  [[ -n "${worktree}" ]] || return 0
+
+  if [[ "${worktree}" == "${main_worktree}" || "${worktree}" == "${this_worktree}" ]]; then
+    say "  skip ${branch} -- checked out here (${worktree})"
+    return 1
+  fi
+  if [[ "${keep_worktrees}" == true ]]; then
+    say "  skip ${branch} -- held by worktree ${worktree} (--keep-worktrees)"
+    return 1
+  fi
+  if [[ -n "$(git -C "${worktree}" status --porcelain 2>/dev/null)" ]]; then
+    say "  skip ${branch} -- worktree has uncommitted or untracked files: ${worktree}"
+    return 1
+  fi
+
+  say "  remove worktree ${worktree} (clean, held ${branch})"
+  run git worktree remove "${worktree}" || {
+    say "    could not remove it; leaving ${branch} alone"
+    return 1
+  }
+  return 0
+}
+
+drop_branch() {
+  local branch="$1" why="$2"
+  [[ "${branch}" != "${default_branch}" ]] || return 0
+  [[ "${branch}" != "${current_branch}" ]] || return 0
+  case " ${handled} " in *" ${branch} "*) return 0 ;; esac
+  handled="${handled} ${branch}"
+
+  if ! free_the_branch "${branch}"; then
+    skipped=$((skipped + 1))
+    return 0
+  fi
+  # Containment is checked HERE, against the default branch, and the delete is
+  # then unconditional -- because `git branch -d` asks a different question.
+  # With an upstream present it refuses unless the branch is merged into THAT,
+  # so a branch whose remote ref was left 27 commits behind is refused even
+  # though every one of its commits is already in main. Nothing can be lost by
+  # deleting a branch the default branch fully contains, and that is the thing
+  # worth verifying.
+  local ahead
+  ahead="$(git rev-list --count "refs/remotes/origin/${default_branch}..refs/heads/${branch}" 2>/dev/null || echo 0)"
+  if [[ "${ahead}" != "0" ]]; then
+    # Reached from the gone-upstream pass: a squash merge leaves the work
+    # upstream under a different SHA, so its commits look absent. This cannot
+    # tell that from a branch that was never merged -- refusing would block
+    # every squash merge -- so it says what it is dropping and leaves the
+    # judgement to whoever reads it. `git reflog` can still bring it back.
+    say "  note ${branch} has ${ahead} commit(s) not in ${default_branch} (squash-merged, or not merged):"
+    git --no-pager log --oneline --max-count=3 "refs/remotes/origin/${default_branch}..refs/heads/${branch}" 2>/dev/null | sed 's/^/        /'
+  fi
+  say "  delete ${branch} ${why}"
+  if run git branch -D "${branch}"; then
+    deleted=$((deleted + 1))
+  else
+    skipped=$((skipped + 1))
+  fi
+}
+
+say "[dm] branches merged into ${default_branch}"
+while IFS= read -r branch; do
+  [[ -n "${branch}" ]] && drop_branch "${branch}" "(merged)"
+done < <(git for-each-ref --format='%(refname:short)' --merged "refs/remotes/origin/${default_branch}" refs/heads)
+
+say "[dm] branches whose upstream is gone"
+while IFS= read -r branch; do
+  [[ -n "${branch}" ]] && drop_branch "${branch}" "(gone upstream)"
+done < <(git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads | awk '$2=="[gone]" {print $1}')
+
+say "[dm] ${deleted} deleted, ${skipped} skipped"
