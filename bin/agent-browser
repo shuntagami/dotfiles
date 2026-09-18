@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# The browser an AGENT drives, kept on a different machine from the one you use.
+#
+# Why a different machine at all: macOS has no per-session namespace for the
+# things a browser claims. One `open` goes to whichever instance of the bundle
+# LaunchServices feels like, global keyboard shortcuts belong to whoever
+# registered them first, and a window inherits whatever profile it was started
+# with. So an automated browser on the machine you are sitting at will,
+# eventually, swallow a `gh repo view --web`, or a shortcut, or both. It did.
+#
+# Two separations, each closing one of those:
+#
+#   - another MACHINE, so `open` here cannot reach it at all
+#   - Chrome for TESTING there (com.google.chrome.for.testing), a different
+#     bundle id, so it does not become the URL handler on that machine either
+#
+# CDP is unauthenticated and total: whoever reaches the port drives the browser
+# and reads every cookie in that profile. So it is never published. It binds to
+# localhost on the remote machine, and an SSH tunnel over Tailscale is what
+# brings it here. Playwright then connects to 127.0.0.1 as if the browser were
+# local, which also satisfies Chrome's Host-header check on the DevTools
+# endpoint.
+
+readonly REMOTE="${AGENT_BROWSER_HOST:-shun-tagami-mbp}"
+readonly PORT="${AGENT_BROWSER_PORT:-9222}"
+readonly PROFILE="${AGENT_BROWSER_PROFILE:-\${HOME}/.cache/agent-browser/profile}"
+readonly TUNNEL_PID_FILE="${TMPDIR:-/tmp}/agent-browser-tunnel.pid"
+readonly TUNNEL_LOG="${TMPDIR:-/tmp}/agent-browser-tunnel.log"
+
+usage() {
+  cat <<USAGE
+usage: agent-browser <command>
+
+  up       start the remote browser and the tunnel, then report the endpoint
+  down     stop the tunnel here and the browser there
+  status   say what is running, on both sides
+  endpoint print the CDP endpoint (for --cdp-endpoint), nothing else
+
+env: AGENT_BROWSER_HOST (${REMOTE}), AGENT_BROWSER_PORT (${PORT})
+USAGE
+}
+
+remote() {
+  ssh -o BatchMode=yes -o ConnectTimeout=8 "${REMOTE}" "$@"
+}
+
+# The browser is Chrome for Testing, fetched by puppeteer's installer rather than
+# by us: it parks builds under ~/.cache/puppeteer and prints the path, so there
+# is no download logic here and no guessing at a version.
+remote_browser_path() {
+  remote 'ls -d "${HOME}"/.cache/puppeteer/chrome/mac_*/chrome-mac-*/Google\ Chrome\ for\ Testing.app/Contents/MacOS/Google\ Chrome\ for\ Testing 2>/dev/null | sort -V | tail -1'
+}
+
+tunnel_running() {
+  [[ -f "${TUNNEL_PID_FILE}" ]] && kill -0 "$(cat "${TUNNEL_PID_FILE}")" 2>/dev/null
+}
+
+cmd_status() {
+  if tunnel_running; then
+    echo "tunnel: up (pid $(cat "${TUNNEL_PID_FILE}"), 127.0.0.1:${PORT} -> ${REMOTE}:${PORT})"
+  else
+    echo "tunnel: down"
+  fi
+  local remote_state
+  remote_state="$(remote "pgrep -f 'remote-debugging-port=${PORT}' >/dev/null && echo running || echo stopped" 2>/dev/null || echo unreachable)"
+  echo "browser on ${REMOTE}: ${remote_state}"
+  if tunnel_running; then
+    local version
+    version="$(curl -s -m 3 "http://127.0.0.1:${PORT}/json/version" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("Browser","?"))' 2>/dev/null || true)"
+    [[ -n "${version}" ]] && echo "CDP answers: ${version}"
+  fi
+}
+
+cmd_up() {
+  local browser
+  browser="$(remote_browser_path)"
+  if [[ -z "${browser}" ]]; then
+    echo "No Chrome for Testing on ${REMOTE}." >&2
+    echo "Install one there:  ssh ${REMOTE} 'npx -y puppeteer browsers install chrome'" >&2
+    exit 1
+  fi
+
+  # Idempotent: an already-running browser is left alone. --user-data-dir keeps
+  # its cookies and logins away from the one a person uses on that machine.
+  if remote "pgrep -f 'remote-debugging-port=${PORT}' >/dev/null"; then
+    echo "Browser already running on ${REMOTE}."
+  else
+    # Detached from the SSH channel on the remote side as well: ssh waits for the
+    # channel to close, so a child still holding it would hang this the same way.
+    remote "mkdir -p '${PROFILE}' && nohup '${browser}' \
+      --remote-debugging-port=${PORT} \
+      --user-data-dir='${PROFILE}' \
+      --no-first-run --no-default-browser-check \
+      --disable-features=Translate \
+      >/dev/null 2>&1 </dev/null & disown; exit 0" || true
+    sleep 2
+    remote "pgrep -f 'remote-debugging-port=${PORT}' >/dev/null" \
+      || { echo "Browser did not start on ${REMOTE}." >&2; exit 1; }
+    echo "Started Chrome for Testing on ${REMOTE}."
+  fi
+
+  if tunnel_running; then
+    echo "Tunnel already up."
+  else
+    # stdout and stderr go to a log, not to ours. A background child that keeps
+    # our stdout open makes this script look like it hung to anything reading
+    # its output through a pipe -- which is exactly how it first failed.
+    ssh -o BatchMode=yes -o ConnectTimeout=8 -o ExitOnForwardFailure=yes \
+      -N -L "127.0.0.1:${PORT}:127.0.0.1:${PORT}" "${REMOTE}" \
+      >"${TUNNEL_LOG}" 2>&1 &
+    echo $! > "${TUNNEL_PID_FILE}"
+    sleep 1
+    tunnel_running || { echo "Tunnel failed." >&2; exit 1; }
+    echo "Tunnel up."
+  fi
+
+  # Reported rather than assumed: a tunnel that connects and a CDP that answers
+  # are different claims, and only the second one means the agent can drive it.
+  local version
+  version="$(curl -s -m 5 "http://127.0.0.1:${PORT}/json/version" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("Browser","?"))' 2>/dev/null || true)"
+  if [[ -z "${version}" ]]; then
+    echo "Tunnel is up but CDP did not answer on 127.0.0.1:${PORT}." >&2
+    exit 1
+  fi
+  echo "CDP answers: ${version}"
+  echo "endpoint: http://127.0.0.1:${PORT}"
+}
+
+cmd_down() {
+  if tunnel_running; then
+    kill "$(cat "${TUNNEL_PID_FILE}")" 2>/dev/null || true
+    rm -f "${TUNNEL_PID_FILE}"
+    echo "Tunnel stopped."
+  else
+    echo "Tunnel was not running."
+  fi
+  # Stopped, not left for later: a browser nobody owns is the problem this whole
+  # script exists to avoid -- it just moves to the other machine.
+  if remote "pkill -f 'remote-debugging-port=${PORT}'" 2>/dev/null; then
+    echo "Browser on ${REMOTE} stopped."
+  else
+    echo "No browser to stop on ${REMOTE}."
+  fi
+}
+
+case "${1:-}" in
+  up) cmd_up ;;
+  down) cmd_down ;;
+  status) cmd_status ;;
+  endpoint) echo "http://127.0.0.1:${PORT}" ;;
+  *) usage; exit 1 ;;
+esac

@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# The Playwright MCP server, pointed at a browser on ANOTHER machine when one is
+# there, and at a local browser when it is not.
+#
+# Indirection rather than a flag in the MCP config, because the right answer
+# changes with where the MacBook is. At home it is reachable and the agent's
+# browser belongs there (see bin/agent-browser for why). On the road it is in a
+# bag, and an MCP server that insists on --cdp-endpoint would fail every call
+# instead of falling back.
+#
+# The probe is the CDP endpoint itself, not ssh and not ping: an endpoint that
+# answers /json/version is the only thing that means "a browser the agent can
+# drive". A tunnel can be up with nothing behind it.
+
+readonly PORT="${AGENT_BROWSER_PORT:-9222}"
+readonly ENDPOINT="http://127.0.0.1:${PORT}"
+
+if curl -s -m 2 "${ENDPOINT}/json/version" >/dev/null 2>&1; then
+  exec npx -y @playwright/mcp@latest --cdp-endpoint "${ENDPOINT}" "$@"
+fi
+
+# No remote browser: let the MCP server start its own, and keep it out of the
+# profile a person uses. --isolated gives it a throwaway context, so a leak here
+# cannot inherit logins -- though it is still THIS machine's Chrome bundle, which
+# is the collision agent-browser exists to avoid.
+exec npx -y @playwright/mcp@latest --isolated "$@"
