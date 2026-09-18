@@ -8,6 +8,18 @@
       "env": {
         "GOOGLE_OAUTH_CREDENTIALS": "/Users/shun.tagami/dotfiles/misc/gcp-oauth.keys.json"
       }
+    },
+    "screenpipe": {
+      "command": "/Applications/screenpipe.app/Contents/MacOS/bun",
+      "args": [
+        "x",
+        "screenpipe-mcp@latest"
+      ],
+      "env": {
+        "SCREENPIPE_API_URL": "http://localhost:3030",
+        "SCREENPIPE_LOCAL_API_KEY": "sp-0fed60cd",
+        "SCREENPIPE_MCP_CLIENT": "claude"
+      }
     }
   },
   "preferences": {
