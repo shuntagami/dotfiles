@@ -44,10 +44,6 @@ ln -sf ~/dotfiles/.zpreztorc ~/.zpreztorc
 ln -sf ~/dotfiles/.zprofile ~/.zprofile
 ln -sf ~/dotfiles/.zshenv ~/.zshenv
 ln -sf ~/dotfiles/.zshrc ~/.zshrc
-if [[ -e ~/.finicky.js && ! -L ~/.finicky.js ]]; then
-  mv ~/.finicky.js ~/.finicky.js.bak.$(date +%Y%m%d%H%M%S)
-fi
-ln -sf ~/dotfiles/.finicky.js ~/.finicky.js
 mkdir -p ~/.docker
 ln -sf ~/dotfiles/misc/docker-config.json ~/.docker/config.json
 # Codex: config.toml includes standard Codex settings such as installed plugins.
@@ -153,12 +149,21 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     node "${HOME}/dotfiles/scripts/jump-desktop-display.mjs" --deploy
   fi
 
-  # Finicky is the system URL router: Discord links go to Chrome and all other
-  # links fall through to Dia according to ~/.finicky.js.
-  if command -v defaultbrowser >/dev/null 2>&1 && [[ -d /Applications/Finicky.app ]]; then
-    open -g -a Finicky
-    defaultbrowser finicky
-  fi
+  # No URL router here any more, and no default-browser step either.
+  #
+  # Finicky used to sit here: it was registered as the system handler, then sent
+  # Discord links to Chrome and everything else to Dia. Both are out of use, and
+  # the indirection was not free -- a browser kept alive in the background still
+  # holds its global keyboard shortcuts, which is how Dia's profile switcher
+  # swallowed Cmd+Shift+P while Chrome was in front.
+  #
+  # The default browser is not set from here because it CANNOT be, on this OS.
+  # `defaultbrowser` (the Homebrew CLI the old block used) reads nothing on
+  # macOS 26: every browser in its listing comes back unmarked even when
+  # LaunchServices has a handler registered, and its write is silent. macOS
+  # wants the request to come from the browser itself, so this is a one-time
+  # click -- Chrome's own "make default" prompt, or System Settings > Desktop &
+  # Dock > Default web browser. Doing it here would only look declarative.
 
   if [[ "${DOTFILES_PROFILE:-full}" != "minimal" ]]; then
     ln -sfn ~/dotfiles/hammerspoon ~/.hammerspoon
