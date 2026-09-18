@@ -60,22 +60,10 @@
 
 	# Remove branches that have already been merged with main.
 	# a.k.a. ‘delete merged’
-  dm = "!f() { \
-    echo '[dm] fetch + prune...'; \
-    git fetch -p; \
-    \
-    echo '[dm] deleting branches merged into default branch...'; \
-    git branch --merged | grep -v '\\*' | while read b; do \
-      [ -n \"$b\" ] && echo \"  delete $b\" && git branch -d \"$b\"; \
-    done; \
-    \
-    echo '[dm] deleting branches whose upstream is gone...'; \
-    git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads \
-      | awk '$2==\"[gone]\" {print $1}' \
-      | while read b; do \
-          [ -n \"$b\" ] && echo \"  delete $b (gone upstream)\" && git branch -D \"$b\"; \
-        done; \
-  }; f"
+  # Implemented in bin/git-dm (on PATH, so `git dm` finds it). It outgrew an
+  # alias: it has to resolve the default branch, read branch names without
+  # parsing the "* " / "+ " prefixes git prints, and remove the worktree holding
+  # a finished branch -- a branch a worktree holds cannot be deleted at all.
 
 	# List contributors with number of commits.
 	contributors = shortlog --summary --numbered
