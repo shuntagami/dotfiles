@@ -1,5 +1,5 @@
-model = "gpt-6-astra"
-model_reasoning_effort = "high"
+model = "gpt-5.6-sol"
+model_reasoning_effort = "medium"
 model_context_window = 1050000
 model_auto_compact_token_limit = 1000000
 service_tier = "default"
@@ -229,3 +229,13 @@ global = "cursor"
 
 [shell_environment_policy.set]
 NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "9230e2bd8b24b7ac7a0ba6774c64bf0d78ecdabbdd91d0ed627b02a587bae2df"
+
+[mcp_servers.screenpipe]
+command = "/Applications/screenpipe.app/Contents/MacOS/bun"
+args = ["x", "screenpipe-mcp@latest"]
+enabled = true
+
+[mcp_servers.screenpipe.env]
+SCREENPIPE_API_URL = "http://localhost:3030"
+SCREENPIPE_LOCAL_API_KEY = "sp-0fed60cd"
+SCREENPIPE_MCP_CLIENT = "codex"
