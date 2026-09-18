@@ -1,4 +1,5 @@
 import importlib.util
+import io
 import json
 from pathlib import Path
 import tempfile
@@ -107,6 +108,27 @@ class AgentNotifyTest(unittest.TestCase):
         self.assertIsNone(notify.claude_completion(self.path, self.claude))
         self.write(self.claude_rows())
         self.assertIsNotNone(notify.claude_completion(self.path, self.claude))
+
+    def test_cursor_only_announces_successful_main_loop(self):
+        payload = {"hook_event_name": "stop", "status": "completed", "conversation_id": "chat", "generation_id": "turn"}
+        self.assertIsNotNone(notify.cursor_completion(payload))
+        for extra in ({"status": "aborted"}, {"status": "error"}, {"status": None},
+                      {"hook_event_name": "afterAgentResponse"}, {"hook_event_name": "subagentStop"},
+                      {"agent_id": "child"}, {"subagent_id": "child"},
+                      {"generation_id": ""}, {"generation_id": []}, {"conversation_id": None}):
+            with self.subTest(extra=extra):
+                self.assertIsNone(notify.cursor_completion({**payload, **extra}))
+
+    def test_cursor_repeated_stop_is_silent_but_next_turn_plays(self):
+        payload = {"hook_event_name": "stop", "status": "completed", "conversation_id": "chat", "generation_id": "turn"}
+        with patch.object(notify.sys, "argv", ["script", "cursor"]), \
+             patch.object(Path, "home", return_value=Path(self.temp.name)), \
+             patch.object(notify.subprocess, "run", return_value=Mock(returncode=0)) as play:
+            for turn in ("turn", "turn", "next"):
+                with patch.object(notify.sys, "stdin", io.StringIO(json.dumps({**payload, "generation_id": turn}))):
+                    notify.main()
+            self.assertEqual(play.call_count, 2)
+            self.assertEqual(play.call_args.args[0][-1], str(notify.SOUNDS["finished"]))
 
     def test_claude_tool_calls_and_intermediate_output_are_silent(self):
         for reason in ("tool_use", "max_tokens", None):

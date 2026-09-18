@@ -17,7 +17,7 @@ SOUNDS = {
     "waiting": ROOT / "static/waiting-chime.mp3",
 }
 WAITING_TYPES = {"permission_prompt", "elicitation_dialog", "elicitation_url_dialog"}
-VOLUME = "0.20"
+VOLUME = "0.40"
 
 
 def records(path):
@@ -99,6 +99,20 @@ def claude_completion(path, payload):
     return f"claude:{payload['session_id']}:{identity}" if identity else None
 
 
+def cursor_completion(payload):
+    # Cursor's stop is an explicit loop boundary; intermediate responses and
+    # subagentStop are different hooks. Failed/cancelled loops are not completion.
+    if payload.get("hook_event_name") != "stop" or payload.get("status") != "completed":
+        return None
+    if payload.get("agent_id") or payload.get("subagent_id"):
+        return None
+    conversation = payload.get("conversation_id")
+    generation = payload.get("generation_id")
+    if not all(isinstance(value, str) and value.strip() for value in (conversation, generation)):
+        return None
+    return "cursor:" + json.dumps([conversation, generation], separators=(",", ":"))
+
+
 def confirmed_completion(read, sleep=time.sleep):
     # Legacy notify can precede the rollout flush; async Stop can precede turn_duration.
     # Retry only to observe that explicit record. Elapsed time never proves completion:
@@ -149,7 +163,12 @@ def main():
         payload = json.loads(sys.argv[-1] if agent == "codex" else sys.stdin.read())
         if not isinstance(payload, dict):
             return
-        if agent == "codex":
+        if agent == "cursor":
+            token = cursor_completion(payload)
+            if token:
+                play_once(token, "finished")
+            return
+        elif agent == "codex":
             path = codex_path(payload)
             check = codex_completion
         elif agent == "claude" and payload.get("transcript_path"):

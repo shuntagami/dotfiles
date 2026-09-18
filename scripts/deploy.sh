@@ -82,6 +82,9 @@ for skill_dir in "${HOME}"/dotfiles/claude/skills/*(/N); do
   ln -sfn "${skill_dir}" ~/.claude/skills/"${skill_dir:t}"
 done
 
+# Cursor: merge our sound hook without overwriting hooks registered by other apps.
+python3 ~/dotfiles/scripts/install-cursor-notify.py
+
 # MulmoTerminal: config.json is written by the app itself (write-temp-then-rename), so a
 # symlink here would get replaced by a real file the moment it saves. Seed it only when
 # missing — on an already-configured machine this must never overwrite live settings that
