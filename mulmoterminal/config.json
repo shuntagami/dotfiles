@@ -120,7 +120,7 @@
     "zoom-toggle": "Alt+ArrowUp",
     "next-attention": "Alt+ArrowDown",
     "terminal-close": "Cmd+.",
-    "files-find": "Cmd+Shift+P"
+    "files-find": "Cmd+Shift+p"
   },
   "copyOnSelect": true,
   "decisionDigest": true,
