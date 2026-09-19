@@ -11,11 +11,13 @@ set -euo pipefail
 # with. So an automated browser on the machine you are sitting at will,
 # eventually, swallow a `gh repo view --web`, or a shortcut, or both. It did.
 #
-# Two separations, each closing one of those:
+# Separation is the other MACHINE, so `open` here cannot reach it at all.
+# On that machine we drive the person's normal Chrome profile (logins stay),
+# because the MacBook is already the agent side -- a disposable "Chrome for
+# Testing" profile just forced re-auth for no safety gain.
 #
-#   - another MACHINE, so `open` here cannot reach it at all
-#   - Chrome for TESTING there (com.google.chrome.for.testing), a different
-#     bundle id, so it does not become the URL handler on that machine either
+# Escape hatch: AGENT_BROWSER_MODE=testing restores the old Chrome-for-Testing
+# + throwaway profile setup (also keeps URL-handler isolation on the MacBook).
 #
 # CDP is unauthenticated and total: whoever reaches the port drives the browser
 # and reads every cookie in that profile. So it is never published. It binds to
@@ -26,20 +28,36 @@ set -euo pipefail
 
 readonly REMOTE="${AGENT_BROWSER_HOST:-shun-tagami-mbp}"
 readonly PORT="${AGENT_BROWSER_PORT:-9222}"
-readonly PROFILE="${AGENT_BROWSER_PROFILE:-\${HOME}/.cache/agent-browser/profile}"
+readonly MODE="${AGENT_BROWSER_MODE:-default}" # default | testing
 readonly TUNNEL_PID_FILE="${TMPDIR:-/tmp}/agent-browser-tunnel.pid"
 readonly TUNNEL_LOG="${TMPDIR:-/tmp}/agent-browser-tunnel.log"
+
+# PROFILE is expanded on the REMOTE (hence the escaped ${HOME}).
+if [[ -n "${AGENT_BROWSER_PROFILE:-}" ]]; then
+  readonly PROFILE="${AGENT_BROWSER_PROFILE}"
+elif [[ "${MODE}" == "testing" ]]; then
+  readonly PROFILE='\${HOME}/.cache/agent-browser/profile'
+else
+  readonly PROFILE='\${HOME}/Library/Application Support/Google/Chrome'
+fi
 
 usage() {
   cat <<USAGE
 usage: agent-browser <command>
 
-  up       start the remote browser and the tunnel, then report the endpoint
-  down     stop the tunnel here and the browser there
-  status   say what is running, on both sides
-  endpoint print the CDP endpoint (for --cdp-endpoint), nothing else
+  up              start the remote browser and the tunnel, then report the endpoint
+  down            stop the tunnel here (and the browser there only in testing mode,
+                  or with --kill-browser)
+  down --kill-browser
+                  also quit Chrome on the remote machine
+  status          say what is running, on both sides
+  endpoint        print the CDP endpoint (for --cdp-endpoint), nothing else
 
-env: AGENT_BROWSER_HOST (${REMOTE}), AGENT_BROWSER_PORT (${PORT})
+env: AGENT_BROWSER_HOST (${REMOTE})
+     AGENT_BROWSER_PORT (${PORT})
+     AGENT_BROWSER_MODE (${MODE})   default = system Chrome + Default profile
+                                    testing = Chrome for Testing + throwaway profile
+     AGENT_BROWSER_PROFILE          override --user-data-dir on the remote
 USAGE
 }
 
@@ -47,11 +65,28 @@ remote() {
   ssh -o BatchMode=yes -o ConnectTimeout=8 "${REMOTE}" "$@"
 }
 
-# The browser is Chrome for Testing, fetched by puppeteer's installer rather than
-# by us: it parks builds under ~/.cache/puppeteer and prints the path, so there
-# is no download logic here and no guessing at a version.
-remote_browser_path() {
+# Chrome for Testing, fetched by puppeteer's installer: parks builds under
+# ~/.cache/puppeteer and prints the path, so there is no download logic here.
+remote_testing_browser_path() {
   remote 'ls -d "${HOME}"/.cache/puppeteer/chrome/mac_*/chrome-mac-*/Google\ Chrome\ for\ Testing.app/Contents/MacOS/Google\ Chrome\ for\ Testing 2>/dev/null | sort -V | tail -1'
+}
+
+remote_system_browser_path() {
+  remote 'test -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" && echo "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"'
+}
+
+remote_cdp_answers() {
+  remote "curl -sf -m 3 http://127.0.0.1:${PORT}/json/version" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    sys.exit(0 if json.load(sys.stdin).get("webSocketDebuggerUrl") else 1)
+except Exception:
+    sys.exit(1)
+' 2>/dev/null
+}
+
+remote_chrome_running() {
+  remote "pgrep -x 'Google Chrome' >/dev/null || pgrep -f 'Google Chrome for Testing' >/dev/null"
 }
 
 tunnel_running() {
@@ -64,8 +99,15 @@ cmd_status() {
   else
     echo "tunnel: down"
   fi
+  echo "mode: ${MODE}"
   local remote_state
-  remote_state="$(remote "pgrep -f 'remote-debugging-port=${PORT}' >/dev/null && echo running || echo stopped" 2>/dev/null || echo unreachable)"
+  if remote_cdp_answers; then
+    remote_state="running (CDP on :${PORT})"
+  elif remote_chrome_running; then
+    remote_state="running (no CDP on :${PORT})"
+  else
+    remote_state="$(remote 'echo stopped' 2>/dev/null || echo unreachable)"
+  fi
   echo "browser on ${REMOTE}: ${remote_state}"
   if tunnel_running; then
     local version
@@ -78,6 +120,10 @@ cmd_status() {
 # belongs to someone else's session and is left alone -- and a failed `up` must
 # not leave a browser behind on the other machine, which is the same unowned
 # process this script exists to prevent, just relocated.
+#
+# In default mode we never kill Chrome on rollback: that is the person's real
+# profile and tabs. Only a browser we ourselves launched in testing mode is
+# fair game.
 started_browser=false
 started_tunnel=false
 
@@ -87,39 +133,87 @@ rollback() {
     rm -f "${TUNNEL_PID_FILE}"
     echo "  rolled back: tunnel stopped" >&2
   fi
-  if [[ "${started_browser}" == true ]]; then
+  if [[ "${started_browser}" == true && "${MODE}" == "testing" ]]; then
     remote "pkill -f 'remote-debugging-port=${PORT}'" 2>/dev/null \
       && echo "  rolled back: browser on ${REMOTE} stopped" >&2 || true
   fi
 }
 
+quit_remote_chrome() {
+  # Prefer a clean quit so the Default profile flushes; fall back to pkill.
+  remote 'osascript -e "tell application \"Google Chrome\" to quit" >/dev/null 2>&1 || true
+    pkill -f "Google Chrome for Testing" >/dev/null 2>&1 || true
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+      pgrep -x "Google Chrome" >/dev/null || pgrep -f "Google Chrome for Testing" >/dev/null || exit 0
+      sleep 0.5
+    done
+    pkill -x "Google Chrome" >/dev/null 2>&1 || true
+    exit 0' || true
+}
+
+start_remote_browser() {
+  local browser="$1"
+  # Detached from the SSH channel on the remote side as well: ssh waits for the
+  # channel to close, so a child still holding it would hang this the same way.
+  remote "mkdir -p '${PROFILE}' && nohup '${browser}' \
+    --remote-debugging-port=${PORT} \
+    --user-data-dir='${PROFILE}' \
+    --no-first-run --no-default-browser-check \
+    --disable-features=Translate \
+    >/dev/null 2>&1 </dev/null & disown; exit 0" || true
+}
+
 cmd_up() {
-  local browser
-  browser="$(remote_browser_path)"
-  if [[ -z "${browser}" ]]; then
-    echo "No Chrome for Testing on ${REMOTE}." >&2
-    echo "Install one there:  ssh ${REMOTE} 'npx -y puppeteer browsers install chrome'" >&2
-    exit 1
+  local browser label
+  if [[ "${MODE}" == "testing" ]]; then
+    browser="$(remote_testing_browser_path)"
+    label="Chrome for Testing"
+    if [[ -z "${browser}" ]]; then
+      echo "No Chrome for Testing on ${REMOTE}." >&2
+      echo "Install one there:  ssh ${REMOTE} 'npx -y puppeteer browsers install chrome'" >&2
+      echo "Or switch to the Default profile:  AGENT_BROWSER_MODE=default agent-browser up" >&2
+      exit 1
+    fi
+  else
+    browser="$(remote_system_browser_path)"
+    label="Google Chrome (Default profile)"
+    if [[ -z "${browser}" ]]; then
+      echo "No Google Chrome on ${REMOTE} at /Applications/Google Chrome.app." >&2
+      exit 1
+    fi
   fi
 
-  # Idempotent: an already-running browser is left alone. --user-data-dir keeps
-  # its cookies and logins away from the one a person uses on that machine.
-  if remote "pgrep -f 'remote-debugging-port=${PORT}' >/dev/null"; then
-    echo "Browser already running on ${REMOTE}."
+  # Idempotent when CDP already answers: leave that browser alone.
+  if remote_cdp_answers; then
+    echo "Browser already answering CDP on ${REMOTE}:${PORT}."
   else
-    # Detached from the SSH channel on the remote side as well: ssh waits for the
-    # channel to close, so a child still holding it would hang this the same way.
-    remote "mkdir -p '${PROFILE}' && nohup '${browser}' \
-      --remote-debugging-port=${PORT} \
-      --user-data-dir='${PROFILE}' \
-      --no-first-run --no-default-browser-check \
-      --disable-features=Translate \
-      >/dev/null 2>&1 </dev/null & disown; exit 0" || true
+    # Chrome allows one process per user-data-dir. A Chrome already open without
+    # --remote-debugging-port will ignore a second launch's flags, so we must
+    # quit it first and start fresh with CDP enabled.
+    if remote_chrome_running; then
+      echo "Chrome is running on ${REMOTE} without CDP; quitting so it can be restarted with debugging." >&2
+      quit_remote_chrome
+      sleep 1
+      if remote_chrome_running; then
+        echo "Could not quit Chrome on ${REMOTE}. Quit it there, then retry." >&2
+        exit 1
+      fi
+    fi
+
+    start_remote_browser "${browser}"
     sleep 2
-    remote "pgrep -f 'remote-debugging-port=${PORT}' >/dev/null" \
-      || { echo "Browser did not start on ${REMOTE}." >&2; started_browser=true; rollback; exit 1; }
+    if ! remote_cdp_answers; then
+      # Give a slow profile load a moment more before declaring failure.
+      sleep 3
+    fi
+    if ! remote_cdp_answers; then
+      echo "Browser did not expose CDP on ${REMOTE}:${PORT}." >&2
+      started_browser=true
+      rollback
+      exit 1
+    fi
     started_browser=true
-    echo "Started Chrome for Testing on ${REMOTE}."
+    echo "Started ${label} on ${REMOTE}."
   fi
 
   if tunnel_running; then
@@ -152,6 +246,15 @@ cmd_up() {
 }
 
 cmd_down() {
+  local kill_browser=false
+  if [[ "${1:-}" == "--kill-browser" ]]; then
+    kill_browser=true
+  fi
+  # testing mode still stops the throwaway browser by default: nobody else owns it.
+  if [[ "${MODE}" == "testing" ]]; then
+    kill_browser=true
+  fi
+
   if tunnel_running; then
     kill "$(cat "${TUNNEL_PID_FILE}")" 2>/dev/null || true
     rm -f "${TUNNEL_PID_FILE}"
@@ -159,18 +262,22 @@ cmd_down() {
   else
     echo "Tunnel was not running."
   fi
-  # Stopped, not left for later: a browser nobody owns is the problem this whole
-  # script exists to avoid -- it just moves to the other machine.
-  if remote "pkill -f 'remote-debugging-port=${PORT}'" 2>/dev/null; then
-    echo "Browser on ${REMOTE} stopped."
+
+  if [[ "${kill_browser}" == true ]]; then
+    if remote_chrome_running || remote "pgrep -f 'remote-debugging-port=${PORT}' >/dev/null"; then
+      quit_remote_chrome
+      echo "Browser on ${REMOTE} stopped."
+    else
+      echo "No browser to stop on ${REMOTE}."
+    fi
   else
-    echo "No browser to stop on ${REMOTE}."
+    echo "Left Chrome on ${REMOTE} running (Default profile). Pass --kill-browser to quit it."
   fi
 }
 
 case "${1:-}" in
   up) cmd_up ;;
-  down) cmd_down ;;
+  down) shift; cmd_down "$@" ;;
   status) cmd_status ;;
   endpoint) echo "http://127.0.0.1:${PORT}" ;;
   *) usage; exit 1 ;;

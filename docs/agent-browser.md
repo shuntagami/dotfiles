@@ -21,14 +21,12 @@ macOS には、ブラウザが主張するものに対する「セッション�
 
 | | |
 |---|---|
-| エージェントのブラウザ | MacBook 上の **Chrome for Testing** |
+| エージェントのブラウザ | MacBook 上の **通常の Google Chrome（Default プロファイル）** |
 | 経路 | Tailscale 上の **SSH ポートフォワード** |
 | 操作 | Playwright MCP の `--cdp-endpoint` |
 
-二重に分離している。
-
-1. **別マシン** — Mac mini の `open` は届かない
-2. **別バンドル**（`com.google.chrome.for.testing`）— MacBook 側の URL ハンドラも汚さない
+マシンを分けているので、認証切れの Chrome for Testing を使う必要はない。
+MacBook 側のログイン状態・Cookie・拡張をそのままエージェントが使える。
 
 ### CDP を公開しない理由
 
@@ -40,20 +38,37 @@ Host ヘッダ検査も同時に満たせる。
 ## 使い方
 
 ```sh
-agent-browser up        # MacBook のブラウザを起動し、トンネルを張り、CDP の応答を確認
-agent-browser status    # 両側の状態
-agent-browser down      # トンネルを切り、向こうのブラウザも止める
-agent-browser endpoint  # CDP のエンドポイントだけを出す
+agent-browser up                 # MacBook の Chrome を CDP 付きで起動し、トンネルを張り、応答を確認
+agent-browser status             # 両側の状態
+agent-browser down               # トンネルだけ切る（Default プロファイルの Chrome は残す）
+agent-browser down --kill-browser  # トンネルを切り、向こうの Chrome も終了
+agent-browser endpoint           # CDP のエンドポイントだけを出す
 ```
 
 `up` は「トンネルが張れた」では成功としない。`/json/version` が応答するかまで見る。
 トンネルが上がっていてもブラウザが死んでいれば、エージェントは何も操作できないため。
 
-`down` で**向こうのブラウザも止める**。持ち主のいないブラウザを残すのは、この構成が
-避けようとしている問題そのもので、それが別マシンに移るだけでは意味がない。
+Chrome は **user-data-dir につき1プロセス**しか許さない。すでに CDP 無しで Chrome が
+開いていると、フラグ付きの再起動は無視される。その場合 `up` は一度 Chrome を終了してから
+`--remote-debugging-port` 付きで立ち上げ直す。
 
-環境変数で変えられる。`AGENT_BROWSER_HOST`（既定 `shun-tagami-mbp`）、
-`AGENT_BROWSER_PORT`（既定 `9222`）。
+`down` は既定ではトンネルだけ切る。Default プロファイルは人が使うものなので、
+持ち主のいないプロセス扱いにはしない。明示的に止めたいときだけ `--kill-browser`。
+
+環境変数で変えられる。
+
+| 変数 | 既定 | 意味 |
+|---|---|---|
+| `AGENT_BROWSER_HOST` | `shun-tagami-mbp` | リモートホスト |
+| `AGENT_BROWSER_PORT` | `9222` | CDP ポート |
+| `AGENT_BROWSER_MODE` | `default` | `default` = 通常 Chrome + Default プロファイル / `testing` = Chrome for Testing + 使い捨てプロファイル |
+| `AGENT_BROWSER_PROFILE` | （mode に従う） | リモート側の `--user-data-dir` を上書き |
+
+昔の分離（Chrome for Testing）に戻すには:
+
+```sh
+AGENT_BROWSER_MODE=testing agent-browser up
+```
 
 ## MCP 側は自動で切り替わる
 
@@ -83,10 +98,9 @@ HTTP が 2xx で、本文に Playwright が実際に繋ぐ `webSocketDebuggerUrl
   ハングさせてはならない
 - 自動起動を止めたいときは `AGENT_BROWSER_AUTO=0`
 
-`up` が途中で失敗したときは、**その実行が起動したものだけを片付ける**。トンネルが
-張れずに向こうのブラウザだけ残るのは、この構成が避けようとしている「持ち主のいない
-プロセス」そのもので、それが別マシンに移るだけでは意味がない。先に動いていた
-ブラウザやトンネルには触らない。
+`up` が途中で失敗したときは、**その実行が起動したものだけを片付ける**。default モードでは
+ロールバックでも向こうの Chrome は止めない（本物のプロファイルだから）。testing モードで
+自分が立ち上げたブラウザだけは止める。
 
 設定を変えたら `node mcp/sync-mcp.mjs` で Claude Code / Codex / Cursor に反映する。
 
@@ -95,8 +109,7 @@ HTTP が 2xx で、本文に Playwright が実際に繋ぐ `webSocketDebuggerUrl
 - 両機で Tailscale が動いていること（`tailscale status`）
 - Mac mini から MacBook へ鍵で ssh できること。`misc/ssh/config` の `shun-tagami-mbp`
   が MagicDNS 名で引く。初回だけ `ssh-copy-id -i ~/.ssh/id_ed25519.pub shun-tagami-mbp`
-- MacBook に Chrome for Testing があること。無ければ
-  `ssh shun-tagami-mbp 'npx -y puppeteer browsers install chrome'`
+- MacBook に Google Chrome があること（`/Applications/Google Chrome.app`）
 
 ## 限界
 
@@ -118,3 +131,7 @@ Syncthing で同期しているので `claude --resume` は両機で継続でき
 `HOST_ID` が定数（`server/backends/remoteHost/index.ts`）で単一ホスト前提のため、
 2台が同じ Firestore コマンドキューを取り合う。MacBook 側で remote host を
 接続しない運用なら共存する。
+
+**エージェントは Default プロファイルの Cookie に届く。** CDP は localhost + SSH トンネル
+に閉じているが、繋いだエージェントはログイン済みセッションを読める。マシン分離は
+URL ハンドラ衝突の回避であって、認証の隔離ではない。
