@@ -32,13 +32,13 @@ readonly MODE="${AGENT_BROWSER_MODE:-default}" # default | testing
 readonly TUNNEL_PID_FILE="${TMPDIR:-/tmp}/agent-browser-tunnel.pid"
 readonly TUNNEL_LOG="${TMPDIR:-/tmp}/agent-browser-tunnel.log"
 
-# PROFILE is expanded on the REMOTE (hence the escaped ${HOME}).
+# PROFILE holds a literal ${HOME}; the remote shell expands it (it is double-quoted there).
 if [[ -n "${AGENT_BROWSER_PROFILE:-}" ]]; then
   readonly PROFILE="${AGENT_BROWSER_PROFILE}"
 elif [[ "${MODE}" == "testing" ]]; then
-  readonly PROFILE='\${HOME}/.cache/agent-browser/profile'
+  readonly PROFILE='${HOME}/.cache/agent-browser/profile'
 else
-  readonly PROFILE='\${HOME}/Library/Application Support/Google/Chrome'
+  readonly PROFILE='${HOME}/Library/Application Support/Google/Chrome'
 fi
 
 usage() {
@@ -155,9 +155,9 @@ start_remote_browser() {
   local browser="$1"
   # Detached from the SSH channel on the remote side as well: ssh waits for the
   # channel to close, so a child still holding it would hang this the same way.
-  remote "mkdir -p '${PROFILE}' && nohup '${browser}' \
+  remote "mkdir -p \"${PROFILE}\" && nohup '${browser}' \
     --remote-debugging-port=${PORT} \
-    --user-data-dir='${PROFILE}' \
+    --user-data-dir=\"${PROFILE}\" \
     --no-first-run --no-default-browser-check \
     --disable-features=Translate \
     >/dev/null 2>&1 </dev/null & disown; exit 0" || true
