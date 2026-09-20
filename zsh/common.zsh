@@ -88,6 +88,11 @@ alias ccs="claude --dangerously-skip-permissions --model sonnet"
 alias ccf="claude --dangerously-skip-permissions --model fable"
 alias cco="claude --dangerously-skip-permissions --model opus"
 
+# Antigravity (always skip permission prompts)
+alias ag="agy --dangerously-skip-permissions"
+alias agf="agy --dangerously-skip-permissions --model gemini-3.8-flash-high"
+alias agp="agy --dangerously-skip-permissions --model gemini-3.1-pro-high"
+
 # --- ffmpeg 区切りカット用 zsh 関数 ---
 # 使い方:
 #   cut <input> start..end     # 指定区間を抽出（_cut）
