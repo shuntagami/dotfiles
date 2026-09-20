@@ -10,6 +10,8 @@ const sourcePath = path.join(dotfiles, "mcp", "servers.json");
 const cursorPath = path.join(dotfiles, "mcp", "generated", "cursor.mcp.json");
 const cursorGlobalPath = path.join(home, ".cursor", "mcp.json");
 const codexConfigPath = path.join(home, ".codex", "config.toml");
+const antigravityHome = path.join(home, ".gemini");
+const antigravityConfigPath = path.join(antigravityHome, "config", "mcp_config.json");
 
 const source = JSON.parse(fs.readFileSync(sourcePath, "utf8"));
 const servers = source.mcpServers ?? {};
@@ -18,8 +20,16 @@ const enabledServers = Object.fromEntries(
 );
 
 function publicServerConfig(config) {
-  const { codex, claude, cursor, enabled, ...rest } = config;
+  const { codex, claude, cursor, antigravity, clients, headersFromKeychain, enabled, ...rest } = config;
   return rest;
+}
+
+function serversFor(client) {
+  return Object.fromEntries(
+    Object.entries(enabledServers).filter(
+      ([, config]) => !Array.isArray(config.clients) || config.clients.includes(client),
+    ),
+  );
 }
 
 function writeJson(filePath, data) {
@@ -70,7 +80,10 @@ function codexBlock(name, config) {
 function syncCursor() {
   writeJson(cursorPath, {
     mcpServers: Object.fromEntries(
-      Object.entries(enabledServers).map(([name, config]) => [name, publicServerConfig(config)]),
+      Object.entries(serversFor("cursor")).map(([name, config]) => [
+        name,
+        publicServerConfig(config),
+      ]),
     ),
   });
 
@@ -101,7 +114,7 @@ function syncCodex() {
   let skipping = false;
   let insertedManagedBlocks = false;
   const managedServerNames = new Set(Object.keys(servers));
-  const renderedManagedBlocks = Object.entries(enabledServers)
+  const renderedManagedBlocks = Object.entries(serversFor("codex"))
     .map(([name, config]) => codexBlock(name, config))
     .join("\n\n");
   for (const line of lines) {
@@ -125,6 +138,87 @@ function syncCodex() {
   fs.writeFileSync(codexConfigPath, `${nextConfig}\n`);
 }
 
+function keychainSecret({ service, account }) {
+  const result = spawnSync("/usr/bin/security", ["find-generic-password", "-s", service, "-a", account, "-w"], {
+    encoding: "utf8",
+  });
+  if (result.status !== 0) return null;
+  return result.stdout.trim() || null;
+}
+
+// Resolved secrets are only ever written to ~/.gemini, which is not in git.
+function resolveKeychainHeaders(config) {
+  const headers = {};
+  for (const [name, source] of Object.entries(config.headersFromKeychain ?? {})) {
+    const secret = keychainSecret(source);
+    if (!secret) return null;
+    headers[name] = `${source.prefix ?? ""}${secret}`;
+  }
+  return headers;
+}
+
+function antigravityServerConfig(config) {
+  const { type, url, headers, command, args, env } = publicServerConfig(config);
+  if (url) {
+    const remote = { serverUrl: url };
+    const keychainHeaders = resolveKeychainHeaders(config);
+    if (keychainHeaders === null) return null;
+    const allHeaders = { ...headers, ...keychainHeaders };
+    if (Object.keys(allHeaders).length > 0) remote.headers = allHeaders;
+    return remote;
+  }
+  const local = { command };
+  if (Array.isArray(args) && args.length > 0) local.args = args;
+  if (env && Object.keys(env).length > 0) local.env = env;
+  return local;
+}
+
+function commandExists(name) {
+  return (process.env.PATH ?? "")
+    .split(path.delimiter)
+    .filter(Boolean)
+    .some((dir) => {
+      try {
+        fs.accessSync(path.join(dir, name), fs.constants.X_OK);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+}
+
+function syncAntigravity() {
+  if (!fs.existsSync(antigravityHome) && !commandExists("agy")) {
+    console.warn("agy command not found; skipped Antigravity MCP sync");
+    return;
+  }
+
+  let current = { mcpServers: {} };
+  if (fs.existsSync(antigravityConfigPath)) {
+    const raw = fs.readFileSync(antigravityConfigPath, "utf8").trim();
+    if (raw) current = JSON.parse(raw);
+  }
+
+  const managedServerNames = new Set(Object.keys(servers));
+  const unmanaged = Object.entries(current.mcpServers ?? {}).filter(
+    ([name]) => !managedServerNames.has(name),
+  );
+  const managed = Object.entries(serversFor("antigravity"))
+    .map(([name, config]) => {
+      const resolved = antigravityServerConfig(config);
+      if (resolved === null) {
+        console.warn(`missing Keychain secret; skipped Antigravity MCP server: ${name}`);
+      }
+      return [name, resolved];
+    })
+    .filter(([, resolved]) => resolved !== null);
+
+  writeJson(antigravityConfigPath, {
+    ...current,
+    mcpServers: Object.fromEntries([...unmanaged, ...managed]),
+  });
+}
+
 function syncClaude() {
   const claude = spawnSync("claude", ["--version"], { encoding: "utf8" });
   if (claude.status !== 0) {
@@ -138,7 +232,7 @@ function syncClaude() {
     });
   }
 
-  for (const [name, config] of Object.entries(enabledServers)) {
+  for (const [name, config] of Object.entries(serversFor("claude"))) {
     const payload = JSON.stringify(publicServerConfig(config));
     const result = spawnSync("claude", ["mcp", "add-json", "--scope", "user", name, payload], {
       encoding: "utf8",
@@ -153,8 +247,9 @@ function syncClaude() {
 syncCursor();
 syncCodex();
 syncClaude();
+syncAntigravity();
 
 const disabledCount = Object.keys(servers).length - Object.keys(enabledServers).length;
 console.log(
-  `Synced ${Object.keys(enabledServers).length} enabled MCP servers to Cursor, Codex, and Claude Code (${disabledCount} disabled in source).`,
+  `Synced ${Object.keys(enabledServers).length} enabled MCP servers to Cursor, Codex, Claude Code, and Antigravity (${disabledCount} disabled in source).`,
 );
