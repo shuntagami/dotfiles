@@ -6,6 +6,10 @@ pkg/*
 __pycache__/
 private.ahk
 gcp-oauth.keys.json
+
+# screenpipe のインストーラが設定ファイルの横に残すバックアップとロック
+*.screenpipe-backup-*
+*.screenpipe.lock
 ngrok.yml
 mcp/slack.env
 screenpipe/**/output/
