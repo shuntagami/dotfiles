@@ -10,8 +10,15 @@ const sourcePath = path.join(dotfiles, "mcp", "servers.json");
 const cursorPath = path.join(dotfiles, "mcp", "generated", "cursor.mcp.json");
 const cursorGlobalPath = path.join(home, ".cursor", "mcp.json");
 const codexConfigPath = path.join(home, ".codex", "config.toml");
-const antigravityHome = path.join(home, ".gemini");
-const antigravityConfigPath = path.join(antigravityHome, "config", "mcp_config.json");
+const geminiHome = path.join(home, ".gemini");
+const antigravityConfigPath = path.join(geminiHome, "config", "mcp_config.json");
+// ~/.gemini alone means nothing: Gemini CLI keeps its user settings there too.
+const antigravityMarkers = [
+  path.join(geminiHome, "antigravity"),
+  path.join(geminiHome, "antigravity-cli"),
+  path.join(geminiHome, "antigravity-ide"),
+];
+const antigravityIdeConfigPath = path.join(geminiHome, "antigravity", "mcp_config.json");
 
 const source = JSON.parse(fs.readFileSync(sourcePath, "utf8"));
 const servers = source.mcpServers ?? {};
@@ -24,17 +31,29 @@ function publicServerConfig(config) {
   return rest;
 }
 
+// Cursor and Codex configs live in this repository and Claude Code keeps its own
+// file, so a resolved Keychain secret must never be rendered for them.
+const secretSafeClients = new Set(["antigravity"]);
+
 function serversFor(client) {
   return Object.fromEntries(
-    Object.entries(enabledServers).filter(
-      ([, config]) => !Array.isArray(config.clients) || config.clients.includes(client),
-    ),
+    Object.entries(enabledServers).filter(([name, config]) => {
+      if (Array.isArray(config.clients) && !config.clients.includes(client)) return false;
+      if (config.headersFromKeychain && !secretSafeClients.has(client)) {
+        console.warn(`${client} config cannot hold secrets; skipped MCP server: ${name}`);
+        return false;
+      }
+      return true;
+    }),
   );
 }
 
-function writeJson(filePath, data) {
+// `mode` is applied to existing files too: writeFileSync only honours it when
+// it creates the file, and a config holding a token must not stay world-readable.
+function writeJson(filePath, data, { mode } = {}) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`);
+  fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, mode ? { mode } : undefined);
+  if (mode) fs.chmodSync(filePath, mode);
 }
 
 function tomlString(value) {
@@ -188,8 +207,9 @@ function commandExists(name) {
 }
 
 function syncAntigravity() {
-  if (!fs.existsSync(antigravityHome) && !commandExists("agy")) {
-    console.warn("agy command not found; skipped Antigravity MCP sync");
+  const installed = antigravityMarkers.some((marker) => fs.existsSync(marker)) || commandExists("agy");
+  if (!installed) {
+    console.warn("Antigravity not found; skipped Antigravity MCP sync");
     return;
   }
 
@@ -213,10 +233,17 @@ function syncAntigravity() {
     })
     .filter(([, resolved]) => resolved !== null);
 
-  writeJson(antigravityConfigPath, {
-    ...current,
-    mcpServers: Object.fromEntries([...unmanaged, ...managed]),
-  });
+  writeJson(
+    antigravityConfigPath,
+    { ...current, mcpServers: Object.fromEntries([...unmanaged, ...managed]) },
+    { mode: 0o600 },
+  );
+
+  // The IDE reads its own copy. It creates this link itself on first run, so only
+  // fill in a missing one; an existing file is the app's to manage.
+  if (fs.existsSync(path.dirname(antigravityIdeConfigPath)) && !fs.existsSync(antigravityIdeConfigPath)) {
+    fs.symlinkSync(antigravityConfigPath, antigravityIdeConfigPath);
+  }
 }
 
 function syncClaude() {

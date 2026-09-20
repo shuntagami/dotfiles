@@ -23,7 +23,7 @@ printf '%s\n%s\n' "$token" "$token" |
     -U \
     -a "$keychain_account" \
     -s "$keychain_service" \
-    -j "User token for Slack's hosted MCP server (read-only scopes)" \
+    -j "User token for Slack's hosted MCP server (read/write scopes)" \
     -w
 
 unset token

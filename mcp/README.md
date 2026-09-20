@@ -25,8 +25,15 @@ This syncs the canonical list to:
 Antigravity uses its own schema: stdio servers keep `command` / `args` / `env`,
 and remote servers use `serverUrl` (plus `headers`) instead of `url`. The sync
 rewrites entries it owns and leaves any server added directly with
-`agy mcp add` in place. The same file backs both the `agy` CLI and the
-Antigravity IDE (`~/.gemini/antigravity/mcp_config.json` is a symlink to it).
+`agy mcp add` in place.
+
+`~/.gemini` on its own does not mean Antigravity is installed — Gemini CLI keeps
+its user settings there too — so the sync looks for `agy` on `PATH` or one of
+`~/.gemini/antigravity{,-cli,-ide}`, and otherwise skips with a warning. The same
+file backs both the `agy` CLI and the Antigravity IDE, which reads it through
+`~/.gemini/antigravity/mcp_config.json`. The IDE creates that link itself on
+first run; the sync only fills in a missing one and never replaces an existing
+file there.
 
 Secrets are not committed. Prefer each service's official OAuth connector or
 tool-specific local config over storing tokens for MCP servers in dotfiles.
@@ -81,8 +88,13 @@ Configure or rotate the token with:
 ```
 
 `headersFromKeychain` in `servers.json` names the Keychain item instead of the
-secret, and the sync resolves it at write time. Resolved secrets are only
-written to `~/.gemini/config/mcp_config.json`, which is not in git — unlike
-`generated/cursor.mcp.json`, so a keychain-backed header must stay scoped to
-Antigravity. If the Keychain item is missing, that server is skipped with a
-warning rather than written without auth.
+secret, and the sync resolves it at write time.
+
+Only Antigravity's config can hold a resolved secret, and the sync enforces
+that: Cursor's and Codex's configs are files in this repository and Claude Code
+keeps its own, so a server carrying `headersFromKeychain` is skipped for them
+with a warning rather than written out. `~/.gemini/config/mcp_config.json` is
+not in git and is written — and re-chmodded on every sync — as `0600`, because
+`writeFileSync` only applies a mode when it creates the file. If the Keychain
+item is missing, that server is skipped with a warning rather than written
+without auth.
