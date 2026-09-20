@@ -104,7 +104,7 @@ if [[ -d "${HOME}/dotfiles/screenpipe/pipes" ]]; then
   done
 fi
 
-# MCP: sync canonical dotfiles config to Cursor, Codex, and Claude Code.
+# MCP: sync canonical dotfiles config to Cursor, Codex, Claude Code, and Antigravity.
 if command -v node >/dev/null 2>&1; then
   ~/dotfiles/mcp/sync-mcp.mjs
 else

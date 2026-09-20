@@ -52,6 +52,21 @@
       "enabled": true,
       "type": "stdio",
       "command": "/Users/shun.tagami/dotfiles/mcp/run-supabase-mcp.sh"
+    },
+    "slack": {
+      "enabled": true,
+      "clients": [
+        "antigravity"
+      ],
+      "type": "http",
+      "url": "https://mcp.slack.com/mcp",
+      "headersFromKeychain": {
+        "Authorization": {
+          "service": "Slack MCP",
+          "account": "user-token",
+          "prefix": "Bearer "
+        }
+      }
     }
   }
 }

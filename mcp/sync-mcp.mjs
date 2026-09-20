@@ -10,6 +10,15 @@ const sourcePath = path.join(dotfiles, "mcp", "servers.json");
 const cursorPath = path.join(dotfiles, "mcp", "generated", "cursor.mcp.json");
 const cursorGlobalPath = path.join(home, ".cursor", "mcp.json");
 const codexConfigPath = path.join(home, ".codex", "config.toml");
+const geminiHome = path.join(home, ".gemini");
+const antigravityConfigPath = path.join(geminiHome, "config", "mcp_config.json");
+// ~/.gemini alone means nothing: Gemini CLI keeps its user settings there too.
+const antigravityMarkers = [
+  path.join(geminiHome, "antigravity"),
+  path.join(geminiHome, "antigravity-cli"),
+  path.join(geminiHome, "antigravity-ide"),
+];
+const antigravityIdeConfigPath = path.join(geminiHome, "antigravity", "mcp_config.json");
 
 const source = JSON.parse(fs.readFileSync(sourcePath, "utf8"));
 const servers = source.mcpServers ?? {};
@@ -18,13 +27,33 @@ const enabledServers = Object.fromEntries(
 );
 
 function publicServerConfig(config) {
-  const { codex, claude, cursor, enabled, ...rest } = config;
+  const { codex, claude, cursor, antigravity, clients, headersFromKeychain, enabled, ...rest } = config;
   return rest;
 }
 
-function writeJson(filePath, data) {
+// Cursor and Codex configs live in this repository and Claude Code keeps its own
+// file, so a resolved Keychain secret must never be rendered for them.
+const secretSafeClients = new Set(["antigravity"]);
+
+function serversFor(client) {
+  return Object.fromEntries(
+    Object.entries(enabledServers).filter(([name, config]) => {
+      if (Array.isArray(config.clients) && !config.clients.includes(client)) return false;
+      if (config.headersFromKeychain && !secretSafeClients.has(client)) {
+        console.warn(`${client} config cannot hold secrets; skipped MCP server: ${name}`);
+        return false;
+      }
+      return true;
+    }),
+  );
+}
+
+// `mode` is applied to existing files too: writeFileSync only honours it when
+// it creates the file, and a config holding a token must not stay world-readable.
+function writeJson(filePath, data, { mode } = {}) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`);
+  fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, mode ? { mode } : undefined);
+  if (mode) fs.chmodSync(filePath, mode);
 }
 
 function tomlString(value) {
@@ -70,7 +99,10 @@ function codexBlock(name, config) {
 function syncCursor() {
   writeJson(cursorPath, {
     mcpServers: Object.fromEntries(
-      Object.entries(enabledServers).map(([name, config]) => [name, publicServerConfig(config)]),
+      Object.entries(serversFor("cursor")).map(([name, config]) => [
+        name,
+        publicServerConfig(config),
+      ]),
     ),
   });
 
@@ -101,7 +133,7 @@ function syncCodex() {
   let skipping = false;
   let insertedManagedBlocks = false;
   const managedServerNames = new Set(Object.keys(servers));
-  const renderedManagedBlocks = Object.entries(enabledServers)
+  const renderedManagedBlocks = Object.entries(serversFor("codex"))
     .map(([name, config]) => codexBlock(name, config))
     .join("\n\n");
   for (const line of lines) {
@@ -125,6 +157,95 @@ function syncCodex() {
   fs.writeFileSync(codexConfigPath, `${nextConfig}\n`);
 }
 
+function keychainSecret({ service, account }) {
+  const result = spawnSync("/usr/bin/security", ["find-generic-password", "-s", service, "-a", account, "-w"], {
+    encoding: "utf8",
+  });
+  if (result.status !== 0) return null;
+  return result.stdout.trim() || null;
+}
+
+// Resolved secrets are only ever written to ~/.gemini, which is not in git.
+function resolveKeychainHeaders(config) {
+  const headers = {};
+  for (const [name, source] of Object.entries(config.headersFromKeychain ?? {})) {
+    const secret = keychainSecret(source);
+    if (!secret) return null;
+    headers[name] = `${source.prefix ?? ""}${secret}`;
+  }
+  return headers;
+}
+
+function antigravityServerConfig(config) {
+  const { type, url, headers, command, args, env } = publicServerConfig(config);
+  if (url) {
+    const remote = { serverUrl: url };
+    const keychainHeaders = resolveKeychainHeaders(config);
+    if (keychainHeaders === null) return null;
+    const allHeaders = { ...headers, ...keychainHeaders };
+    if (Object.keys(allHeaders).length > 0) remote.headers = allHeaders;
+    return remote;
+  }
+  const local = { command };
+  if (Array.isArray(args) && args.length > 0) local.args = args;
+  if (env && Object.keys(env).length > 0) local.env = env;
+  return local;
+}
+
+function commandExists(name) {
+  return (process.env.PATH ?? "")
+    .split(path.delimiter)
+    .filter(Boolean)
+    .some((dir) => {
+      try {
+        fs.accessSync(path.join(dir, name), fs.constants.X_OK);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+}
+
+function syncAntigravity() {
+  const installed = antigravityMarkers.some((marker) => fs.existsSync(marker)) || commandExists("agy");
+  if (!installed) {
+    console.warn("Antigravity not found; skipped Antigravity MCP sync");
+    return;
+  }
+
+  let current = { mcpServers: {} };
+  if (fs.existsSync(antigravityConfigPath)) {
+    const raw = fs.readFileSync(antigravityConfigPath, "utf8").trim();
+    if (raw) current = JSON.parse(raw);
+  }
+
+  const managedServerNames = new Set(Object.keys(servers));
+  const unmanaged = Object.entries(current.mcpServers ?? {}).filter(
+    ([name]) => !managedServerNames.has(name),
+  );
+  const managed = Object.entries(serversFor("antigravity"))
+    .map(([name, config]) => {
+      const resolved = antigravityServerConfig(config);
+      if (resolved === null) {
+        console.warn(`missing Keychain secret; skipped Antigravity MCP server: ${name}`);
+      }
+      return [name, resolved];
+    })
+    .filter(([, resolved]) => resolved !== null);
+
+  writeJson(
+    antigravityConfigPath,
+    { ...current, mcpServers: Object.fromEntries([...unmanaged, ...managed]) },
+    { mode: 0o600 },
+  );
+
+  // The IDE reads its own copy. It creates this link itself on first run, so only
+  // fill in a missing one; an existing file is the app's to manage.
+  if (fs.existsSync(path.dirname(antigravityIdeConfigPath)) && !fs.existsSync(antigravityIdeConfigPath)) {
+    fs.symlinkSync(antigravityConfigPath, antigravityIdeConfigPath);
+  }
+}
+
 function syncClaude() {
   const claude = spawnSync("claude", ["--version"], { encoding: "utf8" });
   if (claude.status !== 0) {
@@ -138,7 +259,7 @@ function syncClaude() {
     });
   }
 
-  for (const [name, config] of Object.entries(enabledServers)) {
+  for (const [name, config] of Object.entries(serversFor("claude"))) {
     const payload = JSON.stringify(publicServerConfig(config));
     const result = spawnSync("claude", ["mcp", "add-json", "--scope", "user", name, payload], {
       encoding: "utf8",
@@ -153,8 +274,9 @@ function syncClaude() {
 syncCursor();
 syncCodex();
 syncClaude();
+syncAntigravity();
 
 const disabledCount = Object.keys(servers).length - Object.keys(enabledServers).length;
 console.log(
-  `Synced ${Object.keys(enabledServers).length} enabled MCP servers to Cursor, Codex, and Claude Code (${disabledCount} disabled in source).`,
+  `Synced ${Object.keys(enabledServers).length} enabled MCP servers to Cursor, Codex, Claude Code, and Antigravity (${disabledCount} disabled in source).`,
 );
