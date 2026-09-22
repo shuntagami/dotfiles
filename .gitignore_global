@@ -1,14 +1,27 @@
+# macOS
 .DS_Store
-node_modules
-.env
-.envrc
-.env.local
-__pycache__/
-.pnpm-store
-.next
-next-env.d.ts
-レイアウト分析
-*.mp4
-*.mov
 
-**/.claude/settings.local.json
+# Node / Next.js
+node_modules/
+.pnpm-store/
+.next/
+next-env.d.ts
+
+# Python
+__pycache__/
+
+# Environment
+.env
+.env.*
+!.env.example
+!.env.template
+.envrc
+
+# Video files
+*.[mM][pP]4
+*.[mM][oO][vV]
+*.[mM]4[vV]
+*.[mM][kK][vV]
+*.[aA][vV][iI]
+*.[wW][eE][bB][mM]
+
