@@ -704,6 +704,7 @@ login_apps=(
   "Hammerspoon"
   "Karabiner-Elements"
   "Clipy"
+  "AudioPriorityBar"
 )
 
 for app in "${login_apps[@]}"; do
