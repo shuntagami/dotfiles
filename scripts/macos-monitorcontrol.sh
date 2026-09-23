@@ -71,7 +71,10 @@ if pgrep -x MonitorControl >/dev/null; then
   fi
 fi
 defaults write "${DOMAIN}" keyboardVolume -int 0
-defaults write "${DOMAIN}" multiKeyboardVolume -int 1
+# multiKeyboardVolume=2 (audio device name matching): volume keys drive a
+# monitor over DDC only while it is the default output. When AudioPriorityBar
+# switches to speakers/headphones, the keys are released to macOS.
+defaults write "${DOMAIN}" multiKeyboardVolume -int 2
 
 python3 - "${PLIST}" "${LABEL}" "${SUPPORT_DIR}" "${HOME}/Library/Logs/dotfiles" <<'PY'
 import plistlib

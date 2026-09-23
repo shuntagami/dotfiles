@@ -2,6 +2,22 @@
 
 音量はMac標準の音量アップ／ダウン・ミュートキーで操作する。セットアップ時にMonitorControlの `keyboardVolume=0`（標準メディアキー）を設定する。`1` はカスタムショートカット専用で、標準の音量キーは反応しなくなる。
 
+## AudioPriorityBarとの併用
+
+出力・入力デバイスの自動切り替えは [AudioPriorityBar](https://github.com/tobi/AudioPriorityBar) が担当する。Homebrewのcaskがないため、`scripts/install-audioprioritybar.sh`（`install-packages.sh` から実行）がバージョンとSHA-256を固定したリリース版を `/Applications` に入れる。リリース版はad-hoc署名で公証されていない。ログイン項目もこのスクリプトが登録する（`setup.sh` は `macos.sh` を実行しないため）。
+
+役割は次のように分ける。
+
+| 操作 | 担当 |
+| --- | --- |
+| どのデバイスから音を出すか・どのマイクを使うか | AudioPriorityBar（優先順位による自動切り替え） |
+| 外部モニター（DDC）の音量 | MonitorControl（音量キー） |
+| スピーカー・ヘッドホンの音量 | macOS（音量キー） |
+
+MonitorControlは `multiKeyboardVolume=2`（オーディオデバイス名で一致）にする。既定の出力デバイス名がモニター名と一致するときだけ音量キーを奪い、AudioPriorityBarがスピーカーやヘッドホンに切り替えると音量キーをmacOSへ返す。`1`（すべての画面）のままだと、ソフトウェア音量を持たない出力（一部の仮想デバイスなど）を選んだときにモニターの音量が変わってしまう。モニター名と出力デバイス名が異なる場合は、MonitorControlのディスプレイ設定でオーディオデバイス名を上書きする。
+
+AudioPriorityBarの音量スライダーとスクロールはCoreAudioのソフトウェア音量を操作するため、DisplayPort/HDMI出力のモニターでは効かない。モニターの音量は音量キーかMonitorControlのメニューで調整する。優先順位はデバイスUIDごとにAudioPriorityBarの設定（UserDefaults）へ保存され、dotfilesでは管理しない。
+
 `zsh scripts/deploy.sh` で、ほかのdotfilesと一緒に設定・更新する。`scripts/setup.sh` もdeploy経由で適用する。単独で更新する場合は `bash scripts/macos-monitorcontrol.sh` を実行する。`scripts/macos.sh` からは重複実行しない。MonitorControlとXcode Command Line Toolsが必要で、MonitorControl未導入のMacではスキップする。
 
 別のMacでは、この変更を含むブランチを取得したうえで `zsh scripts/deploy.sh` を実行する。同じ切り替えルールを各Macに導入する仕組みで、アプリ画面で変更した設定や現在の明るさをMac間でリアルタイム同期するものではない。表示機器のID、消灯前の明るさ、バックアップ、ログは各Macで保持する。

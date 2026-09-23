@@ -48,4 +48,6 @@ elif [[ `uname` == "Darwin" ]]; then
     brew bundle install --file="$brewfile"
     eval "$(/opt/homebrew/bin/brew shellenv)"
   fi
+  # Apps without a Homebrew cask
+  bash $HOME/dotfiles/scripts/install-audioprioritybar.sh
 fi
