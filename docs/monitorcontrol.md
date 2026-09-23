@@ -4,7 +4,7 @@
 
 ## AudioPriorityBarとの併用
 
-出力・入力デバイスの自動切り替えは [AudioPriorityBar](https://github.com/tobi/AudioPriorityBar) が担当する。Homebrewのcaskがないため、`scripts/install-audioprioritybar.sh`（`install-packages.sh` から実行）がバージョンとSHA-256を固定したリリース版を `/Applications` に入れる。リリース版はad-hoc署名で公証されていない。ログイン項目には `scripts/macos.sh` で登録する。
+出力・入力デバイスの自動切り替えは [AudioPriorityBar](https://github.com/tobi/AudioPriorityBar) が担当する。Homebrewのcaskがないため、`scripts/install-audioprioritybar.sh`（`install-packages.sh` から実行）がバージョンとSHA-256を固定したリリース版を `/Applications` に入れる。リリース版はad-hoc署名で公証されていない。ログイン項目もこのスクリプトが登録する（`setup.sh` は `macos.sh` を実行しないため）。
 
 役割は次のように分ける。
 
