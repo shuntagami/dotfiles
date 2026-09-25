@@ -95,10 +95,10 @@ alias agp="agy --dangerously-skip-permissions --model gemini-3.1-pro-high"
 
 # --- ffmpeg 区切りカット用 zsh 関数 ---
 # 使い方:
-#   cut <input> start..end     # 指定区間を抽出（_cut）
-#   cut <input> start..        # start 以降を抽出（_after）
-#   cut <input> ..end          # 先頭〜end を抽出（_before）
-#   cut <input> start~~end     # 指定区間を削除し前後を結合（_removed）
+#   avcut <input> start..end     # 指定区間を抽出（_cut）
+#   avcut <input> start..        # start 以降を抽出（_after）
+#   avcut <input> ..end          # 先頭〜end を抽出（_before）
+#   avcut <input> start~~end     # 指定区間を削除し前後を結合（_removed）
 #
 # 仕様:
 # - mp3/mp4 は -c copy（高速）
@@ -109,9 +109,10 @@ alias agp="agy --dangerously-skip-permissions --model gemini-3.1-pro-high"
 # - zsh の glob 展開を抑止（呼び出し時：alias、関数内：NO_GLOB）
 #
 # 注意:
-# - 同名の POSIX `cut` コマンドと名前が衝突します。必要なら `\cut` で元コマンドを呼べます。
+# - POSIX の `cut` コマンドと衝突しないよう、名前は avcut にしている（以前は cut で、
+#   スクリプトやエージェントが `cut -f2` などを呼ぶと、この関数が使い方を出して失敗していた）。
 
-cut() {
+avcut() {
   emulate -L zsh
   setopt LOCAL_OPTIONS NO_GLOB
 
@@ -126,11 +127,11 @@ cut() {
 
   # ---- 引数チェック ----
   if (( $# != 2 )); then
-    _err "使い方: cut <input> <range>"
-    _err "  例) cut movie.mp4 00:30..01:45"
-    _err "      cut audio.wav 01:00.."
-    _err "      cut talk.mp3 ..05:00"
-    _err "      cut clip.mp4 00:30:00~~01:30:00"
+    _err "使い方: avcut <input> <range>"
+    _err "  例) avcut movie.mp4 00:30..01:45"
+    _err "      avcut audio.wav 01:00.."
+    _err "      avcut talk.mp3 ..05:00"
+    _err "      avcut clip.mp4 00:30:00~~01:30:00"
     return 2
   fi
 
@@ -296,7 +297,7 @@ cut() {
 
 # 呼び出し時点での glob 展開を抑止するため、エイリアスで noglob を付与
 # （関数内でも NO_GLOB を設定して二重で安全対策）
-alias cut='noglob cut'
+alias avcut='noglob avcut'
 
 unzipall() {
   if [ "$#" -eq 0 ]; then
