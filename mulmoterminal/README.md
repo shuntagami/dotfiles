@@ -1,6 +1,6 @@
 # 個人用の背景画像
 
-`background.json` で画像・不透明度・表示方法を管理する。現在は `backgrounds/dog.JPG` を不透明度15％、`contain`（全体表示）で使う。
+`background.json` で画像・不透明度・表示方法を管理する。現在は `backgrounds/dog.JPG` を不透明度15％、`cover`（セル全体に広げ、はみ出す部分は切り取り）で使う。
 
 ```sh
 python3 ~/dotfiles/scripts/apply-mulmoterminal-background.py
