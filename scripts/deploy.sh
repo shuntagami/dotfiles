@@ -88,6 +88,7 @@ python3 ~/dotfiles/scripts/remove-cursor-notify.py
 if [[ ! -f ~/.mulmoterminal/config.json ]]; then
   ~/dotfiles/scripts/install-mulmoterminal-config.sh
 fi
+python3 ~/dotfiles/scripts/apply-mulmoterminal-background.py
 
 # Screenpipe: manage only prompt/config files that are safe to keep in dotfiles.
 # Databases, recordings, logs, outputs, and connection secrets stay under ~/.screenpipe.

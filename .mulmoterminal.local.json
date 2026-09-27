@@ -6,5 +6,10 @@
   "cellBorderColor": "#6b7280",
   "dotColor": "#9ca3af",
   "buttonColor": "#d1d5db",
-  "headerStatusTint": "none"
+  "headerStatusTint": "none",
+  "backgroundImage": {
+    "image": ".mulmoterminal-background/dog.JPG",
+    "opacity": 0.15,
+    "fit": "contain"
+  }
 }
