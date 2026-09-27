@@ -5,6 +5,14 @@
       "command": "/Users/shun.tagami/dotfiles/bin/playwright-mcp",
       "args": []
     },
+    "playwright-info": {
+      "type": "stdio",
+      "command": "/Users/shun.tagami/dotfiles/bin/playwright-mcp",
+      "args": [
+        "--profile-dir-name",
+        "Profile 9"
+      ]
+    },
     "supabase": {
       "type": "stdio",
       "command": "/Users/shun.tagami/dotfiles/mcp/run-supabase-mcp.sh"

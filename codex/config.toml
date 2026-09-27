@@ -178,6 +178,19 @@ approval_mode = "auto"
 [mcp_servers.playwright.tools.browser_run_code_unsafe]
 approval_mode = "auto"
 
+[mcp_servers.playwright-info]
+command = "/Users/shun.tagami/dotfiles/bin/playwright-mcp"
+args = ["--profile-dir-name", "Profile 9"]
+
+[mcp_servers.playwright-info.tools.browser_click]
+approval_mode = "auto"
+
+[mcp_servers.playwright-info.tools.browser_navigate]
+approval_mode = "auto"
+
+[mcp_servers.playwright-info.tools.browser_run_code_unsafe]
+approval_mode = "auto"
+
 [mcp_servers.supabase]
 command = "/Users/shun.tagami/dotfiles/mcp/run-supabase-mcp.sh"
 
