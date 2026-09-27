@@ -180,7 +180,7 @@ approval_mode = "auto"
 
 [mcp_servers.playwright-info]
 command = "/Users/shun.tagami/dotfiles/bin/playwright-mcp"
-args = ["--profile-dir-name", "Profile 9"]
+args = ["--profile-dir-name", "Profile 7"]
 
 [mcp_servers.playwright-info.tools.browser_click]
 approval_mode = "auto"

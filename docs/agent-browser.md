@@ -1,12 +1,12 @@
 # 普段の Chrome に接続する
 
-ブラウザ操作は **MacBook で開いている通常の Chrome** に、Playwright Extension 経由で接続する。
-Mac mini からも同じ Chrome を使う。別の Chrome プロセスや自動操作用プロファイルを起動しない。
+ブラウザ操作は **Mac mini で開いている通常の Chrome** に、Playwright Extension 経由で接続する。
+MacBook からも SSH の鍵認証設定後は同じ Chrome を使える。別の Chrome プロセスや自動操作用プロファイルを起動しない。
 
 ```text
-MacBook のエージェント ───────────────┐
-                                    ├─ MacBook の Playwright MCP --extension
-Mac mini のエージェント ─ SSH/stdio ─┘       └─ 通常 Chrome の選択したプロファイル
+Mac mini のエージェント ───────────────┐
+                                    ├─ Mac mini の Playwright MCP --extension
+MacBook のエージェント ─ SSH/stdio ─┘       └─ 通常 Chrome の選択したプロファイル
 ```
 
 Playwright MCP は `@playwright/mcp@0.0.82` に固定している。接続ごとに独立した MCP プロセスを使う。
@@ -15,7 +15,7 @@ Cookie・ログイン状態はその Chrome プロファイルで共有される
 
 ## 最初のセットアップ
 
-1. MacBook の通常 Chrome で、使いたいプロファイルを開く。
+1. Mac mini の通常 Chrome で、使いたいプロファイルを開く。
 2. そのプロファイルに [Playwright Extension](https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm) を入れる。
    拡張機能が求めるサイト・タブの操作権限を確認して許可する。
 3. `info@ele-inc.com` も使うなら、そのプロファイルにも拡張機能を入れる。
@@ -24,7 +24,7 @@ Cookie・ログイン状態はその Chrome プロファイルで共有される
 6. 一時停止中なら **両 Mac で** `agent-browser resume` を実行する。
 7. エージェントの新しいセッションでブラウザツールを使い、Chrome に出る接続・タブ選択画面を操作する。
 
-通常 Chrome が閉じている、プロファイルや拡張機能が無い、MacBook に SSH できない場合は
+通常 Chrome が閉じている、プロファイルや拡張機能が無い、Mac mini に SSH できない場合は
 理由を表示して失敗する。別のブラウザや他のマシンへの自動フォールバックはしない。
 拡張機能がインストール済みでも無効なら、Chrome で有効化して接続を再試行する。
 
@@ -32,45 +32,46 @@ Cookie・ログイン状態はその Chrome プロファイルで共有される
 
 | MCP 名 | 選択 |
 |---|---|
-| `playwright` | MacBook の通常 Chrome が最後に使ったプロファイル |
-| `playwright-info` | `Profile 9`（現在の `info@ele-inc.com`）を明示指定 |
+| `playwright` | Mac mini の通常 Chrome が最後に使ったプロファイル |
+| `playwright-info` | `Profile 7`（現在の `info@ele-inc.com`）を明示指定 |
 
-通常は ELE（`shun.tagami@ele-inc.com`、現在の `Profile 2`）を開いてから接続する。
+通常は ELE（`shun.tagami@ele-inc.com`、現在の `Profile 8`）を開いてから接続する。
 選択は **MCP プロセスの起動時** に通常 Chrome の `Local State` から読み取り、
 `--profile-dir-name` で固定する。操作中に別のウィンドウを前面に出しても接続先は変わらない。
 プロフィールを切り替えたら MCP 接続を作り直す。接続先は stderr と `status` で確認できる。
 
 ```sh
 agent-browser status
-agent-browser status --profile-dir-name 'Profile 9'
-PLAYWRIGHT_MCP_PROFILE_DIR_NAME='Profile 2' playwright-mcp
+agent-browser status --profile-dir-name 'Profile 7'
+PLAYWRIGHT_MCP_PROFILE_DIR_NAME='Profile 8' playwright-mcp
 ```
 
 プロファイルを作り直してディレクトリ名が変わった場合は、
 `agent-browser status` と Chrome の表示を照合し、`mcp/servers.json` の
 `playwright-info.args` を更新して再同期する。
 
-## Mac mini からの接続
+## MacBook からの接続
 
-既定のブラウザホストは `shun-tagami-mbp`。同名の MacBook 上では直接起動し、
-それ以外では SSH で MacBook 上の同じスクリプトを実行する。
-SSH は Tailscale の既存のホスト設定と鍵認証を使う。
+既定のブラウザホストは `shun-tagami-mac-mini`。同名の Mac mini 上では直接起動し、
+それ以外では SSH で Mac mini 上の同じスクリプトを実行する。
+MacBook から使う場合は、Tailscale 経由で Mac mini に鍵認証で SSH 接続できることが必要。
+`ssh -o BatchMode=yes shun-tagami-mac-mini hostname` で確認する。
 
 ```sh
-# Mac mini で実行しても、MacBook 上のプロファイル状態を表示する
+# MacBook で実行しても、Mac mini 上のプロファイル状態を表示する
 agent-browser status
 
 # 必要な場合だけホストを明示する
 AGENT_BROWSER_HOST=local agent-browser status
-AGENT_BROWSER_HOST=shun-tagami-mbp playwright-mcp
+AGENT_BROWSER_HOST=shun-tagami-mac-mini playwright-mcp
 ```
 
 SSH の stdin/stdout が MCP の通信になる。`9222` 番ポートの公開・転送や常設トンネルは不要。
-MacBook がスリープ中・到達不能なら接続できない。MCP の起動に失敗したときは
+Mac mini がスリープ中・到達不能なら接続できない。MCP の起動に失敗したときは
 表示された SSH の理由を解決して再接続する。
 
-ブラウザから見た `localhost` とアップロード・ダウンロード先は **MacBook**。
-Mac mini の開発サーバーは Tailscale で到達できるアドレスを使うか、必要なアプリのポートだけを
+ブラウザから見た `localhost` とアップロード・ダウンロード先は **Mac mini**。
+MacBook の開発サーバーは Tailscale で到達できるアドレスを使うか、必要なアプリのポートだけを
 別途転送する。ローカルファイルを自動で両 Mac 間コピーする機能はない。
 
 ## 一時停止と診断
@@ -83,7 +84,7 @@ agent-browser resume   # このマシンの新しい接続を許可する
 
 停止ファイルは `${XDG_CONFIG_HOME:-~/.config}/agent-browser/paused`。
 `pause` は既存接続を切断しない。稼働中の接続は拡張機能の接続一覧またはエージェント側で閉じる。
-送信元と MacBook のどちらかが停止中なら MCP は起動しない。
+送信元と Mac mini のどちらかが停止中なら MCP は起動しない。
 `status` はブラウザホストの状態を表示するため、送信元の停止ファイルは別途確認する。
 
 接続トークンをコードや設定ファイルに保存しない構成。通常の接続承認画面を使う。
@@ -106,7 +107,7 @@ macOS の外部リンクが自動操作用プロセスへ渡る問題があっ�
 
 ```sh
 agent-browser status
-agent-browser status --profile-dir-name 'Profile 9'
+agent-browser status --profile-dir-name 'Profile 7'
 bash -n bin/playwright-mcp
 ```
 

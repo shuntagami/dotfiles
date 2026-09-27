@@ -10,7 +10,7 @@ import socket
 import subprocess
 import sys
 
-DEFAULT_HOST = "shun-tagami-mbp"
+DEFAULT_HOST = "shun-tagami-mac-mini"
 MCP_PACKAGE = "@playwright/mcp@0.0.82"
 EXTENSION_ID = "mmlmfjhmonkocbjadbfplnigmagldckm"
 EXTENSION_URL = "https://chromewebstore.google.com/detail/playwright-extension/" + EXTENSION_ID

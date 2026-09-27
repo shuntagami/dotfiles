@@ -40,7 +40,7 @@
       "command": "/Users/shun.tagami/dotfiles/bin/playwright-mcp",
       "args": [
         "--profile-dir-name",
-        "Profile 9"
+        "Profile 7"
       ],
       "codex": {
         "tools": {
