@@ -72,7 +72,7 @@ if pgrep -x MonitorControl >/dev/null; then
 fi
 defaults write "${DOMAIN}" keyboardVolume -int 0
 # multiKeyboardVolume=2 (audio device name matching): volume keys drive a
-# monitor over DDC only while it is the default output. When AudioPriorityBar
+# monitor over DDC only while it is the default output. When the output
 # switches to speakers/headphones, the keys are released to macOS.
 defaults write "${DOMAIN}" multiKeyboardVolume -int 2
 
