@@ -1,137 +1,112 @@
-# エージェントのブラウザを MacBook 側に置く
+# 普段の Chrome に接続する
 
-AI エージェントにブラウザを操作させると、**自分が使っているブラウザと衝突する**。
-その衝突を、別マシンに追い出すことで構造的に無くすための構成。
+ブラウザ操作は **MacBook で開いている通常の Chrome** に、Playwright Extension 経由で接続する。
+Mac mini からも同じ Chrome を使う。別の Chrome プロセスや自動操作用プロファイルを起動しない。
 
-## なぜ必要か
+```text
+MacBook のエージェント ───────────────┐
+                                    ├─ MacBook の Playwright MCP --extension
+Mac mini のエージェント ─ SSH/stdio ─┘       └─ 通常 Chrome の選択したプロファイル
+```
 
-macOS には、ブラウザが主張するものに対する「セッションごとの名前空間」が無い。
+Playwright MCP は `@playwright/mcp@0.0.82` に固定している。接続ごとに独立した MCP プロセスを使う。
+Chrome 拡張機能はエージェントごとにタブグループを分ける。同じタブを複数の接続に渡さない。
+Cookie・ログイン状態はその Chrome プロファイルで共有される。
 
-- **URL ハンドラは1つ** — `open`（`gh repo view --web` も中身はこれ）は、そのバンドルの
-  どのインスタンスに届くか選べない。自動化用のインスタンスが受け取ると、別ウィンドウに
-  開き、使い捨てプロファイルなので自分の設定（縦タブなど）も効かない
-- **グローバルショートカットは先に登録した者のもの** — 裏で生きているブラウザは
-  ショートカットを保持し続ける
-- **後始末されないプロセスが残る** — 実際に15日前と6日前のヘッドレス Chrome が残留し、
-  Chrome が起動できない状態を作っていた
+## 最初のセットアップ
 
-いずれも「気をつける」では防げない。取り合う相手を物理的に分けるのが確実。
+1. MacBook の通常 Chrome で、使いたいプロファイルを開く。
+2. そのプロファイルに [Playwright Extension](https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm) を入れる。
+   拡張機能が求めるサイト・タブの操作権限を確認して許可する。
+3. `info@ele-inc.com` も使うなら、そのプロファイルにも拡張機能を入れる。
+4. 両 Mac にこの版の `bin/agent-browser` と `bin/playwright-mcp` を反映する。
+5. MCP の登録は `mcp/servers.json` を原本とし、`node mcp/sync-mcp.mjs` で各クライアントに反映する。
+6. 一時停止中なら **両 Mac で** `agent-browser resume` を実行する。
+7. エージェントの新しいセッションでブラウザツールを使い、Chrome に出る接続・タブ選択画面を操作する。
 
-## 構成
+通常 Chrome が閉じている、プロファイルや拡張機能が無い、MacBook に SSH できない場合は
+理由を表示して失敗する。別のブラウザや他のマシンへの自動フォールバックはしない。
+拡張機能がインストール済みでも無効なら、Chrome で有効化して接続を再試行する。
 
-| | |
+## どのプロファイルを使うか
+
+| MCP 名 | 選択 |
 |---|---|
-| エージェントのブラウザ | MacBook 上の **通常の Google Chrome（Default プロファイル）** |
-| 経路 | Tailscale 上の **SSH ポートフォワード** |
-| 操作 | Playwright MCP の `--cdp-endpoint` |
+| `playwright` | MacBook の通常 Chrome が最後に使ったプロファイル |
+| `playwright-info` | `Profile 8`（現在の `info@ele-inc.com`）を明示指定 |
 
-マシンを分けているので、認証切れの Chrome for Testing を使う必要はない。
-MacBook 側のログイン状態・Cookie・拡張をそのままエージェントが使える。
-
-### CDP を公開しない理由
-
-Chrome DevTools Protocol は**無認証で、繋がれば全 Cookie が読める**。なので
-MacBook 側では localhost にバインドし、SSH トンネルでこちらに引く。Playwright からは
-ローカルの `127.0.0.1:9222` に見えるため、Chrome の DevTools エンドポイントが行う
-Host ヘッダ検査も同時に満たせる。
-
-## 使い方
+通常は ELE（`shun.tagami@ele-inc.com`、現在の `Profile 2`）を開いてから接続する。
+選択は **MCP プロセスの起動時** に通常 Chrome の `Local State` から読み取り、
+`--profile-dir-name` で固定する。操作中に別のウィンドウを前面に出しても接続先は変わらない。
+プロフィールを切り替えたら MCP 接続を作り直す。接続先は stderr と `status` で確認できる。
 
 ```sh
-agent-browser up                 # MacBook の Chrome を CDP 付きで起動し、トンネルを張り、応答を確認
-agent-browser status             # 両側の状態
-agent-browser down               # トンネルだけ切る（Default プロファイルの Chrome は残す）
-agent-browser down --kill-browser  # トンネルを切り、向こうの Chrome も終了
-agent-browser endpoint           # CDP のエンドポイントだけを出す
+agent-browser status
+agent-browser status --profile-dir-name 'Profile 8'
+PLAYWRIGHT_MCP_PROFILE_DIR_NAME='Profile 2' playwright-mcp
 ```
 
-`up` は「トンネルが張れた」では成功としない。`/json/version` が応答するかまで見る。
-トンネルが上がっていてもブラウザが死んでいれば、エージェントは何も操作できないため。
+プロファイルを作り直してディレクトリ名が変わった場合は、
+`agent-browser status` と Chrome の表示を照合し、`mcp/servers.json` の
+`playwright-info.args` を更新して再同期する。
 
-Chrome は **user-data-dir につき1プロセス**しか許さない。すでに CDP 無しで Chrome が
-開いていると、フラグ付きの再起動は無視される。その場合 `up` は一度 Chrome を終了してから
-`--remote-debugging-port` 付きで立ち上げ直す。
+## Mac mini からの接続
 
-`down` は既定ではトンネルだけ切る。Default プロファイルは人が使うものなので、
-持ち主のいないプロセス扱いにはしない。明示的に止めたいときだけ `--kill-browser`。
-
-環境変数で変えられる。
-
-| 変数 | 既定 | 意味 |
-|---|---|---|
-| `AGENT_BROWSER_HOST` | `shun-tagami-mbp` | リモートホスト |
-| `AGENT_BROWSER_PORT` | `9222` | CDP ポート |
-| `AGENT_BROWSER_MODE` | `default` | `default` = 通常 Chrome + Default プロファイル / `testing` = Chrome for Testing + 使い捨てプロファイル |
-| `AGENT_BROWSER_PROFILE` | （mode に従う） | リモート側の `--user-data-dir` を上書き |
-
-昔の分離（Chrome for Testing）に戻すには:
+既定のブラウザホストは `shun-tagami-mbp`。同名の MacBook 上では直接起動し、
+それ以外では SSH で MacBook 上の同じスクリプトを実行する。
+SSH は Tailscale の既存のホスト設定と鍵認証を使う。
 
 ```sh
-AGENT_BROWSER_MODE=testing agent-browser up
+# Mac mini で実行しても、MacBook 上のプロファイル状態を表示する
+agent-browser status
+
+# 必要な場合だけホストを明示する
+AGENT_BROWSER_HOST=local agent-browser status
+AGENT_BROWSER_HOST=shun-tagami-mbp playwright-mcp
 ```
 
-## MCP 側は自動で切り替わる
+SSH の stdin/stdout が MCP の通信になる。`9222` 番ポートの公開・転送や常設トンネルは不要。
+MacBook がスリープ中・到達不能なら接続できない。MCP の起動に失敗したときは
+表示された SSH の理由を解決して再接続する。
 
-`mcp/servers.json` の playwright は `bin/playwright-mcp` を指す。このラッパは
-**CDP が応答するかを見て**、リモートかローカルかを選ぶ。
+ブラウザから見た `localhost` とアップロード・ダウンロード先は **MacBook**。
+Mac mini の開発サーバーは Tailscale で到達できるアドレスを使うか、必要なアプリのポートだけを
+別途転送する。ローカルファイルを自動で両 Mac 間コピーする機能はない。
 
-- 応答する → `--cdp-endpoint` を付けて MacBook のブラウザを使う
-- 応答しない → `--isolated` でローカルに起動（外出中に MacBook が鞄の中でも壊れない）
+## 一時停止と診断
 
-判定に ssh や ping を使わないのは、**「エージェントが操作できるブラウザがある」**ことを
-意味するのは CDP の応答だけだから。トンネルが上がっていて中身が空のこともあるし、
-別の何かが 9222 を掴んでいることもある（`curl` は 404 でも終了コード 0 を返すので、
-HTTP が 2xx で、本文に Playwright が実際に繋ぐ `webSocketDebuggerUrl` があることまで
-見る）。
+```sh
+agent-browser pause    # このマシンからの新しい接続を止める
+agent-browser status   # 実際のブラウザホスト・アカウント・拡張機能・停止状態
+agent-browser resume   # このマシンの新しい接続を許可する
+```
 
-### 誰も `up` しなくても繋がる
+停止ファイルは `${XDG_CONFIG_HOME:-~/.config}/agent-browser/paused`。
+`pause` は既存接続を切断しない。稼働中の接続は拡張機能の接続一覧またはエージェント側で閉じる。
+送信元と MacBook のどちらかが停止中なら MCP は起動しない。
+`status` はブラウザホストの状態を表示するため、送信元の停止ファイルは別途確認する。
 
-**明示的な操作は要らない。** ラッパは CDP が応答しなければ自分で `agent-browser up`
-を実行する。MulmoTerminal のセルから Claude Code / Codex / Cursor CLI を普通に
-起動すれば、最初の1つが MacBook のブラウザを立ち上げ、以降はそれを共有する。
+接続トークンをコードや設定ファイルに保存しない構成。通常の接続承認画面を使う。
+`PLAYWRIGHT_MCP_EXTENSION_TOKEN` はプロファイル固有であり、このラッパは SSH コマンドや
+ログに転送しない。別のプロファイルのトークンを使い回さない。
 
-- MulmoTerminal のグリッドは同時に多数のエージェントを動かすので、**ロックを取る**
-  （macOS に `flock(1)` が無いため `mkdir` の原子性を使う）。ロックを取れなかった側は
-  相手の起動を待つ。待たずに走ると、2本目のトンネルと迷子の ssh が残る
-- **起動には固い上限がある**（既定40秒、`AGENT_BROWSER_START_BUDGET`）。ラッパは MCP
-  サーバの起動経路に座っているので、鞄の中の MacBook は数秒のコストで済ませ、
-  ハングさせてはならない
-- 自動起動を止めたいときは `AGENT_BROWSER_AUTO=0`
+## 旧構成からの変更
 
-`up` が途中で失敗したときは、**その実行が起動したものだけを片付ける**。default モードでは
-ロールバックでも向こうの Chrome は止めない（本物のプロファイルだから）。testing モードで
-自分が立ち上げたブラウザだけは止める。
+- `agent-browser up/down/endpoint` は廃止。ブラウザの起動・終了を管理しない。
+- `AGENT_BROWSER_PORT/MODE/PROFILE/AUTO/START_BUDGET` による旧 CDP 起動・切り替えは廃止。
+- `--cdp-endpoint`、`--user-data-dir`、`--isolated` など接続方式を変更する引数は受け付けない。
+- 旧 `~/Library/Application Support/agent-browser/Chrome` のデータは自動削除・コピーしない。
+- 普段の Chrome の既定ブラウザ設定や `gh` の開き先を変更する必要はない。
 
-設定を変えたら `node mcp/sync-mcp.mjs` で Claude Code / Codex / Cursor に反映する。
+過去の構成は同じ `Google Chrome.app` を別データ領域で起動していたため、
+macOS の外部リンクが自動操作用プロセスへ渡る問題があった。
+既存 Chrome への拡張機能接続に統一して、この二重起動をなくす。
 
-## 前提
+## 検証
 
-- 両機で Tailscale が動いていること（`tailscale status`）
-- Mac mini から MacBook へ鍵で ssh できること。`misc/ssh/config` の `shun-tagami-mbp`
-  が MagicDNS 名で引く。初回だけ `ssh-copy-id -i ~/.ssh/id_ed25519.pub shun-tagami-mbp`
-- MacBook に Google Chrome があること（`/Applications/Google Chrome.app`）
+```sh
+python3 -m unittest discover -s tests -v
+bash -n bin/playwright-mcp
+```
 
-## 限界
-
-**寝ている MacBook は起こせない。** Tailscale（WireGuard）に Wake-on-LAN は無い。
-同一LANなら WoL が使えるが、macOS のスリープ状態次第で不確実。確実なのは
-「起こさない運用」— 電源につないだまま自動スリープを切り、ブラウザ用の常駐マシンとして
-扱う。
-
-**MacBook を持ち出すと使えない。** そのときは `playwright-mcp` のフォールバックが
-ローカルに切り替わる。エージェントのブラウザは自分の Chrome と同じバンドルに戻るので、
-上の衝突は再び起こり得る。
-
-**computer use（実画面の操作）はこの構成では逃がせない。** 実デスクトップを触るので、
-MacBook 側でやるならエージェント自体をそちらで動かす必要がある。セッション履歴は
-Syncthing で同期しているので `claude --resume` は両機で継続できる
-（[multi-machine-sync.md](multi-machine-sync.md)）。
-
-**MulmoTerminal を両機で動かしてスマホから使い分けることはできない。** remote host の
-`HOST_ID` が定数（`server/backends/remoteHost/index.ts`）で単一ホスト前提のため、
-2台が同じ Firestore コマンドキューを取り合う。MacBook 側で remote host を
-接続しない運用なら共存する。
-
-**エージェントは Default プロファイルの Cookie に届く。** CDP は localhost + SSH トンネル
-に閉じているが、繋いだエージェントはログイン済みセッションを読める。マシン分離は
-URL ハンドラ衝突の回避であって、認証の隔離ではない。
+[Playwright Extension の公式説明](https://github.com/microsoft/playwright/tree/main/packages/extension)
