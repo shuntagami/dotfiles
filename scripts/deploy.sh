@@ -71,6 +71,13 @@ if [[ -e ~/.claude/settings.json && ! -L ~/.claude/settings.json ]]; then
 fi
 ln -sf ~/dotfiles/claude/settings.json ~/.claude/settings.json
 
+# Claude Code keybindings: Hammerspoon owns Ctrl+S globally, so chords ending in
+# ctrl+s never arrive; keybindings.json adds alternatives that avoid it.
+if [[ -e ~/.claude/keybindings.json && ! -L ~/.claude/keybindings.json ]]; then
+  mv ~/.claude/keybindings.json ~/.claude/keybindings.json.bak.$(date +%Y%m%d%H%M%S)
+fi
+ln -sf ~/dotfiles/claude/keybindings.json ~/.claude/keybindings.json
+
 # Claude Code skills: symlink each skill directory. RIFE binary for vfr-sync-rife
 # is not in git; fetch it once with claude/skills/vfr-sync-rife/scripts/install_rife.sh
 mkdir -p ~/.claude/skills
