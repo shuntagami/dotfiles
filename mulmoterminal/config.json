@@ -120,7 +120,8 @@
     "zoom-toggle": "Alt+ArrowUp",
     "next-attention": "Alt+ArrowDown",
     "terminal-close": "Cmd+.",
-    "files-find": "Cmd+Shift+p"
+    "files-find": "Cmd+Shift+p",
+    "focus-mode": "Alt+Shift+ArrowUp"
   },
   "copyOnSelect": true,
   "decisionDigest": true,
@@ -130,6 +131,7 @@
   "appendSystemPrompt": true,
   "autoDirIcon": true,
   "showLoadAverage": true,
+  "paletteSearchBox": true,
   "toolbarPins": [],
   "cockpitLines": {
     "summary": 2,
