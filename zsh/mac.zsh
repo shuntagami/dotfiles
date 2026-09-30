@@ -26,6 +26,46 @@ alias airport='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/C
 
 alias chrome="open -a Google\ Chrome"
 
+# Convert beside the original, keeping its basename (JPEG by default).
+heic2img() {
+  emulate -L zsh
+  if (( $# < 1 )); then
+    print -u2 '使い方: heic2img <画像.heic>... [jpeg|png]'
+    return 2
+  fi
+
+  local -a inputs=("$@")
+  local format=jpeg extension=jpg
+  if (( $# > 1 )); then
+    case "${(L)inputs[-1]}" in
+      jpg|jpeg) inputs[-1]=() ;;
+      png) format=png; extension=png; inputs[-1]=() ;;
+    esac
+  fi
+
+  local file input output
+  local result=0
+  for file in "${inputs[@]}"; do
+    input="${file:a}"
+    if [[ ! -f "$input" ]]; then
+      print -u2 -- "ファイルが見つかりません: $file"
+      result=1
+      continue
+    fi
+
+    output="${input:r}.${extension}"
+    if [[ -e "$output" || -L "$output" ]]; then
+      print -u2 -- "出力先がすでに存在します: $output"
+      result=1
+      continue
+    fi
+
+    command sips -s format "$format" "$input" --out "$output" || result=1
+  done
+  return "$result"
+}
+alias heic2jpg='heic2img'
+
 # Recursively delete `.DS_Store` files
 alias rm-ds-store="find . -name '.DS_Store' -type f -delete"
 
