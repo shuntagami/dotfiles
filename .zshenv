@@ -9,6 +9,11 @@ export VISUAL='vim'
 export PAGER='less'
 export GOPATH="$DOTFILES/pkg/go"
 
+# OpenAI credentials are stored outside the dotfiles repository.
+if [[ -z ${OPENAI_API_KEY:-} && -r "$HOME/.config/openai/api.env" ]]; then
+  source "$HOME/.config/openai/api.env"
+fi
+
 # Claude Code defaults to bypassing permission prompts everywhere. MulmoTerminal
 # passes an explicit --permission-mode, so its documented environment override
 # is also needed there; direct `claude` launches use ~/.claude/settings.json.
