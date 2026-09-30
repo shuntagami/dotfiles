@@ -15,7 +15,7 @@ brew "pycparser"
 # Powerful, lightweight programming language
 brew "lua"
 # Cryptography and SSL/TLS Toolkit
-brew "openssl@3"
+brew "openssl@3", link: true
 # General-purpose data compression with high compression ratio
 brew "xz"
 # Zstandard is a real-time compression algorithm
