@@ -54,6 +54,8 @@ brew "libyaml"
 brew "cfn-lint"
 # Statistics utility to count lines of code
 brew "cloc"
+# Cloudflare Tunnel client (formerly Argo Tunnel)
+brew "cloudflared"
 # Top-like interface for container metrics
 brew "ctop"
 # Get a file from an HTTP, HTTPS or FTP server
@@ -72,6 +74,20 @@ brew "duti"
 brew "exiftool"
 # Play, record, convert, and stream select audio and video codecs
 brew "ffmpeg"
+# OpenType text shaping engine
+brew "harfbuzz"
+# New file format for still image compression
+brew "jpeg-xl"
+# Library for JPEG-2000 image manipulation
+brew "openjpeg"
+# Image processing and image analysis library
+brew "leptonica"
+# Subtitle renderer for the ASS/SSA subtitle format
+brew "libass"
+# OCR (Optical Character Recognition) engine
+brew "tesseract"
+# Play, record, convert, and stream many audio and video codecs
+brew "ffmpeg-full"
 # Monitor a directory for changes and run a shell command
 brew "fswatch"
 # Command-line fuzzy finder written in Go
@@ -80,8 +96,6 @@ brew "fzf"
 brew "gawk"
 # GNU compiler collection
 brew "gcc"
-# New file format for still image compression
-brew "jpeg-xl"
 # Library for encoding and decoding .avif files
 brew "libavif"
 # Graphics library to dynamically manipulate images
@@ -90,14 +104,6 @@ brew "gd"
 brew "gdk-pixbuf"
 # GitHub command-line tool
 brew "gh"
-# OpenType text shaping engine
-brew "harfbuzz"
-# Library for JPEG-2000 image manipulation
-brew "openjpeg"
-# Image processing and image analysis library
-brew "leptonica"
-# OCR (Optical Character Recognition) engine
-brew "tesseract"
 # Interpreter for PostScript and PDF
 brew "ghostscript"
 # Distributed revision control system
@@ -138,8 +144,6 @@ brew "libheif"
 brew "imagemagick"
 # Lightweight and flexible command-line JSON processor
 brew "jq"
-# Subtitle renderer for the ASS/SSA subtitle format
-brew "libass"
 # Framework for scientific data networking
 brew "libdap"
 # Provides library functionality for FIDO U2F & FIDO 2.0, including USB
