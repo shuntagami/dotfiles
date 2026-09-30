@@ -89,12 +89,11 @@ done
 python3 ~/dotfiles/scripts/remove-cursor-notify.py
 
 # MulmoTerminal: config.json is written by the app itself (write-temp-then-rename), so a
-# symlink here would get replaced by a real file the moment it saves. Seed it only when
-# missing — on an already-configured machine this must never overwrite live settings that
-# have not been copied back with save-mulmoterminal-config.sh.
-if [[ ! -f ~/.mulmoterminal/config.json ]]; then
-  ~/dotfiles/scripts/install-mulmoterminal-config.sh
-fi
+# symlink here would get replaced by a real file the moment it saves. Merge instead: seed a
+# missing config, otherwise set only the shared keys that differ from dotfiles, leaving this
+# machine's own keys alone. Settings changed here and not yet saved back with
+# save-mulmoterminal-config.sh ARE overwritten for the shared keys — save them first.
+~/dotfiles/scripts/install-mulmoterminal-config.sh
 python3 ~/dotfiles/scripts/apply-mulmoterminal-background.py
 
 # Screenpipe: manage only prompt/config files that are safe to keep in dotfiles.

@@ -59,7 +59,10 @@
   ],
   "providers": [],
   "soundFile": null,
-  "soundKinds": [],
+  "soundKinds": [
+    "finished",
+    "waiting"
+  ],
   "sounds": {
     "finished": "preset:coin",
     "waiting": "preset:meow"
@@ -69,6 +72,8 @@
   "repoDirs": {},
   "launchers": [],
   "customAgents": [],
+  "paletteAliases": {},
+  "paletteFavorites": [],
   "quickCommands": [],
   "userMcpServers": [],
   "headerStatusColors": {},
@@ -103,6 +108,7 @@
     }
   ],
   "chips": null,
+  "commands": [],
   "pushEnabled": true,
   "pushKinds": [
     "finished",
@@ -113,6 +119,7 @@
   "calendarSyncEnabled": true,
   "worklogIntervalHours": 6,
   "sessionIdleReapDays": 7,
+  "sessionReapIntervalHours": 0,
   "terminalSubmit": "cr",
   "keymap": {
     "terminal-new": "Alt+ArrowLeft",
@@ -132,6 +139,7 @@
   "autoDirIcon": true,
   "showLoadAverage": true,
   "paletteSearchBox": true,
+  "playfulEffects": "random",
   "toolbarPins": [],
   "cockpitLines": {
     "summary": 2,
