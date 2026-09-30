@@ -10,7 +10,7 @@
     ],
     "defaultMode": "bypassPermissions"
   },
-  "model": "opus[1m]",
+  "model": "sonnet",
   "hooks": {
     "Stop": [
       {
@@ -54,7 +54,7 @@
       "effortLevel": "xhigh"
     },
     "claude-opus-5-5": {
-      "effortLevel": "xhigh"
+      "effortLevel": "high"
     }
   },
   "autoCompactWindow": 800000,
