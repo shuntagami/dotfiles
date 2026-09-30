@@ -104,7 +104,7 @@
       "label": "エージェントを再起動",
       "run": "action",
       "icon": "restart_alt",
-      "action": "restart"
+      "action": "terminal-restart"
     }
   ],
   "chips": null,
@@ -128,7 +128,9 @@
     "next-attention": "Alt+ArrowDown",
     "terminal-close": "Cmd+.",
     "files-find": "Cmd+Shift+p",
-    "focus-mode": "Alt+Shift+ArrowUp"
+    "focus-mode": "Alt+Shift+ArrowUp",
+    "mark-unread": "Alt+Shift+ArrowDown",
+    "terminal-park": "Alt+Shift+ArrowLeft"
   },
   "copyOnSelect": true,
   "decisionDigest": true,
@@ -139,6 +141,7 @@
   "autoDirIcon": true,
   "showLoadAverage": true,
   "paletteSearchBox": true,
+  "remoteServer": false,
   "playfulEffects": "random",
   "toolbarPins": [],
   "cockpitLines": {
