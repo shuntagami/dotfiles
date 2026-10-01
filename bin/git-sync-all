@@ -44,6 +44,10 @@ find_git_entries() {
 
 run_sync() {
   local roots=("$@")
+  # launchd appends to $LOG_FILE forever; keep the newest ~1MB.
+  if [[ -f "$LOG_FILE" && $(stat -f%z "$LOG_FILE" 2>/dev/null || echo 0) -gt 2097152 ]]; then
+    tail -c 1048576 "$LOG_FILE" > "$LOG_FILE.tmp" && cat "$LOG_FILE.tmp" > "$LOG_FILE"; rm -f "$LOG_FILE.tmp"
+  fi
   if [[ ${#roots[@]} -eq 0 ]]; then
     roots=("${GIT_SYNC_ROOT:-$HOME}")
   fi

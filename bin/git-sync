@@ -12,7 +12,8 @@
 # case that actually matters (an untracked file the sync would overwrite),
 # so pre-blocking on them too would just make a stray scratch file in the
 # worktree (a seed script, a .temp/ dir) silently stall every sync forever.
-# A rebase conflict aborts the rebase and is reported, not left half-done.
+# A rebase conflict aborts the rebase and is logged (no desktop notification:
+# it repeated every interval for the same branch), not left half-done.
 #
 # Usage: git sync [-C <repo>]
 
@@ -48,25 +49,18 @@ if ! git -C "$main_worktree" fetch --prune origin >/dev/null 2>&1; then
   exit 0
 fi
 
-notify() {
-  local msg="$1"
-  command -v osascript >/dev/null 2>&1 || return 0
-  osascript -e "display notification \"${msg//\"/\\\"}\" with title \"git sync: $repo_name\"" >/dev/null 2>&1 || true
-}
-
-# ff-pull the main worktree if it's on the default branch and clean.
+# ff-pull the main worktree if it's on the default branch. A dirty tree is
+# fine: `merge --ff-only` itself refuses (without touching anything) only when
+# the incoming commits would overwrite a locally modified file, so a stray
+# local edit (e.g. a machine-local config) must not stall the pull forever.
 main_branch=$(git -C "$main_worktree" rev-parse --abbrev-ref HEAD 2>/dev/null || true)
 if [[ "$main_branch" == "$default_branch" ]]; then
-  if [[ -z "$(git -C "$main_worktree" status --porcelain --untracked-files=no 2>/dev/null)" ]]; then
-    before=$(git -C "$main_worktree" rev-parse HEAD)
-    if git -C "$main_worktree" merge --ff-only "origin/$default_branch" >/dev/null 2>&1; then
-      after=$(git -C "$main_worktree" rev-parse HEAD)
-      [[ "$before" != "$after" ]] && echo "[git sync] $repo_name: $default_branch ${before:0:7} -> ${after:0:7}"
-    else
-      echo "[git sync] $repo_name: $default_branch can't fast-forward (diverged), skipping"
-    fi
+  before=$(git -C "$main_worktree" rev-parse HEAD)
+  if git -C "$main_worktree" merge --ff-only "origin/$default_branch" >/dev/null 2>&1; then
+    after=$(git -C "$main_worktree" rev-parse HEAD)
+    [[ "$before" != "$after" ]] && echo "[git sync] $repo_name: $default_branch ${before:0:7} -> ${after:0:7}"
   else
-    echo "[git sync] $repo_name: $default_branch has uncommitted changes, skipping pull"
+    echo "[git sync] $repo_name: $default_branch can't fast-forward (diverged or conflicts with local changes), skipping"
   fi
 fi
 
@@ -98,6 +92,5 @@ while IFS= read -r wt; do
   else
     git -C "$wt" rebase --abort >/dev/null 2>&1 || true
     echo "[git sync] $repo_name: $branch CONFLICTS rebasing onto $default_branch — needs manual rebase" >&2
-    notify "$branch needs manual rebase onto $default_branch"
   fi
 done < <(git worktree list --porcelain | awk '/^worktree /{print $2}')
