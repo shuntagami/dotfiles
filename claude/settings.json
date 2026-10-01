@@ -10,7 +10,7 @@
     ],
     "defaultMode": "bypassPermissions"
   },
-  "model": "claude-fable-5-1",
+  "model": "sonnet",
   "hooks": {
     "Stop": [
       {
