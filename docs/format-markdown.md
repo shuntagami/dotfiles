@@ -1,6 +1,6 @@
 # AIでMarkdownを改行する
 
-`bin/format-markdown` は、`~/projects/vercel-functions` の処理を呼ぶAI専用コマンド。
+`bin/format-markdown` はDenoで動くAI専用コマンド。処理とプロンプトを同梱した1ファイルで動く。
 ブラウザ・サーバー起動は不要。既定モデルは `gpt-6.1-sol`。
 dotfilesの `bin/` はPATHに登録済みなので、そのまま実行できる。
 
@@ -22,13 +22,20 @@ AIによる改行の対象外。改行以外に、見出しの冗長な太字・
 
 ## 準備
 
-Node.js 22.13以上を使い、`~/projects/vercel-functions` で
-`pnpm install --frozen-lockfile` を実行しておく。
-リポジトリを別の場所に置く場合は `VERCEL_FUNCTIONS_DIR` を設定する。
-`OPENAI_API_KEY` は環境変数または `~/.config/openai/api.env` から読む。
-処理本体はvercel-functionsの `.env.local` も読むため、そこでもAI設定を上書きできる。
+Deno 2をインストールしておく。Node.js・npmパッケージ・サーバー・vercel-functionsのチェックアウトは不要。
+`OPENAI_API_KEY` は環境変数から読み、未設定なら `~/.config/openai/api.env` を読む。
+モデルを明示的に変える場合は `MARKDOWN_FORMAT_AI_MODEL` を設定する。
 APIキーはdotfilesの追跡ファイルへ記録しない。
 
-API経由で使う場合は `--url https://<host>/api/markdown/format` と
-`MARKDOWN_FORMAT_API_KEY` を指定する。
+## 更新・配布
+
+このファイルはvercel-functionsの共通処理から生成した配布物。直接編集せず、
+ソースを変更して次のコマンドで再生成する。
+
+```bash
+sh ~/projects/vercel-functions/scripts/bundle-markdown-cli.sh ~/dotfiles/bin/format-markdown
+```
+
+生成ファイルを別のマシンへコピーしても、DenoとAPIキーがあれば動く。
+OpenAIへ直接接続するため、VercelのAPIキーやURL設定も不要。
 処理の詳細はvercel-functionsの `docs/markdown-format.md` を参照。
