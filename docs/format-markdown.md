@@ -30,7 +30,7 @@ APIキーはdotfilesの追跡ファイルへ記録しない。
 ## 更新・配布
 
 このファイルはvercel-functionsの共通処理から生成した配布物。直接編集せず、
-ソースを変更して次のコマンドで再生成する。
+ソース（`src/cli/markdown.mjs` と `src/tools/markdown/`）を変更して次のコマンドで再生成する。
 
 ```bash
 sh ~/projects/vercel-functions/scripts/bundle-markdown-cli.sh ~/dotfiles/bin/format-markdown

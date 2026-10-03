@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno run --no-config --no-lock --no-npm --no-remote --allow-read --allow-write --allow-net=api.openai.com --allow-env=OPENAI_API_KEY,HOME,MARKDOWN_FORMAT_AI_MODEL --ext=js
-// Generated from ele-inc/vercel-functions/cli/format-markdown.mjs. Regenerate with scripts/bundle-markdown-cli.sh.
-// lib/markdown-format/format.ts
+// Generated from ele-inc/vercel-functions/src/cli/markdown.mjs. Regenerate with scripts/bundle-markdown-cli.sh.
+// src/tools/markdown/format.ts
 var DOCS_SPACER_LINE = "\u3164";
 var DOCS_TABLE_SPACER_CELL = DOCS_SPACER_LINE;
 var injectTableHeadingSpacer = (md) => {
@@ -112,24 +112,32 @@ var parseMarkdownBlocks = (md) => {
       continue;
     }
     if (/^(\s*)[-*+]\s/.test(line) || /^(\s*)\d+\.\s/.test(line)) {
-      if (prevLineType !== "list" && prevLineType !== "empty" && blocks.length > 0) pushLine("");
+      if (prevLineType !== "list" && prevLineType !== "empty" && blocks.length > 0) {
+        pushLine("");
+      }
       pushLine(line);
       prevLineType = "list";
       continue;
     }
     if (/^>\s?/.test(line)) {
-      if (prevLineType !== "quote" && prevLineType !== "empty" && blocks.length > 0) pushLine("");
+      if (prevLineType !== "quote" && prevLineType !== "empty" && blocks.length > 0) {
+        pushLine("");
+      }
       pushLine(line);
       prevLineType = "quote";
       continue;
     }
     if (/^\|/.test(line)) {
-      if (prevLineType !== "table" && prevLineType !== "empty" && blocks.length > 0) pushLine("");
+      if (prevLineType !== "table" && prevLineType !== "empty" && blocks.length > 0) {
+        pushLine("");
+      }
       pushLine(line);
       prevLineType = "table";
       continue;
     }
-    if (prevLineType !== "paragraph" && prevLineType !== "empty" && blocks.length > 0) pushLine("");
+    if (prevLineType !== "paragraph" && prevLineType !== "empty" && blocks.length > 0) {
+      pushLine("");
+    }
     blocks.push({
       tag: "paragraph",
       id: paragraphId++,
@@ -205,7 +213,7 @@ var addZwsp = (md) => {
   return result.join("\n");
 };
 
-// lib/markdown-format/prompt.ts
+// src/tools/markdown/prompt.ts
 var MARKDOWN_FORMAT_SYSTEM_PROMPT = `# \u5F79\u5272
 
 \u3042\u306A\u305F\u306F\u65E5\u672C\u8A9E\u30C6\u30AD\u30B9\u30C8\u306E\u6539\u884C\u4F4D\u7F6E\u3092\u6700\u9069\u5316\u3059\u308B\u5C02\u9580\u5BB6\u3067\u3059\u3002
@@ -288,7 +296,7 @@ var MARKDOWN_FORMAT_SYSTEM_PROMPT = `# \u5F79\u5272
 \u7406\u7531: \u300C\u82E6\u52B4\u306E\u63CF\u5199\uFF08\u4E3B\u8A9E\uFF09\u300D\u3068\u300C\u6210\u529F\u306E\u7D50\u679C\uFF08\u8FF0\u8A9E\uFF09\u300D\u306E\u5883\u754C\u3067\u6539\u884C
 `;
 
-// lib/markdown-format/openai.ts
+// src/tools/markdown/openai.ts
 var FormatterConfigurationError = class extends Error {
 };
 function validatedParagraphResults(originals, returned) {
@@ -358,9 +366,13 @@ ${JSON.stringify(chunk)}`,
     redirect: "error",
     signal
   });
-  if (!response.ok) throw new Error(`OpenAI API\u30A8\u30E9\u30FC (${response.status})\u3002\u8A2D\u5B9A\u3084\u5229\u7528\u72B6\u6CC1\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044`);
+  if (!response.ok) {
+    throw new Error(`OpenAI API\u30A8\u30E9\u30FC (${response.status})\u3002\u8A2D\u5B9A\u3084\u5229\u7528\u72B6\u6CC1\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044`);
+  }
   const body = await response.json();
-  if (body.status !== "completed") throw new Error("AI\u306E\u5FDC\u7B54\u304C\u5B8C\u4E86\u3057\u3066\u3044\u307E\u305B\u3093\u3002\u518D\u5B9F\u884C\u3057\u3066\u304F\u3060\u3055\u3044");
+  if (body.status !== "completed") {
+    throw new Error("AI\u306E\u5FDC\u7B54\u304C\u5B8C\u4E86\u3057\u3066\u3044\u307E\u305B\u3093\u3002\u518D\u5B9F\u884C\u3057\u3066\u304F\u3060\u3055\u3044");
+  }
   const text = (body.output ?? []).filter((item) => item.type === "message").flatMap((item) => item.content ?? []).filter((item) => item.type === "output_text").map((item) => item.text ?? "").join("");
   if (!text) throw new AIFormattingValidationError();
   const result = JSON.parse(text);
@@ -370,7 +382,9 @@ ${JSON.stringify(chunk)}`,
   return validatedParagraphResults(chunk, result);
 }
 async function formatOpenAIMarkdown(markdown, options) {
-  if (!markdown.trim() || markdown.length > 1e5) throw new Error("\u5165\u529B\u306F\u7A7A\u3067\u306A\u3044100000\u6587\u5B57\u4EE5\u5185\u306B\u3057\u3066\u304F\u3060\u3055\u3044");
+  if (!markdown.trim() || markdown.length > 1e5) {
+    throw new Error("\u5165\u529B\u306F\u7A7A\u3067\u306A\u3044100000\u6587\u5B57\u4EE5\u5185\u306B\u3057\u3066\u304F\u3060\u3055\u3044");
+  }
   const timeout = AbortSignal.timeout(1e5);
   const signal = options.signal ? AbortSignal.any([
     options.signal,
@@ -392,7 +406,7 @@ async function formatOpenAIMarkdown(markdown, options) {
   });
 }
 
-// cli/format-markdown.mjs
+// src/cli/markdown.mjs
 var deno = globalThis.Deno;
 function parseArgs(args) {
   const options = {};
@@ -432,7 +446,9 @@ async function readKey() {
   if (!home) return "";
   try {
     const env = await deno.readTextFile(`${home}/.config/openai/api.env`);
-    const match = env.match(/^\s*(?:export\s+)?OPENAI_API_KEY\s*=\s*(?:"([^"]*)"|'([^']*)'|([^#\r\n]*))/m);
+    const match = env.match(
+      /^\s*(?:export\s+)?OPENAI_API_KEY\s*=\s*(?:"([^"]*)"|'([^']*)'|([^#\r\n]*))/m
+    );
     return (match?.[1] ?? match?.[2] ?? match?.[3] ?? "").trim();
   } catch (error) {
     if (error instanceof deno.errors.NotFound) return "";
@@ -454,7 +470,9 @@ Requires Deno 2 and OPENAI_API_KEY. No Node.js, npm install, or server needed.`)
   let markdown = "";
   if (options.input) markdown = await deno.readTextFile(options.input);
   else {
-    if (deno.stdin.isTerminal()) throw new Error("\u30D5\u30A1\u30A4\u30EB\u3092\u6307\u5B9A\u3059\u308B\u304B\u3001\u6A19\u6E96\u5165\u529B\u304B\u3089Markdown\u3092\u6E21\u3057\u3066\u304F\u3060\u3055\u3044");
+    if (deno.stdin.isTerminal()) {
+      throw new Error("\u30D5\u30A1\u30A4\u30EB\u3092\u6307\u5B9A\u3059\u308B\u304B\u3001\u6A19\u6E96\u5165\u529B\u304B\u3089Markdown\u3092\u6E21\u3057\u3066\u304F\u3060\u3055\u3044");
+    }
     for await (const chunk of deno.stdin.readable.pipeThrough(new TextDecoderStream())) {
       markdown += chunk;
       if (markdown.length > 1e5) throw new Error("\u5165\u529B\u306F100000\u6587\u5B57\u4EE5\u5185\u306B\u3057\u3066\u304F\u3060\u3055\u3044");
