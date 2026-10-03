@@ -169,6 +169,10 @@ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts
 
 ## 🗂️ 管理している主なツール・設定
 
+Markdownの改行は `format-markdown draft.md` でAIに任せられます。
+指定ファイルを更新し、`--output formatted.md` を付ければ別ファイルへ保存します。
+[使い方と準備](docs/format-markdown.md)を参照してください。
+
 | カテゴリ           | ツール                                                                                                                                                                 |
 | :----------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **シェル**         | [Zsh](https://www.zsh.org/) + [Prezto](https://github.com/sorin-ionescu/prezto)（補完・ハイライト・サジェスト）                                                        |
