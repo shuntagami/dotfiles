@@ -169,6 +169,10 @@ enabled = true
 
 [mcp_servers.playwright]
 command = "/Users/shun.tagami/dotfiles/bin/playwright-mcp"
+args = ["--account", "shun.tagami@ele-inc.com"]
+
+[mcp_servers.playwright.env]
+AGENT_BROWSER_HOST = "shun-tagami-mbp"
 
 [mcp_servers.playwright.tools.browser_click]
 approval_mode = "auto"
@@ -181,7 +185,10 @@ approval_mode = "auto"
 
 [mcp_servers.playwright-info]
 command = "/Users/shun.tagami/dotfiles/bin/playwright-mcp"
-args = ["--profile-dir-name", "Profile 7"]
+args = ["--account", "info@ele-inc.com"]
+
+[mcp_servers.playwright-info.env]
+AGENT_BROWSER_HOST = "shun-tagami-mbp"
 
 [mcp_servers.playwright-info.tools.browser_click]
 approval_mode = "auto"
