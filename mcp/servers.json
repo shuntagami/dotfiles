@@ -19,7 +19,13 @@
       "enabled": true,
       "type": "stdio",
       "command": "/Users/shun.tagami/dotfiles/bin/playwright-mcp",
-      "args": [],
+      "args": [
+        "--account",
+        "shun.tagami@ele-inc.com"
+      ],
+      "env": {
+        "AGENT_BROWSER_HOST": "shun-tagami-mbp"
+      },
       "codex": {
         "tools": {
           "browser_click": {
@@ -39,9 +45,12 @@
       "type": "stdio",
       "command": "/Users/shun.tagami/dotfiles/bin/playwright-mcp",
       "args": [
-        "--profile-dir-name",
-        "Profile 7"
+        "--account",
+        "info@ele-inc.com"
       ],
+      "env": {
+        "AGENT_BROWSER_HOST": "shun-tagami-mbp"
+      },
       "codex": {
         "tools": {
           "browser_click": {

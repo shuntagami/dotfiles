@@ -1,16 +1,27 @@
 #!/usr/bin/env python3
-"""Connect agents to an existing Chrome profile; never launch another browser."""
+"""Connect agents to the MacBook's normal Chrome, authenticated by its local Keychain."""
+import getpass
+import ctypes
 import json
 import os
 from pathlib import Path
 import re
 import shlex
 import shutil
+import signal
 import socket
+import socketserver
+import plistlib
+import stat
 import subprocess
 import sys
+import threading
+import time
 
-DEFAULT_HOST = "shun-tagami-mac-mini"
+DEFAULT_HOST = "shun-tagami-mbp"
+DEFAULT_ACCOUNT = "shun.tagami@ele-inc.com"
+KEYCHAIN_SERVICE = "Playwright Extension"
+KEYCHAIN_AGENT = "com.shuntagami.agent-browser-keychain"
 MCP_PACKAGE = "@playwright/mcp@0.0.82"
 EXTENSION_ID = "mmlmfjhmonkocbjadbfplnigmagldckm"
 EXTENSION_URL = "https://chromewebstore.google.com/detail/playwright-extension/" + EXTENSION_ID
@@ -48,34 +59,53 @@ def parse_options(args):
     """Prevent launcher flags or config files from overriding extension mode."""
     remaining = []
     profile = os.environ.get("PLAYWRIGHT_MCP_PROFILE_DIR_NAME")
+    account = os.environ.get("AGENT_BROWSER_ACCOUNT")
     i = 0
     while i < len(args):
         arg = args[i]
         key = arg.split("=", 1)[0]
         if key in LAUNCH_OPTIONS:
             raise ConfigurationError(f"{key} is not supported: this connection uses existing Chrome only.")
-        if key == "--profile-dir-name":
+        if key in ("--profile-dir-name", "--account"):
             if "=" in arg:
-                profile = arg.split("=", 1)[1]
+                value = arg.split("=", 1)[1]
             else:
                 i += 1
                 if i == len(args):
-                    raise ConfigurationError("--profile-dir-name needs a directory name.")
-                profile = args[i]
+                    raise ConfigurationError(f"{key} needs a value.")
+                value = args[i]
+            if key == "--profile-dir-name":
+                profile = value
+            else:
+                account = value
         else:
             remaining.append(arg)
         i += 1
     if profile is not None and (not profile or Path(profile).name != profile or profile in (".", "..")):
         raise ConfigurationError("Profile must be a directory name such as 'Profile 2', not a path.")
-    return profile, remaining
+    if profile and account:
+        raise ConfigurationError("Choose --account OR --profile-dir-name, not both.")
+    if account is not None and not re.fullmatch(r"[^\s@]+@[^\s@]+", account):
+        raise ConfigurationError("--account needs a Chrome account email address.")
+    return profile, account or (None if profile else DEFAULT_ACCOUNT), remaining
 
 
-def selected_profile(root, explicit=None):
+def selected_profile(root, explicit=None, account=None):
     try:
         profiles = json.loads((root / "Local State").read_text())["profile"]
     except (OSError, ValueError, KeyError) as exc:
         raise ConfigurationError("Cannot read normal Chrome profiles; open Chrome on the browser host first.") from exc
-    directory = explicit or profiles.get("last_used")
+    if account:
+        matches = [directory for directory, info in profiles.get("info_cache", {}).items()
+                   if info.get("user_name", "").casefold() == account.casefold()]
+        if len(matches) != 1:
+            raise ConfigurationError(
+                f"Expected one Chrome profile for {account}, found {len(matches)}. "
+                "Check the browser host's Chrome profiles or specify --profile-dir-name."
+            )
+        directory = matches[0]
+    else:
+        directory = explicit or profiles.get("last_used")
     if not directory or Path(directory).name != directory or directory in (".", ".."):
         raise ConfigurationError("Chrome has no valid last-used profile; select a profile in Chrome first.")
     info = profiles.get("info_cache", {}).get(directory)
@@ -101,12 +131,14 @@ def extension_installed(root, directory):
     return any((root / directory / "Extensions" / EXTENSION_ID).glob("*/manifest.json"))
 
 
-def ssh_command(host, command, profile, args):
+def ssh_command(host, command, profile, account, args):
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.@-]*", host):
         raise ConfigurationError("AGENT_BROWSER_HOST must be a local marker or an SSH host name.")
     remote_args = [command, "--local"]
     if profile:
         remote_args += ["--profile-dir-name", profile]
+    if account:
+        remote_args += ["--account", account]
     remote_args += args
     remote = 'exec "$HOME/dotfiles/bin/agent-browser" ' + shlex.join(remote_args)
     return [
@@ -115,8 +147,178 @@ def ssh_command(host, command, profile, args):
     ]
 
 
-def local_state(profile):
-    directory, email, name = selected_profile(chrome_root(), profile)
+def keychain_socket():
+    return Path.home() / "Library/Caches/agent-browser/keychain.sock"
+
+
+def install_keychain_service():
+    """Run Keychain operations in the logged-in user's audit session, not SSH's."""
+    destination = Path.home() / "Library/LaunchAgents" / f"{KEYCHAIN_AGENT}.plist"
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    definition = {"Label": KEYCHAIN_AGENT, "RunAtLoad": True, "KeepAlive": True,
+                  "ProgramArguments": [sys.executable, str(Path(__file__).resolve()), "serve-keychain", "--local"]}
+    content = plistlib.dumps(definition)
+    domain = f"gui/{os.getuid()}"
+    changed = not destination.exists() or destination.read_bytes() != content
+    if changed:
+        destination.write_bytes(content)
+        destination.chmod(0o600)
+        subprocess.run(["/bin/launchctl", "bootout", f"{domain}/{KEYCHAIN_AGENT}"], capture_output=True)
+    loaded = subprocess.run(["/bin/launchctl", "print", f"{domain}/{KEYCHAIN_AGENT}"], capture_output=True)
+    if loaded.returncode != 0:
+        result = subprocess.run(["/bin/launchctl", "bootstrap", domain, str(destination)], capture_output=True)
+        if result.returncode != 0:
+            raise ConfigurationError("Cannot start the MacBook login-session Keychain service. Log in on the MacBook and run agent-browser install-auth-service --local.")
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        if keychain_socket().exists():
+            return
+        time.sleep(0.1)
+    raise ConfigurationError("The MacBook login-session Keychain service did not start. Run agent-browser install-auth-service --local there.")
+
+
+def keychain_request(operation, directory, token=None):
+    if not keychain_socket().exists():
+        install_keychain_service()
+    request = {"operation": operation, "profile": directory}
+    if token is not None:
+        request["token"] = token
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+            connection.settimeout(15)
+            connection.connect(str(keychain_socket()))
+            connection.sendall(json.dumps(request).encode() + b"\n")
+            response = connection.makefile("rb").readline(4096)
+        result = json.loads(response)
+        if not isinstance(result, dict):
+            raise ValueError()
+    except (OSError, ValueError):
+        raise ConfigurationError("MacBook login-session Keychain service unavailable. Run agent-browser install-auth-service --local on the MacBook.") from None
+    if result.get("error"):
+        raise ConfigurationError("MacBook login-session Keychain access failed. Unlock the login Keychain on that Mac and retry.")
+    return result
+
+
+def security_read_token(directory):
+    return subprocess.run(
+        ["/usr/bin/security", "find-generic-password", "-s", KEYCHAIN_SERVICE,
+         "-a", directory, "-w"], capture_output=True, text=True, timeout=10,
+    )
+
+
+def security_store_token(directory, token):
+    # No secret in argv, logs, or files, including during SSH bootstrap.
+    return subprocess.run(
+        ["/usr/bin/security", "add-generic-password", "-U", "-s", KEYCHAIN_SERVICE,
+         "-a", directory, "-j", "Automatic Playwright connection for this Chrome profile", "-w"],
+        input=f"{token}\n{token}\n", capture_output=True, text=True, timeout=10,
+    )
+
+
+def trusted_peer(connection):
+    uid = ctypes.c_uint()
+    gid = ctypes.c_uint()
+    libc = ctypes.CDLL(None)
+    return libc.getpeereid(connection.fileno(), ctypes.byref(uid), ctypes.byref(gid)) == 0 and uid.value == os.getuid()
+
+
+def serve_keychain():
+    """Secret-free LaunchAgent with a private, same-user-only local socket."""
+    address = keychain_socket()
+    address.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    if address.parent.is_symlink() or address.parent.stat().st_uid != os.getuid():
+        raise ConfigurationError("Unsafe Keychain socket directory.")
+    address.parent.chmod(0o700)
+    if address.exists() or address.is_symlink():
+        existing = address.lstat()
+        if not stat.S_ISSOCK(existing.st_mode) or existing.st_uid != os.getuid():
+            raise ConfigurationError("Unsafe existing Keychain socket.")
+        address.unlink()
+
+    class Handler(socketserver.StreamRequestHandler):
+        def handle(self):
+            if not trusted_peer(self.request):
+                return
+            self.request.settimeout(15)
+            try:
+                request = json.loads(self.rfile.readline(4096))
+                directory = request["profile"]
+                if not isinstance(directory, str) or not directory or Path(directory).name != directory or directory in (".", ".."):
+                    raise ValueError()
+                selected_profile(chrome_root(), explicit=directory)
+                if request["operation"] == "read":
+                    result = security_read_token(directory)
+                    if result.returncode not in (0, 44):
+                        raise ValueError()
+                    response = {"token": result.stdout.strip() if result.returncode == 0 else None}
+                elif request["operation"] == "store":
+                    token = request["token"]
+                    if not isinstance(token, str) or not re.fullmatch(r"[A-Za-z0-9_-]{16,512}", token):
+                        raise ValueError()
+                    if security_store_token(directory, token).returncode != 0:
+                        raise ValueError()
+                    response = {"stored": True}
+                else:
+                    raise ValueError()
+            except (ValueError, KeyError, TypeError, OSError, ConfigurationError, subprocess.SubprocessError):
+                # Never echo requests, tokens, Keychain output, or exception details.
+                response = {"error": True}
+            self.wfile.write(json.dumps(response).encode() + b"\n")
+
+    with socketserver.UnixStreamServer(str(address), Handler) as server:
+        address.chmod(0o600)
+        server.serve_forever()
+
+
+def keychain_token(directory):
+    result = security_read_token(directory)
+    if result.returncode == 36:  # SSH audit session cannot use the GUI login Keychain.
+        token = keychain_request("read", directory).get("token")
+        if token is None:
+            return None
+    elif result.returncode == 44:  # errSecItemNotFound
+        return None
+    elif result.returncode != 0:
+        raise ConfigurationError("Cannot read the browser host's Keychain. Unlock its login Keychain and retry.")
+    else:
+        token = result.stdout.strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{16,512}", token):
+        raise ConfigurationError("Invalid Playwright token in Keychain. Run agent-browser setup-auth again.")
+    return token
+
+
+def setup_auth(directory):
+    token = getpass.getpass("Playwright Extension token: ") if sys.stdin.isatty() else sys.stdin.read().strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{16,512}", token):
+        raise ConfigurationError("Invalid token. Copy the value from this Chrome profile's Playwright Extension status page.")
+    result = security_store_token(directory, token)
+    if result.returncode == 36:
+        if keychain_request("store", directory, token).get("stored") is not True:
+            raise ConfigurationError("MacBook Keychain did not confirm token registration.")
+    elif result.returncode != 0:
+        raise ConfigurationError("Could not save the token. Unlock the browser host's login Keychain and retry.")
+    print(f"Playwright token saved in this machine's Keychain for {directory}.", file=sys.stderr)
+
+
+def ensure_chrome_running(directory):
+    if chrome_running():
+        return
+    # Launch the NORMAL Chrome profile, without a separate user-data-dir/process.
+    result = subprocess.run(
+        ["/usr/bin/open", "-a", "Google Chrome", "--args", f"--profile-directory={directory}"],
+        capture_output=True, text=True,
+    )
+    if result.returncode == 0:
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            if chrome_running():
+                return
+            time.sleep(0.2)
+    raise ConfigurationError("Could not start normal Chrome on the browser host. Open Chrome there and retry.")
+
+
+def local_state(profile, account=None):
+    directory, email, name = selected_profile(chrome_root(), profile, account)
     return {
         "browser_host": socket.gethostname(),
         "mode": "existing-chrome-extension",
@@ -126,7 +328,67 @@ def local_state(profile):
         "chrome_running": chrome_running(),
         "extension_installed": extension_installed(chrome_root(), directory),
         "paused": pause_file().exists(),
+        "automatic_connection": keychain_token(directory) is not None,
     }
+
+
+def forward_redacted(source, destination, secret):
+    """MCP messages are newline-delimited JSON; replacement preserves their framing."""
+    for line in iter(source.readline, b""):
+        destination.write(line.replace(secret, b"***"))
+        destination.flush()
+
+
+def run_mcp(launch, environment):
+    # Playwright includes its token-bearing connect URL in tool replies when Chrome has no
+    # existing tabs. Keep that credential out of MCP results and diagnostic output as well.
+    secret = environment["PLAYWRIGHT_MCP_EXTENSION_TOKEN"].encode()
+    child = subprocess.Popen(launch, env=environment, stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             start_new_session=True)
+
+    def stop_child(signum, frame):
+        if child.poll() is None:
+            try:
+                os.killpg(child.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+
+    def forward_input():
+        try:
+            for line in iter(sys.stdin.buffer.readline, b""):
+                child.stdin.write(line)
+                child.stdin.flush()
+        except (BrokenPipeError, OSError):
+            pass
+        finally:
+            try:
+                child.stdin.close()
+            except OSError:
+                pass
+
+    handlers = {kind: signal.signal(kind, stop_child)
+                for kind in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)}
+    threading.Thread(target=forward_input, daemon=True).start()
+    diagnostics = threading.Thread(target=forward_redacted,
+                                   args=(child.stderr, sys.stderr.buffer, secret), daemon=True)
+    diagnostics.start()
+    try:
+        forward_redacted(child.stdout, sys.stdout.buffer, secret)
+        result = child.wait()
+        diagnostics.join(timeout=2)
+        return result
+    finally:
+        stop_child(signal.SIGTERM, None)
+        try:
+            child.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            os.killpg(child.pid, signal.SIGKILL)
+            child.wait()
+        child.stdout.close()
+        child.stderr.close()
+        for kind, handler in handlers.items():
+            signal.signal(kind, handler)
 
 
 def main(argv=None):
@@ -135,6 +397,11 @@ def main(argv=None):
     local = bool(args and args[0] == "--local")
     if local:
         args.pop(0)
+    if command == "serve-keychain":
+        if not local or args:
+            raise ConfigurationError("serve-keychain is a local LaunchAgent entry point.")
+        serve_keychain()
+        return 0
     if command in ("pause", "resume"):
         if args:
             raise ConfigurationError(f"{command} takes no arguments and affects only this machine.")
@@ -146,44 +413,66 @@ def main(argv=None):
             marker.unlink(missing_ok=True)
         print(f"agent-browser: new connections on this machine are {'paused' if command == 'pause' else 'enabled'}.", file=sys.stderr)
         return 0
-    if command not in ("mcp", "status"):
+    if command not in ("mcp", "status", "setup-auth", "install-auth-service"):
         raise ConfigurationError(
-            "Usage: agent-browser {status|pause|resume}. "
-            "Legacy up/down/endpoint commands are retired; Chrome is no longer launched or killed."
+            "Usage: agent-browser {status|setup-auth|pause|resume|mcp} [--account EMAIL | --profile-dir-name DIR]."
         )
-    profile, remaining = parse_options(args)
+    profile, account, remaining = parse_options(args)
     if command == "mcp" and pause_file().exists():
         raise ConfigurationError(f"Paused ({pause_file()}); use agent-browser resume when ready.")
     host = os.environ.get("AGENT_BROWSER_HOST", DEFAULT_HOST)
     if not local and not is_local(host):
         # Keep stdio attached to SSH: no CDP port, daemon, or local fallback.
-        os.execv("/usr/bin/ssh", ssh_command(host, command, profile, remaining))
-    state = local_state(profile)
+        os.execv("/usr/bin/ssh", ssh_command(host, command, profile, account, remaining))
+    if command == "install-auth-service":
+        install_keychain_service()
+        print("MacBook login-session Keychain service ready; socket accessible only to this user.", file=sys.stderr)
+        return 0
+    if command == "setup-auth":
+        if remaining:
+            raise ConfigurationError("setup-auth does not accept MCP arguments.")
+        directory, _, _ = selected_profile(chrome_root(), profile, account)
+        if not extension_installed(chrome_root(), directory):
+            raise ConfigurationError("Install Playwright Extension in the selected Chrome profile before setup-auth.")
+        setup_auth(directory)
+        return 0
+    state = local_state(profile, account)
     if command == "status":
         print(json.dumps(state, ensure_ascii=False, indent=2))
         return 0
-    if not state["chrome_running"]:
-        raise ConfigurationError("Normal Chrome is not running on the browser host. Open it and retry; no browser was launched.")
     if not state["extension_installed"]:
         raise ConfigurationError(
             f"Playwright Extension is missing in {state['profile_directory']} ({state['account']}). "
             f"Install it in that profile: {EXTENSION_URL}"
         )
+    if not state["automatic_connection"]:
+        raise ConfigurationError(
+            f"No Playwright token in Keychain on {state['browser_host']} for {state['profile_directory']}. "
+            "On that Mac, open the selected profile's Playwright Extension status page and run "
+            "agent-browser setup-auth --local with the same --account or --profile-dir-name. "
+            "Paste the token into the terminal prompt, never into chat."
+        )
+    ensure_chrome_running(state["profile_directory"])
     environment = dict(os.environ)
     for key in LAUNCH_ENV:
         environment.pop(key, None)
+    # Always use THIS host/profile's item; never reuse a caller's token for another profile.
+    token = keychain_token(state["profile_directory"])
+    if token is None:
+        raise ConfigurationError("The selected profile's Keychain token disappeared. Run setup-auth and retry.")
+    environment["PLAYWRIGHT_MCP_EXTENSION_TOKEN"] = token
     environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + environment.get("PATH", "/usr/bin:/bin")
     npx = shutil.which("npx", path=environment["PATH"])
     if not npx:
         raise ConfigurationError("npx is not installed on the browser host.")
     print(
         f"playwright-mcp: existing Chrome on {state['browser_host']}, "
-        f"{state['profile_directory']} ({state['account']}); approve/select tabs in Chrome.",
+        f"{state['profile_directory']} ({state['account']}); automatic connection via local Keychain.",
         file=sys.stderr,
     )
     launch = [npx, "-y", MCP_PACKAGE, "--extension", "--browser", "chrome",
               "--profile-dir-name", state["profile_directory"], *remaining]
-    os.execvpe(npx, launch, environment)
+    return run_mcp(launch, environment)
 
 
 if __name__ == "__main__":

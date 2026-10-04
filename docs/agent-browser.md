@@ -1,114 +1,93 @@
-# 普段の Chrome に接続する
+# MacBook の普段の Chrome を操作する
 
-ブラウザ操作は **Mac mini で開いている通常の Chrome** に、Playwright Extension 経由で接続する。
-MacBook からも SSH の鍵認証設定後は同じ Chrome を使える。別の Chrome プロセスや自動操作用プロファイルを起動しない。
+通常のブラウザ操作は **MacBook の Chrome** を使う。エージェントが Mac mini で動いていても接続先は MacBook。ユーザーが明示した場合だけ Mac mini を使う。
 
 ```text
-Mac mini のエージェント ───────────────┐
-                                    ├─ Mac mini の Playwright MCP --extension
-MacBook のエージェント ─ SSH/stdio ─┘       └─ 通常 Chrome の選択したプロファイル
+Mac mini のエージェント ─ SSH/stdio ─┐
+                                   ├─ MacBook の Playwright MCP --extension
+MacBook のエージェント ─────────────┘     └─ 普段の Chrome / アカウント指定
 ```
 
-Playwright MCP は `@playwright/mcp@0.0.82` に固定している。接続ごとに独立した MCP プロセスを使う。
-Chrome 拡張機能はエージェントごとにタブグループを分ける。同じタブを複数の接続に渡さない。
-Cookie・ログイン状態はその Chrome プロファイルで共有される。
+接続先の既定値は `shun-tagami-mbp`。MCP の原本 `mcp/servers.json` にもホストを明記し、`bin/agent-browser` が SSH またはローカル実行を選ぶ。Playwright MCP は `@playwright/mcp@0.0.82` に固定する。
 
-## 最初のセットアップ
+## 普段の操作
 
-1. Mac mini の通常 Chrome で、使いたいプロファイルを開く。
-2. そのプロファイルに [Playwright Extension](https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm) を入れる。
-   拡張機能が求めるサイト・タブの操作権限を確認して許可する。
-3. `info@ele-inc.com` も使うなら、そのプロファイルにも拡張機能を入れる。
-4. 両 Mac にこの版の `bin/agent-browser` と `bin/playwright-mcp` を反映する。
-5. MCP の登録は `mcp/servers.json` を原本とし、`node mcp/sync-mcp.mjs` で各クライアントに反映する。
-6. 一時停止中なら **両 Mac で** `agent-browser resume` を実行する。
-7. エージェントの新しいセッションでブラウザツールを使い、Chrome に出る接続・タブ選択画面を操作する。
+新しい作業では、エージェントが `browser_tabs` の `action: "new"` と目的の URL で作業用タブを開く。ユーザーがタブ一覧から無関係なページを選ぶ必要はない。接続先を判断できない場合はまず `agent-browser status` の `browser_host` と `account` を確認する。
 
-通常 Chrome が閉じている、プロファイルや拡張機能が無い、Mac mini に SSH できない場合は
-理由を表示して失敗する。別のブラウザや他のマシンへの自動フォールバックはしない。
-拡張機能がインストール済みでも無効なら、Chrome で有効化して接続を再試行する。
+| MCP 名 | 接続先 | Chrome アカウント |
+|---|---|---|
+| `playwright` | MacBook | `shun.tagami@ele-inc.com` |
+| `playwright-info` | MacBook | `info@ele-inc.com` |
 
-## どのプロファイルを使うか
-
-| MCP 名 | 選択 |
-|---|---|
-| `playwright` | Mac mini の通常 Chrome が最後に使ったプロファイル |
-| `playwright-info` | `Profile 7`（現在の `info@ele-inc.com`）を明示指定 |
-
-通常は ELE（`shun.tagami@ele-inc.com`、現在の `Profile 8`）を開いてから接続する。
-選択は **MCP プロセスの起動時** に通常 Chrome の `Local State` から読み取り、
-`--profile-dir-name` で固定する。操作中に別のウィンドウを前面に出しても接続先は変わらない。
-プロフィールを切り替えたら MCP 接続を作り直す。接続先は stderr と `status` で確認できる。
+`--account` は Chrome の `Local State` に記録されたメールアドレスからプロファイルを一意に選ぶ。最後に使ったプロファイルや、マシンごとに異なる `Profile 2` / `Profile 8` には依存しない。該当がない・複数ある場合は理由を表示して停止する。明示的に選びたい場合は `--profile-dir-name` を使う（`--account` と併用不可）。
 
 ```sh
 agent-browser status
-agent-browser status --profile-dir-name 'Profile 7'
-PLAYWRIGHT_MCP_PROFILE_DIR_NAME='Profile 8' playwright-mcp
+agent-browser status --account info@ele-inc.com
+# Mac mini が明示された作業だけ
+AGENT_BROWSER_HOST=shun-tagami-mac-mini agent-browser status
+# 実行しているマシン自体を診断する場合
+agent-browser status --local
 ```
 
-プロファイルを作り直してディレクトリ名が変わった場合は、
-`agent-browser status` と Chrome の表示を照合し、`mcp/servers.json` の
-`playwright-info.args` を更新して再同期する。
+## 初回の認証設定
 
-## MacBook からの接続
-
-既定のブラウザホストは `shun-tagami-mac-mini`。同名の Mac mini 上では直接起動し、
-それ以外では SSH で Mac mini 上の同じスクリプトを実行する。
-MacBook から使う場合は、Tailscale 経由で Mac mini に鍵認証で SSH 接続できることが必要。
-`ssh -o BatchMode=yes shun-tagami-mac-mini hostname` で確認する。
+1. MacBook の対象アカウントの Chrome に [Playwright Extension](https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm) を入れる。
+2. 拡張機能の status ページを開き、`PLAYWRIGHT_MCP_EXTENSION_TOKEN=` の **値だけ**をコピーする。
+3. **MacBook のターミナル**で次を実行し、非表示の入力欄へ貼り付ける。
 
 ```sh
-# MacBook で実行しても、Mac mini 上のプロファイル状態を表示する
+~/dotfiles/bin/agent-browser setup-auth --local --account shun.tagami@ele-inc.com
+# info アカウントを使う場合は、そのプロファイルの別のトークンを登録する
+~/dotfiles/bin/agent-browser setup-auth --local --account info@ele-inc.com
+```
+
+トークンは macOS キーチェーンの service `Playwright Extension`、account は選ばれたプロファイルのディレクトリ名で保存する。MCP 起動時に **ブラウザを操作するマシン自身**のキーチェーンから読み込む。値を設定ファイル・Git・SSH コマンド引数・ログへ保存しない。別プロファイルや送信元マシンのトークンを使い回さない。
+
+SSH の実行環境からログインキーチェーンを使うと `User interaction is not allowed` になる場合がある。その場合は MacBook のログイン環境で動く `com.shuntagami.agent-browser-keychain` LaunchAgent に読み書きを依頼する。初回に自動登録するが、診断・再登録は `agent-browser install-auth-service --local` で行える。
+
+サービスの定義に認証情報は入らない。通信は `~/Library/Caches/agent-browser/keychain.sock` のローカル Unix ソケットのみ。ディレクトリは `0700`、ソケットは `0600` とし、接続元の UID も確認する。読み書きできるのは `Playwright Extension` service の、存在する Chrome プロファイルの項目だけ。トークンはリクエストや応答のログに出さない。
+
+これは対象 Chrome プロファイルへの継続的な操作アクセスを認める設定。拡張機能でトークンを再生成した場合は `setup-auth` でキーチェーンも更新する。未登録なら手順を表示して直ちに停止し、承認画面を開いたまま無言で待たない。
+
+Chrome のタブがすべて閉じられていた場合など、Playwright が接続用 URL をツールの応答に含めることがある。ラッパは MCP の応答と診断出力に含まれる登録トークンを `***` に置き換える。認証用の環境変数は子プロセスに渡すが、ユーザーやエージェントへの応答に値を返さない。
+
+## 起動・接続
+
+対象の通常 Chrome が閉じている場合、ラッパが `open -a "Google Chrome" --args --profile-directory=…` で起動する。別の `--user-data-dir` や自動操作用 Chrome プロセスは作らない。スリープ中・SSH 到達不能・拡張機能が未導入なら、その理由を解決する。別のマシンやプロファイルへ自動フォールバックしない。
+
+```sh
+ssh -o BatchMode=yes shun-tagami-mbp hostname
 agent-browser status
-
-# 必要な場合だけホストを明示する
-AGENT_BROWSER_HOST=local agent-browser status
-AGENT_BROWSER_HOST=shun-tagami-mac-mini playwright-mcp
 ```
 
-SSH の stdin/stdout が MCP の通信になる。`9222` 番ポートの公開・転送や常設トンネルは不要。
-Mac mini がスリープ中・到達不能なら接続できない。MCP の起動に失敗したときは
-表示された SSH の理由を解決して再接続する。
+SSH の stdin/stdout が MCP の通信になる。`9222` 番ポートの公開・常設トンネルは不要。ブラウザから見た `localhost` とアップロード・ダウンロード先は **MacBook**。Mac mini のファイルを添付する場合は、必要なものだけを MacBook の `~/.playwright-mcp/` などの許可された場所へコピーする。
 
-ブラウザから見た `localhost` とアップロード・ダウンロード先は **Mac mini**。
-MacBook の開発サーバーは Tailscale で到達できるアドレスを使うか、必要なアプリのポートだけを
-別途転送する。ローカルファイルを自動で両 Mac 間コピーする機能はない。
+拡張機能経由で `browser_file_upload` が `DOM.setFileInputFiles: Not allowed` になる場合は、ファイル選択をキャンセルし、`browser_drop` で同じファイルを添付欄へ渡す。別ブラウザへ切り替えず、添付後にプレビューの画像表示を確認する。
 
-## 一時停止と診断
+## 接続画面が出たとき
+
+自動認証が設定済みなら、毎回の `Allow & select` は不要。画面が出たら、エージェントはすぐに「接続設定の画面」「MacBook のどのアカウントか」「何をする必要があるか」を説明し、対象プロファイルとキーチェーンを確認する。無関係なタブの選択を求めたり、タイムアウトまで無言で待ったりしない。
+
+## 一時停止と設定反映
 
 ```sh
-agent-browser pause    # このマシンからの新しい接続を止める
-agent-browser status   # 実際のブラウザホスト・アカウント・拡張機能・停止状態
-agent-browser resume   # このマシンの新しい接続を許可する
+agent-browser pause
+agent-browser resume
+agent-browser status
+node ~/dotfiles/mcp/sync-mcp.mjs
 ```
 
-停止ファイルは `${XDG_CONFIG_HOME:-~/.config}/agent-browser/paused`。
-`pause` は既存接続を切断しない。稼働中の接続は拡張機能の接続一覧またはエージェント側で閉じる。
-送信元と Mac mini のどちらかが停止中なら MCP は起動しない。
-`status` はブラウザホストの状態を表示するため、送信元の停止ファイルは別途確認する。
+`pause` / `resume` は実行したマシンからの新しい接続を制御する。送信元と MacBook のどちらかに停止ファイル `${XDG_CONFIG_HOME:-~/.config}/agent-browser/paused` があれば MCP は起動しない。既存接続の切断は拡張機能の status ページから行う。
 
-接続トークンをコードや設定ファイルに保存しない構成。通常の接続承認画面を使う。
-`PLAYWRIGHT_MCP_EXTENSION_TOKEN` はプロファイル固有であり、このラッパは SSH コマンドや
-ログに転送しない。別のプロファイルのトークンを使い回さない。
-
-## 旧構成からの変更
-
-- `agent-browser up/down/endpoint` は廃止。ブラウザの起動・終了を管理しない。
-- `AGENT_BROWSER_PORT/MODE/PROFILE/AUTO/START_BUDGET` による旧 CDP 起動・切り替えは廃止。
-- `--cdp-endpoint`、`--user-data-dir`、`--isolated` など接続方式を変更する引数は受け付けない。
-- 旧 `~/Library/Application Support/agent-browser/Chrome` のデータは自動削除・コピーしない。
-- 普段の Chrome の既定ブラウザ設定や `gh` の開き先を変更する必要はない。
-
-過去の構成は同じ `Google Chrome.app` を別データ領域で起動していたため、
-macOS の外部リンクが自動操作用プロセスへ渡る問題があった。
-既存 Chrome への拡張機能接続に統一して、この二重起動をなくす。
+MCP 設定を反映した後はエージェントの新しいセッションを開始する。共通のブラウザ操作指示は `codex/AGENTS.md`（`~/.codex/AGENTS.md` へリンク）に置く。
 
 ## 検証
 
 ```sh
+python3 ~/dotfiles/scripts/test_agent_browser.py
 agent-browser status
-agent-browser status --profile-dir-name 'Profile 7'
-bash -n bin/playwright-mcp
+bash -n ~/dotfiles/bin/playwright-mcp
 ```
 
 [Playwright Extension の公式説明](https://github.com/microsoft/playwright/tree/main/packages/extension)
