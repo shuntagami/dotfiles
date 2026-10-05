@@ -45,13 +45,14 @@ function viewerRunning() {
 function main() {
   const flags = process.argv.slice(2);
   if (flags.includes('--help')) {
-    console.log('Usage: node scripts/jump-desktop-display.mjs [--check | --quit | --deploy]\n'
+    console.log('Usage: node scripts/jump-desktop-display.mjs [--check | --fix | --quit | --deploy]\n'
       + 'Default: apply while Jump Desktop is closed. --check: inspect only.\n'
+      + '--fix: reapply Single Virtual Display and Fit In Window to the live connection.\n'
       + '--quit: quit and reopen the viewer to apply (disconnects sessions).\n'
       + '--deploy: skip if the viewer is running or the connection is not registered.');
     return;
   }
-  if (flags.length > 1 || flags.some(flag => !['--check', '--quit', '--deploy'].includes(flag))) {
+  if (flags.length > 1 || flags.some(flag => !['--check', '--fix', '--quit', '--deploy'].includes(flag))) {
     throw new Error('Invalid arguments; use --help.');
   }
   if (process.platform !== 'darwin') {
@@ -61,6 +62,14 @@ function main() {
   const policyPath = fileURLToPath(new URL('../misc/jump-desktop/display.json', import.meta.url));
   const policy = JSON.parse(fs.readFileSync(policyPath, 'utf8'));
   validatePolicy(policy);
+  if (flags.includes('--fix')) {
+    const script = fileURLToPath(new URL('./jump-desktop-display-fix.applescript', import.meta.url));
+    const output = execFileSync('/usr/bin/osascript', [script, policy.displayName], {
+      encoding: 'utf8', timeout: 30000,
+    });
+    console.log(output.trim());
+    return;
+  }
   const serversDir = path.join(os.homedir(), 'Documents/JumpDesktop/Viewer/Servers');
   const findTarget = () => {
     const entries = fs.existsSync(serversDir) ? fs.readdirSync(serversDir) : [];

@@ -36,6 +36,9 @@ Mac mini が一覧に現れたら、`Fluid` と表示された接続を使う。
 上記は Jump Desktop 9.1.9 のメニュー名。仮想ディスプレイの切り替えで
 接続ウィンドウが作り直された場合は、対象モニター上で再度全画面表示にする。
 
+Jump Desktop 10では `Display > Single Virtual Display` で仮想ディスプレイ
+1枚・解像度追従・Retinaをまとめて設定できる。
+
 ### 27インチモニターでローカルと同じ表示サイズにする
 
 表示設定は `misc/jump-desktop/display.json` で管理する。接続元のMacで
@@ -73,6 +76,37 @@ Mac mini 側で `res.27` が `cannot be set to 3008x1692` を返す場合、
 解像度を選ぶだけなので、先に Jump Desktop 側で上記の設定を行う。
 接続中の解像度は Jump Desktop の追従機能で揃えられるため、通常は
 Mac mini 側で `res.27` を実行する必要はない。
+
+### 接続中の文字が小さくなったとき
+
+`jump-display-check` は保存ファイルだけを検査する。差分がなくても、接続中の
+解像度や表示倍率まで正しいとは限らない。既存の設定適用スクリプトは
+常駐監視ではなく、接続中の表示を自動で修復するものでもない。
+
+Jump Desktop 10では、次を接続中に行う。
+
+MacBookのターミナルからは `jump-display-fix` で、以下の1・2をまとめて実行できる。
+接続名は `misc/jump-desktop/display.json` を使い、アプリの再起動や接続切断は行わない。
+全画面で実行した場合は全画面表示を維持する。初回はmacOSからターミナル等の
+「System Events」操作・アクセシビリティの許可を求められる場合がある。
+alias未読み込みの場合は `source ~/dotfiles/zsh/mac.zsh` を実行するか、
+`node ~/dotfiles/scripts/jump-desktop-display.mjs --fix` を直接使う。
+
+1. `Display > Single Virtual Display` をもう一度選び、自動追従を再適用する。
+2. `View > Fit In Window` を選ぶ。
+3. 全画面で使う場合は、対象モニターで `View > Fullscreen` にする。
+4. `Display` の `Active Displays` にある仮想ディスプレイの解像度を確認する。
+
+2026-10-05、MacBookの1920×1080外部モニターと内蔵Retina画面のミラーリング中、
+保存設定はすべて一致していたが、接続中は `Display 2 (3840x2032) Virtual`
+だった。`Single Virtual Display` の再適用で `1920x1016` に変わった。
+これはウィンドウ表示での値で、タイトルバーなどの分だけ縦が短い。
+Retina画面では描画ピクセル数が見かけのサイズの2倍になる場合があるため、
+解像度の数字だけで文字の大きさを判断せず、実際の表示も確認する。
+モニター切り替え・ミラーリングが今回のずれを引き起こしたかは未確定。
+
+公式の設定説明:
+[Use virtual displays on Windows and Mac](https://docs.jumpdesktop.com/viewer/virtual-displays/windows-mac/)
 
 ### 音声入力
 
