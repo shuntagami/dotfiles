@@ -7,7 +7,7 @@ const HELP = `  display os version
 
   $ os
   Ubuntu 17.04 zesty
-  macOS 26.0 Tahoe`;
+  macOS 27.0 Golden Gate`;
 
 if (process.argv[2] === '-h') {
   console.log(HELP);
@@ -41,7 +41,7 @@ if (/Darwin/.test(uname)) {
   const versionStr = execSync('sw_vers -productVersion', { encoding: 'utf8' }).trim();
   const [major, minor] = versionStr.split('.').map(Number);
 
-  const macosNames = { 26: 'Tahoe', 15: 'Sequoia', 14: 'Sonoma', 13: 'Ventura', 12: 'Monterey', 11: 'Big Sur' };
+  const macosNames = { 27: 'Golden Gate', 26: 'Tahoe', 15: 'Sequoia', 14: 'Sonoma', 13: 'Ventura', 12: 'Monterey', 11: 'Big Sur' };
   const mac10Names = { 15: 'Catalina', 14: 'Mojave', 13: 'High Sierra', 12: 'Sierra', 11: 'El Capitan', 10: 'Yosemite' };
 
   // Unknown (newer) majors print the version only rather than a wrong codename.
