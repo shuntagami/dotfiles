@@ -44,13 +44,12 @@ if (/Darwin/.test(uname)) {
   const macosNames = { 26: 'Tahoe', 15: 'Sequoia', 14: 'Sonoma', 13: 'Ventura', 12: 'Monterey', 11: 'Big Sur' };
   const mac10Names = { 15: 'Catalina', 14: 'Mojave', 13: 'High Sierra', 12: 'Sierra', 11: 'El Capitan', 10: 'Yosemite' };
 
+  // Unknown (newer) majors print the version only rather than a wrong codename.
   let name;
-  if (major >= 26) name = 'Tahoe';
-  else if (macosNames[major]) name = macosNames[major];
+  if (macosNames[major]) name = macosNames[major];
   else if (major === 10) name = mac10Names[minor] || 'Unknown';
-  else name = 'Unknown';
 
-  console.log(`${productName} ${versionStr} ${name}`);
+  console.log(`${productName} ${versionStr}${name ? ' ' + name : ''}`);
   process.exit(0);
 }
 
