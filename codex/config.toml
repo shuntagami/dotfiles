@@ -167,6 +167,9 @@ enabled = true
 [plugins."visualize@openai-bundled"]
 enabled = true
 
+[plugins."code-review@openai-bundled"]
+enabled = true
+
 [mcp_servers.playwright]
 command = "/Users/shun.tagami/dotfiles/bin/playwright-mcp"
 args = ["--account", "shun.tagami@ele-inc.com"]
@@ -213,16 +216,16 @@ NODE_REPL_NODE_MODULE_DIRS = "/Applications/ChatGPT.app/Contents/Resources/cua_n
 NODE_REPL_NODE_PATH = "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node"
 NODE_REPL_TRUSTED_CODE_PATHS = "/Users/shun.tagami/.codex:/Applications/ChatGPT.app/Contents/Resources/cua_node/lib/node_modules"
 CODEX_HOME = "/Users/shun.tagami/.codex"
-BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
+BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab,mcpapps"
 BROWSER_USE_TINYSKY_ENABLED = "1"
 NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = ""
 NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = ""
 NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE = ""
 BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
-BROWSER_USE_CODEX_APP_VERSION = "26.915.31945"
-NODE_REPL_TRUSTED_SERVICES = '{"browser":"/Users/shun.tagami/.codex/plugins/cache/openai-bundled/browser/26.915.31945/scripts/browser-service.mjs","sky":"@oai/sky/service"}'
+BROWSER_USE_CODEX_APP_VERSION = "26.1002.52244"
+NODE_REPL_TRUSTED_SERVICES = '{"browser":"/Users/shun.tagami/.codex/plugins/cache/openai-bundled/browser/26.1002.52244/scripts/browser-service.mjs","sky":"@oai/sky/service"}'
 SKY_CUA_SERVICE_PATH = "/Users/shun.tagami/.codex/computer-use/Codex Computer Use.app"
-CODEX_CLI_PATH = "/Applications/ChatGPT.app/Contents/Resources/codex"
+CODEX_CLI_PATH = "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
 
 [mcp_servers.openaiDeveloperDocs]
 url = "https://developers.openai.com/mcp"
@@ -233,13 +236,13 @@ args = ["mcp"]
 cwd = "."
 enabled = false
 
-[marketplaces.openai-bundled]
-source_type = "local"
-source = "/Users/shun.tagami/.codex/.tmp/bundled-marketplaces/openai-bundled"
-
 [marketplaces.openai-primary-runtime]
 source_type = "local"
 source = "/Users/shun.tagami/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
+
+[marketplaces.openai-bundled]
+source_type = "local"
+source = "/Users/shun.tagami/.codex/.tmp/bundled-marketplaces/openai-bundled"
 
 [desktop]
 conversationDetailMode = "STEPS_PROSE"
@@ -250,6 +253,8 @@ preventSleepWhileRunning = true
 show-context-window-usage = true
 followUpQueueMode = "queue"
 dock-icon-preference = "app-default"
+toys-confetti-enabled = true
+toys-audio-visualizer-enabled = true
 
 [desktop.open-in-target-preferences]
 global = "cursor"
