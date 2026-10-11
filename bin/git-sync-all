@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # git-sync-all [run [root...] | install [interval_sec] | uninstall | status]
 #
-# Runs `git-sync` (fetch + ff-pull default branch + rebase every worktree
+# Runs `git-sync` (fetch + ff-pull default branch + merge into every worktree
 # onto it) once per distinct repo found under one or more root directories.
 # Finds every `.git` (dir or file - a worktree's is a file) under each root,
 # resolves it to that repo's actual main worktree via `git worktree list`,
@@ -42,6 +42,43 @@ find_git_entries() {
     -name .git -print -prune 2>/dev/null
 }
 
+# ELE_WORKSPACE_SYNC_DISPATCH: use the company's allowlist/status backend.
+# Keep the existing home-wide scheduler for personal repositories.
+find_ele_workspace() {
+  local candidate="$1" origin_url
+  while [[ "$candidate" != / ]]; do
+    if [[ -f "$candidate/repositories.json" && -f "$candidate/scripts/sync-repositories.mjs" ]]; then
+      origin_url=$(git -C "$candidate" config --get remote.origin.url 2>/dev/null || true)
+      case "$origin_url" in
+        https://github.com/ele-inc/ele-workspace|https://github.com/ele-inc/ele-workspace.git|git@github.com:ele-inc/ele-workspace|git@github.com:ele-inc/ele-workspace.git)
+          printf '%s\n' "$candidate"
+          return 0
+          ;;
+      esac
+    fi
+    candidate=$(dirname "$candidate")
+  done
+  return 1
+}
+
+workspace_node() {
+  local node_path
+  node_path=$(command -v node 2>/dev/null || true)
+  if [[ -n "$node_path" && -x "$node_path" ]]; then
+    printf '%s\n' "$node_path"
+    return 0
+  fi
+  # launchd does not load the interactive shell's Homebrew PATH.
+  for node_path in /opt/homebrew/bin/node /usr/local/bin/node; do
+    if [[ -x "$node_path" ]]; then
+      printf '%s\n' "$node_path"
+      return 0
+    fi
+  done
+  echo '[git-sync-all] Node.js 20+ is required for the ELE workspace; install Node.js and retry.' >&2
+  return 1
+}
+
 run_sync() {
   local roots=("$@")
   # launchd appends to $LOG_FILE forever; keep the newest ~1MB.
@@ -52,7 +89,7 @@ run_sync() {
     roots=("${GIT_SYNC_ROOT:-$HOME}")
   fi
 
-  local root git_entry wt_path main_wt mains=""
+  local root git_entry wt_path main_wt workspace_root mains="" workspaces=""
   for root in "${roots[@]}"; do
     root="${root/#\~/$HOME}"
     if [[ ! -d "$root" ]]; then
@@ -61,9 +98,24 @@ run_sync() {
     fi
     while IFS= read -r git_entry; do
       wt_path=$(dirname "$git_entry")
-      main_wt=$(git -C "$wt_path" worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}') || continue
+      main_wt=$(git -C "$wt_path" worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p' | head -1) || continue
+      if [[ -n "$main_wt" ]]; then
+        workspace_root=$(find_ele_workspace "$main_wt") || workspace_root=""
+        if [[ -n "$workspace_root" ]]; then
+          workspaces="$workspaces$workspace_root"$'\n'
+          continue
+        fi
+      fi
       [[ -n "$main_wt" ]] && mains="$mains$main_wt"$'\n'
     done < <(find_git_entries "$root")
+  done
+
+  printf '%s' "$workspaces" | sort -u | while IFS= read -r workspace_root; do
+    [[ -n "$workspace_root" ]] || continue
+    local node_path
+    node_path=$(workspace_node) || continue
+    "$node_path" "$workspace_root/scripts/sync-repositories.mjs" run --notify \
+      || echo "[git-sync-all] workspace sync failed (exit $?): $workspace_root" >&2
   done
 
   printf '%s' "$mains" | sort -u | while IFS= read -r main_wt; do
