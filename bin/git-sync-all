@@ -114,7 +114,8 @@ run_sync() {
     [[ -n "$workspace_root" ]] || continue
     local node_path
     node_path=$(workspace_node) || continue
-    "$node_path" "$workspace_root/scripts/sync-repositories.mjs" run --notify
+    "$node_path" "$workspace_root/scripts/sync-repositories.mjs" run --notify \
+      || echo "[git-sync-all] workspace sync failed (exit $?): $workspace_root" >&2
   done
 
   printf '%s' "$mains" | sort -u | while IFS= read -r main_wt; do
