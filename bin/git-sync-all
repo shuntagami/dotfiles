@@ -47,7 +47,7 @@ find_git_entries() {
 find_ele_workspace() {
   local candidate="$1" origin_url
   while [[ "$candidate" != / ]]; do
-    if [[ -f "$candidate/repositories.json" && -f "$candidate/scripts/sync-repositories.py" ]]; then
+    if [[ -f "$candidate/repositories.json" && -f "$candidate/scripts/sync-repositories.mjs" ]]; then
       origin_url=$(git -C "$candidate" config --get remote.origin.url 2>/dev/null || true)
       case "$origin_url" in
         https://github.com/ele-inc/ele-workspace|https://github.com/ele-inc/ele-workspace.git|git@github.com:ele-inc/ele-workspace|git@github.com:ele-inc/ele-workspace.git)
@@ -58,6 +58,24 @@ find_ele_workspace() {
     fi
     candidate=$(dirname "$candidate")
   done
+  return 1
+}
+
+workspace_node() {
+  local node_path
+  node_path=$(command -v node 2>/dev/null || true)
+  if [[ -n "$node_path" && -x "$node_path" ]]; then
+    printf '%s\n' "$node_path"
+    return 0
+  fi
+  # launchd does not load the interactive shell's Homebrew PATH.
+  for node_path in /opt/homebrew/bin/node /usr/local/bin/node; do
+    if [[ -x "$node_path" ]]; then
+      printf '%s\n' "$node_path"
+      return 0
+    fi
+  done
+  echo '[git-sync-all] Node.js 20+ is required for the ELE workspace; install Node.js and retry.' >&2
   return 1
 }
 
@@ -94,7 +112,9 @@ run_sync() {
 
   printf '%s' "$workspaces" | sort -u | while IFS= read -r workspace_root; do
     [[ -n "$workspace_root" ]] || continue
-    python3 "$workspace_root/scripts/sync-repositories.py" run --notify
+    local node_path
+    node_path=$(workspace_node) || continue
+    "$node_path" "$workspace_root/scripts/sync-repositories.mjs" run --notify
   done
 
   printf '%s' "$mains" | sort -u | while IFS= read -r main_wt; do
