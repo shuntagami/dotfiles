@@ -208,10 +208,15 @@ def security_read_token(directory):
 
 def security_store_token(directory, token):
     # No secret in argv, logs, or files, including during SSH bootstrap.
+    # Bare -w reads /dev/tty, ignoring piped password input. Interactive command
+    # mode reads the complete command from stdin without another password prompt.
+    command = shlex.join([
+        "add-generic-password", "-U", "-s", KEYCHAIN_SERVICE,
+        "-a", directory, "-j", "Automatic Playwright connection for this Chrome profile", "-w", token,
+    ])
     return subprocess.run(
-        ["/usr/bin/security", "add-generic-password", "-U", "-s", KEYCHAIN_SERVICE,
-         "-a", directory, "-j", "Automatic Playwright connection for this Chrome profile", "-w"],
-        input=f"{token}\n{token}\n", capture_output=True, text=True, timeout=10,
+        ["/usr/bin/security", "-i"],
+        input=command + "\n", capture_output=True, text=True, timeout=10,
     )
 
 
@@ -220,6 +225,15 @@ def trusted_peer(connection):
     gid = ctypes.c_uint()
     libc = ctypes.CDLL(None)
     return libc.getpeereid(connection.fileno(), ctypes.byref(uid), ctypes.byref(gid)) == 0 and uid.value == os.getuid()
+
+
+def validate_keychain_profile(directory):
+    if not isinstance(directory, str) or not directory or Path(directory).name != directory or directory in (".", ".."):
+        raise ValueError()
+    # The caller already resolved the account from Local State. A login-session
+    # helper may stat the profile but cannot read another app's protected data.
+    if not (chrome_root() / directory).is_dir():
+        raise ValueError()
 
 
 def serve_keychain():
@@ -243,9 +257,7 @@ def serve_keychain():
             try:
                 request = json.loads(self.rfile.readline(4096))
                 directory = request["profile"]
-                if not isinstance(directory, str) or not directory or Path(directory).name != directory or directory in (".", ".."):
-                    raise ValueError()
-                selected_profile(chrome_root(), explicit=directory)
+                validate_keychain_profile(directory)
                 if request["operation"] == "read":
                     result = security_read_token(directory)
                     if result.returncode not in (0, 44):
@@ -297,6 +309,8 @@ def setup_auth(directory):
             raise ConfigurationError("MacBook Keychain did not confirm token registration.")
     elif result.returncode != 0:
         raise ConfigurationError("Could not save the token. Unlock the browser host's login Keychain and retry.")
+    if keychain_token(directory) != token:
+        raise ConfigurationError("Saved token did not match the input. Run setup-auth again; registration was not confirmed.")
     print(f"Playwright token saved in this machine's Keychain for {directory}.", file=sys.stderr)
 
 

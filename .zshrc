@@ -38,3 +38,9 @@ done
 
 # Added by Antigravity CLI installer
 export PATH="/Users/shun.tagami/.local/bin:$PATH"
+
+# >>> grok installer >>>
+export PATH="$HOME/.grok/bin:$PATH"
+fpath=(~/.grok/completions/zsh $fpath)
+autoload -Uz compinit && compinit -C
+# <<< grok installer <<<

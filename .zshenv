@@ -14,6 +14,11 @@ if [[ -z ${OPENAI_API_KEY:-} && -r "$HOME/.config/openai/api.env" ]]; then
   source "$HOME/.config/openai/api.env"
 fi
 
+# xAI credentials are stored outside the dotfiles repository.
+if [[ -z ${XAI_API_KEY:-} && -r "$HOME/.config/xai/api.env" ]]; then
+  source "$HOME/.config/xai/api.env"
+fi
+
 # Claude Code defaults to bypassing permission prompts everywhere. MulmoTerminal
 # passes an explicit --permission-mode, so its documented environment override
 # is also needed there; direct `claude` launches use ~/.claude/settings.json.
@@ -54,4 +59,9 @@ fi
 # Guarded by SHLVL to avoid re-sourcing in nested shells.
 if [[ ($SHLVL -eq 1 && ! -o LOGIN) && -s ${ZDOTDIR:-$HOME}/.zprofile ]]; then
   source "${ZDOTDIR:-$HOME}/.zprofile"
+fi
+
+# X (Twitter) Bearer Token - for API access (user timeline, search, article collection)
+if [[ -z ${X_BEARER_TOKEN:-} && -r "$HOME/.config/x/twitter.env" ]]; then
+  source "$HOME/.config/x/twitter.env"
 fi

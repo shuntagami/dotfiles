@@ -43,6 +43,16 @@ class BrowserTests(unittest.TestCase):
             self.assertEqual(browser.selected_profile(root, account=browser.DEFAULT_ACCOUNT)[0], "Profile 2")
             self.assertEqual(browser.selected_profile(root, account="info@ele-inc.com")[0], "Profile 9")
 
+    def test_keychain_helper_does_not_read_protected_chrome_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.profiles(directory)
+            with patch.object(browser, "chrome_root", return_value=root), \
+                 patch.object(Path, "read_text", side_effect=PermissionError(1, "Operation not permitted")):
+                browser.validate_keychain_profile("Profile 2")
+                for invalid in (None, "", ".", "..", "../Profile 2", "/tmp", "Missing profile"):
+                    with self.subTest(profile=invalid), self.assertRaises(ValueError):
+                        browser.validate_keychain_profile(invalid)
+
     def test_missing_or_ambiguous_account_never_falls_back(self):
         with tempfile.TemporaryDirectory() as directory:
             root = self.profiles(directory)
@@ -107,11 +117,23 @@ class BrowserTests(unittest.TestCase):
         token = "example_token_1234567890"
         with patch.object(browser.sys, "stdin", io.StringIO(token)), \
              patch.object(browser.sys, "stderr", io.StringIO()) as output, \
+             patch.object(browser, "keychain_token", return_value=token), \
              patch.object(browser.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "", "")) as run:
             browser.setup_auth("Profile 2")
             self.assertNotIn(token, " ".join(run.call_args.args[0]))
-            self.assertEqual(run.call_args.kwargs["input"], token + "\n" + token + "\n")
+            self.assertEqual(run.call_args.args[0], ["/usr/bin/security", "-i"])
+            self.assertIn("-w " + token, run.call_args.kwargs["input"])
+            self.assertIn("'Profile 2'", run.call_args.kwargs["input"])
             self.assertNotIn(token, output.getvalue())
+
+    def test_setup_does_not_report_success_for_a_different_saved_value(self):
+        with patch.object(browser.sys, "stdin", io.StringIO("example_token_1234567890")), \
+             patch.object(browser.sys, "stderr", io.StringIO()) as output, \
+             patch.object(browser, "security_store_token", return_value=subprocess.CompletedProcess([], 0, "", "")), \
+             patch.object(browser, "keychain_token", return_value="different_token_1234567890"):
+            with self.assertRaisesRegex(browser.ConfigurationError, "did not match"):
+                browser.setup_auth("Profile 2")
+            self.assertNotIn("token saved", output.getvalue())
 
     def test_ssh_keychain_read_uses_login_session_service(self):
         with patch.object(browser, "security_read_token", return_value=subprocess.CompletedProcess([], 36, "", "User interaction is not allowed")), \
