@@ -298,6 +298,8 @@ cask "google-chrome"
 cask "gyazo"
 # Desktop automation application
 cask "hammerspoon"
+# Free and open-source media player
+cask "iina"
 # Terminal emulator as alternative to Apple's Terminal app
 cask "iterm2"
 # Remote desktop application
