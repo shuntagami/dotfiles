@@ -22,6 +22,18 @@ if [[ -z "${DOTFILES_PROFILE:-}" ]]; then
 fi
 export DOTFILES_PROFILE
 
+source "${HOME}/dotfiles/scripts/sudo-session.sh"
+tmp_brewfile=""
+cleanup_packages() {
+  if [[ -n "${tmp_brewfile}" ]]; then
+    rm -f "${tmp_brewfile}"
+  fi
+  dotfiles_stop_sudo_session
+}
+trap cleanup_packages EXIT
+# This script may also be run on its own, without setup.sh's keeper.
+dotfiles_start_sudo_session
+
 has() {
   type "$1" > /dev/null 2>&1
 }
@@ -45,7 +57,10 @@ elif [[ `uname` == "Darwin" ]]; then
       grep -v '# full-only' "$brewfile" > "$tmp_brewfile"
       brewfile="$tmp_brewfile"
     fi
-    brew bundle install --file="$brewfile"
+    # sudo -v above already verified access. Homebrew's redundant first-use
+    # probe resets that cache; use its checked flag for this command only.
+    # Actual privileged commands still authenticate through normal sudo.
+    HOMEBREW_SUDO_CHECKED=1 brew bundle install --file="$brewfile"
     eval "$(/opt/homebrew/bin/brew shellenv)"
   fi
 fi

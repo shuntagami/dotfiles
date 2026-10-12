@@ -165,6 +165,26 @@ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts
 
 </details>
 
+### 別のユーザーのMacで使う場合
+
+シェルのパスは `$HOME` を使います。Codex・Claude Code・Claude Desktop・iTerm2の設定は、
+`deploy.sh` が実行ユーザーのホームディレクトリに合わせて配置します。
+既存の `/Users/shun.tagami/…` と `/Users/shuntagami/…` は設定内のテンプレートとして扱い、
+別ユーザーでは `~/.local/share/dotfiles/generated/` に解決済みの設定を作成します。
+既存の設定ファイルは置き換え前にバックアップします。
+田上のアカウントでは、AI設定をアプリからリポジトリへ保存する既存のリンクを維持します。
+
+MCPの `servers.json` では `${HOME}` を使えます。`sync-mcp.mjs` が各クライアントへの反映時に解決します。
+パスの置き換えはログイン情報やAPIキーを移しません。必要なアプリ・プロジェクトの配置と認証は各Macで行ってください。
+SSHの接続先、ブラウザ自動操作の接続先・Chromeアカウント、ショートカットなどは共通設定のままです。
+
+### インストール中のパスワード入力
+
+`setup.sh` と `install-packages.sh` は、最初に管理者認証を行い、実行中は通常の `sudo` の認証キャッシュを維持します。
+Homebrewには、このコマンド内ですでに `sudo` の認証を確認したことを伝え、重複するキャッシュのリセットを避けます。
+認証を維持する処理は、成功・失敗のどちらでもスクリプト終了時に停止します。
+macOSのアプリごとの許可画面や独自のインストーラーによる認証は別なので、必要に応じて操作してください。
+
 ---
 
 ## 🗂️ 管理している主なツール・設定
