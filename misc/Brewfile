@@ -253,7 +253,7 @@ brew "ktr0731/evans/evans"
 # Coherent PDF Command-line Tools to modify PDF files
 brew "oncletom/cpdf/cpdf"
 # Incredibly fast JavaScript runtime, bundler, transpiler and package manager - all in one.
-brew "oven-sh/bun/bun"
+brew "oven-sh/bun/bun", trusted: true
 # Supabase CLI
 brew "supabase/tap/supabase", trusted: true
 # View, print, and comment on PDF documents
