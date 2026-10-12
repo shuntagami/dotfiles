@@ -1,61 +1,1004 @@
-#!/usr/bin/env bash
-set -uo pipefail
+#!/usr/bin/env -S deno run -A --ext=js
+// @ts-nocheck: JS スクリプトのため型検査はしない
+// URL から動画を1本ダウンロードする standalone CLI。
+// dotfiles だけで完結し、他リポジトリのコードを呼ばない。
+//
+// Usage:
+//   dlvideo <url> [options]
+//
+// Options:
+//   -o, --output <file>              保存先。拡張子が無ければ .mp4 を足す。既存のディレクトリなら中に保存する
+//   --dir <dir>                      保存先ディレクトリ（既定: カレント）。-o が無いときに使う
+//   --force                          同名ファイルがあれば上書きする（既定は "(1)" を付けて別名にする）
+//   --password <value>               Vimeo のパスワード / Zoom 録画のパスコード
+//   --cookies <file>                 yt-dlp に渡す Netscape 形式の cookies.txt
+//   --cookies-from-browser <name>    yt-dlp にブラウザの cookie を使わせる（例: chrome）
+//   --proxy <url>                    yt-dlp のプロキシ
+//   --attempts <n>                   一時的なエラー（bot 判定・429・403・timeout）のリトライ回数（既定: 3）
+//   -h, --help
+//
+// 環境変数（オプションが無いときの既定値）:
+//   DLVIDEO_COOKIES / DLVIDEO_COOKIES_FROM_BROWSER / DLVIDEO_PROXY / DLVIDEO_MAX_ATTEMPTS
+//
+// 対応ソース:
+//   YouTube / Loom / Vimeo など yt-dlp が対応するサイトと直リンクの動画ファイル
+//     映像は H.264 の最高解像度を優先する。codec を指定しないと yt-dlp は AV1 / VP9 を
+//     選ぶことがあり、同じ解像度でもビットレートが H.264 の 1/2〜1/3 になる
+//   Zoom クラウド録画（rec/share, rec/play。パスコードは --password。ffmpeg で取得）
+//   Utage の動画ページ（ページから m3u8 を拾って yt-dlp に渡す）
+//   Vimeo Review ページ（/reviews/{uuid}/videos/{id}。プレイヤー設定から m3u8 を拾って yt-dlp に渡す）
+//   直リンクの HLS（.m3u8。yt-dlp が最高画質の variant を選ぶ）
+//   Google Drive のファイル（~/dotfiles/.env.local のサービスアカウントで取得）
+//   Dropbox の共有リンク
+//
+// 必要なもの: yt-dlp, ffmpeg（yt-dlp の結合と Zoom で使う）
 
-repo="${SCRIBE_VIDEO_DOWNLOADER_ROOT:-$HOME/projects/elevenlabs-transcribe-bot}"
-script="$repo/scripts/download-video.ts"
-config="$repo/src/deno.json"
+import { basename, dirname, extname, join, resolve } from "node:path";
+import { homedir } from "node:os";
+import { existsSync, readFileSync } from "node:fs";
+import {
+  isZoomRecordingUrl,
+  resolveZoomRecording,
+} from "./lib/dlvideo-zoom.mjs";
 
-if ! command -v deno >/dev/null 2>&1; then
-  echo "Error: deno is not installed or not in PATH." >&2
-  exit 127
-fi
+const decoder = new TextDecoder();
 
-if [[ ! -f "$script" || ! -f "$config" ]]; then
-  cat >&2 <<EOF
-Error: video downloader project was not found.
+// =================================================================
+// 引数
+// =================================================================
 
-Expected:
-  $script
-  $config
+function printHelp() {
+  console.log(`URL から動画を1本ダウンロードする
 
-Set SCRIBE_VIDEO_DOWNLOADER_ROOT if the project lives somewhere else.
-EOF
-  exit 1
-fi
+Usage:
+  dlvideo <url> [options]
 
-# ローカルPCから実行する分には自宅IPで叩けるので、elevenlabs-transcribe-bot
-# 側（Cloud Run等のサーバー用途）が使う住宅プロキシは既定で無効化する。
-# サーバー用途と同じ挙動が必要な時だけ DLVIDEO_USE_PROXY=1 で明示的に有効化する。
-if [[ "${DLVIDEO_USE_PROXY:-0}" != "1" ]]; then
-  export YOUTUBE_PROXY=""
-fi
+Options:
+  -o, --output <file>              保存先。拡張子が無ければ .mp4 を足す。既存のディレクトリなら中に保存する
+  --dir <dir>                      保存先ディレクトリ（既定: カレント）。-o が無いときに使う
+  --force                          同名ファイルがあれば上書きする（既定は "(1)" を付けて別名にする）
+  --password <value>               Vimeo のパスワード / Zoom 録画のパスコード
+  --cookies <file>                 yt-dlp に渡す Netscape 形式の cookies.txt
+  --cookies-from-browser <name>    yt-dlp にブラウザの cookie を使わせる（例: chrome）
+  --proxy <url>                    yt-dlp のプロキシ
+  --attempts <n>                   一時的なエラーのリトライ回数（既定: 3）
+  -h, --help
 
-# 動画本体のダウンロードには（音声/メタデータ取得と違って）自動リトライが
-# 実装されていないため、ここで一時的なエラー（bot判定・レート制限・タイムアウト等）
-# だけを対象にラッパー側でリトライする。Video unavailable 等の恒久的なエラーは
-# 無駄なので即座に諦める。
-max_attempts="${DLVIDEO_MAX_ATTEMPTS:-3}"
-log_file="$(mktemp)"
-trap 'rm -f "$log_file"' EXIT
+環境変数（オプションが無いときの既定値）:
+  DLVIDEO_COOKIES  DLVIDEO_COOKIES_FROM_BROWSER  DLVIDEO_PROXY  DLVIDEO_MAX_ATTEMPTS
 
-attempt=1
-while :; do
-  deno run --allow-all --config "$config" "$script" "$@" 2>&1 | tee "$log_file"
-  status="${PIPESTATUS[0]}"
+対応ソース:
+  YouTube / Loom / Vimeo など yt-dlp が対応するサイト、直リンクの動画ファイル
+  Zoom クラウド録画、Utage の動画ページ、Vimeo Review ページ、直リンクの HLS (.m3u8)
+  Google Drive のファイル（~/dotfiles/.env.local のサービスアカウントで取得）、Dropbox の共有リンク
 
-  if [[ "$status" -eq 0 ]]; then
-    exit 0
-  fi
+例:
+  dlvideo 'https://www.youtube.com/watch?v=xxxxx' -o 対談.mp4 --force
+  dlvideo 'https://us02web.zoom.us/rec/share/xxxxx' --password 'secret' -o zoom.mp4
+  dlvideo 'https://vimeo.com/reviews/xxxxx/videos/123456789' --dir ~/Downloads
+`);
+}
 
-  if [[ "$attempt" -ge "$max_attempts" ]]; then
-    exit "$status"
-  fi
+function readOptionValue(args, index, flag) {
+  const value = args[index + 1];
+  if (value === undefined || (value.startsWith("-") && value !== "-")) {
+    throw new Error(`${flag} には値が必要です`);
+  }
+  return value;
+}
 
-  if ! grep -qiE "sign in to confirm|confirm you.?re not a bot|HTTP Error 429|HTTP Error 403|timed out|unable to download webpage|connection reset" "$log_file"; then
-    exit "$status"
-  fi
+function parseArgs(args) {
+  if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
+    printHelp();
+    Deno.exit(0);
+  }
 
-  attempt=$((attempt + 1))
-  echo "[dlvideo] transient error detected, retrying (${attempt}/${max_attempts})..." >&2
-  sleep $((attempt * 2))
-done
+  const env = Deno.env.toObject();
+  const options = {
+    url: "",
+    output: undefined,
+    dir: Deno.cwd(),
+    force: false,
+    password: undefined,
+    cookies: env.DLVIDEO_COOKIES,
+    cookiesFromBrowser: env.DLVIDEO_COOKIES_FROM_BROWSER,
+    proxy: env.DLVIDEO_PROXY,
+    attempts: Number(env.DLVIDEO_MAX_ATTEMPTS) || 3,
+  };
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    switch (arg) {
+      case "-o":
+      case "--output":
+        options.output = readOptionValue(args, i++, arg);
+        break;
+      case "--dir":
+        options.dir = readOptionValue(args, i++, arg);
+        break;
+      case "--password":
+        options.password = readOptionValue(args, i++, arg);
+        break;
+      case "--cookies":
+        options.cookies = readOptionValue(args, i++, arg);
+        break;
+      case "--cookies-from-browser":
+        options.cookiesFromBrowser = readOptionValue(args, i++, arg);
+        break;
+      case "--proxy":
+        options.proxy = readOptionValue(args, i++, arg);
+        break;
+      case "--attempts":
+        options.attempts = Number(readOptionValue(args, i++, arg));
+        if (!Number.isInteger(options.attempts) || options.attempts < 1) {
+          throw new Error("--attempts は 1 以上の整数で指定してください");
+        }
+        break;
+      case "--force":
+        options.force = true;
+        break;
+      default:
+        if (arg.startsWith("-")) {
+          throw new Error(`不明なオプションです: ${arg}`);
+        }
+        if (options.url) throw new Error(`余分な引数があります: ${arg}`);
+        options.url = arg;
+    }
+  }
+
+  if (!options.url) throw new Error("URL を指定してください");
+  return options;
+}
+
+// =================================================================
+// 共通
+// =================================================================
+
+const RESERVED_FILENAME_CHARACTERS = /[<>:"/\\|?*]/g;
+const MAX_FILENAME_LENGTH = 200;
+
+/** OS をまたいで安全に扱えるファイル名にする。 */
+function sanitizeFilename(value) {
+  const withoutControls = Array.from(
+    String(value),
+    (c) => (c.charCodeAt(0) <= 0x1f ? "_" : c),
+  ).join("");
+  return withoutControls
+    .replace(RESERVED_FILENAME_CHARACTERS, "_")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_FILENAME_LENGTH);
+}
+
+function parseUrl(url) {
+  try {
+    return new URL(url);
+  } catch {
+    return null;
+  }
+}
+
+function formatBytes(bytes) {
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  return `${value.toFixed(unit === 0 ? 0 : 2)} ${units[unit]}`;
+}
+
+const availability = new Map();
+
+/** yt-dlp / ffmpeg が PATH にあるか一度だけ確かめる。 */
+async function ensureAvailable(command, versionArg) {
+  if (availability.get(command)) return;
+  try {
+    const { success } = await new Deno.Command(command, {
+      args: [versionArg],
+      stdout: "null",
+      stderr: "null",
+    }).output();
+    if (!success) throw new Error("exit code != 0");
+  } catch (error) {
+    throw new Error(
+      `${command} が使えません。brew install ${command} でインストールしてください（${error.message}）`,
+    );
+  }
+  availability.set(command, true);
+}
+
+/**
+ * コマンドを実行し、stderr は画面に流しつつ文字列としても集める。
+ * yt-dlp の進捗（stdout）はそのまま画面に出す。
+ */
+async function runCommand(command, args, { captureStdout = false } = {}) {
+  const process = new Deno.Command(command, {
+    args,
+    stdin: "null",
+    stdout: captureStdout ? "piped" : "inherit",
+    stderr: "piped",
+  }).spawn();
+
+  const stderrChunks = [];
+  const pumpStderr = (async () => {
+    for await (const chunk of process.stderr) {
+      stderrChunks.push(chunk);
+      await Deno.stderr.write(chunk);
+    }
+  })();
+
+  let stdoutText = "";
+  if (captureStdout) {
+    const chunks = [];
+    for await (const chunk of process.stdout) chunks.push(chunk);
+    stdoutText = decoder.decode(concatBytes(chunks));
+  }
+
+  await pumpStderr;
+  const status = await process.status;
+  return {
+    success: status.success,
+    stdout: stdoutText,
+    stderr: decoder.decode(concatBytes(stderrChunks)),
+  };
+}
+
+function concatBytes(chunks) {
+  const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return out;
+}
+
+async function verifyOutputFile(path) {
+  const stat = await Deno.stat(path).catch(() => null);
+  if (!stat || !stat.isFile || stat.size <= 0) {
+    throw new Error(`出力ファイルが空です: ${path}`);
+  }
+  return stat.size;
+}
+
+async function streamToFile(body, outputPath) {
+  const file = await Deno.open(outputPath, {
+    write: true,
+    create: true,
+    truncate: true,
+  });
+  try {
+    await body.pipeTo(file.writable);
+  } catch (error) {
+    try {
+      file.close();
+    } catch {
+      // pipeTo が閉じた後は無視する
+    }
+    throw error;
+  }
+}
+
+// =================================================================
+// yt-dlp（YouTube / Loom / Vimeo / 直リンク / その他 yt-dlp 対応サイト）
+// =================================================================
+
+// 映像は H.264（avc1）を最優先にする。codec の条件が無いと yt-dlp の既定の並び順
+// （av01 > vp9 > h264）で、同じ解像度でもビットレートが 1/2〜1/3 の AV1 / VP9 が
+// 選ばれてしまう（mp4 の条件は AV1 を弾けない）。H.264 が無い動画は次の候補へ落ちる。
+// format_id（137 など）は直書きしない。720p 止まりの動画には 137 が無く失敗する。
+const VIDEO_FORMAT_SELECTOR = [
+  "bv*[vcodec^=avc1]+ba[ext=m4a]",
+  "bv*[ext=mp4]+ba[ext=m4a]",
+  "bv*+ba",
+  "b[ext=mp4][protocol^=http]",
+  "b[ext=mp4]",
+  "b",
+].join("/");
+
+// 時間を置けば通ることが多いエラー。"Video unavailable" のような恒久的なものは含めない。
+const RETRIABLE_PATTERNS = [
+  /confirm you[''’]?re not a bot/i,
+  /HTTP Error 429/i,
+  /HTTP Error 403/i,
+  /timed out/i,
+  /Unable to download webpage/i,
+  /Connection reset/i,
+];
+
+const AUTH_REQUIRED_PATTERNS = [
+  /join this channel/i,
+  /members-only/i,
+  /private video/i,
+  /sign in/i,
+  /logged[- ]in/i,
+  /age-restricted/i,
+  /confirm you[''’]?re not a bot/i,
+];
+
+function ytDlpCommonArgs(options) {
+  const args = ["--no-playlist", "--no-warnings"];
+  if (options.cookies) args.push("--cookies", options.cookies);
+  else if (options.cookiesFromBrowser) {
+    args.push("--cookies-from-browser", options.cookiesFromBrowser);
+  }
+  if (options.proxy) args.push("--proxy", options.proxy);
+  if (options.password) args.push("--video-password", options.password);
+  return args;
+}
+
+function authHint(stderr, options) {
+  if (!AUTH_REQUIRED_PATTERNS.some((p) => p.test(stderr))) return "";
+  if (options.cookies || options.cookiesFromBrowser) {
+    return "\ncookie は渡していますが、期限切れか、この動画を見られないアカウントの可能性があります。";
+  }
+  return "\nこの動画はログインが必要です。--cookies-from-browser chrome（ログイン済みのブラウザ）か --cookies <cookies.txt> を試してください。";
+}
+
+/** 一時的なエラーなら間を置いてやり直す。 */
+async function runYtDlp(args, options, { captureStdout = false } = {}) {
+  await ensureAvailable("yt-dlp", "--version");
+  let result;
+  for (let attempt = 1; attempt <= options.attempts; attempt++) {
+    result = await runCommand("yt-dlp", args, { captureStdout });
+    if (result.success) return result;
+    if (
+      attempt === options.attempts ||
+      !RETRIABLE_PATTERNS.some((p) => p.test(result.stderr))
+    ) {
+      return result;
+    }
+    const waitSeconds = attempt * 2;
+    console.error(
+      `[dlvideo] 一時的なエラーのため ${waitSeconds} 秒後にやり直します (${
+        attempt + 1
+      }/${options.attempts})`,
+    );
+    await new Promise((r) => setTimeout(r, waitSeconds * 1000));
+  }
+  return result;
+}
+
+async function ytDlpTitle(url, options) {
+  const result = await runYtDlp(
+    [
+      "--skip-download",
+      "--print",
+      "%(title)s",
+      ...ytDlpCommonArgs(options),
+      url,
+    ],
+    options,
+    { captureStdout: true },
+  );
+  if (!result.success) {
+    throw new Error(
+      `yt-dlp で動画の情報を取れませんでした。${
+        authHint(result.stderr, options)
+      }`.trim(),
+    );
+  }
+  const title = result.stdout.trim().split("\n").pop();
+  return title || "video";
+}
+
+/**
+ * yt-dlp は結合後の拡張子を自分で決めるので、一意な接頭辞で出力させてから
+ * 出来上がったファイルを探して目的のパスへ移す。
+ */
+async function ytDlpDownload(url, outputPath, options, extraArgs = []) {
+  const outputDir = dirname(outputPath);
+  await Deno.mkdir(outputDir, { recursive: true });
+  const prefix = `${
+    basename(outputPath).replace(/\.[^/.]+$/, "") || "video"
+  }.${crypto.randomUUID()}.`;
+  const template = join(outputDir, `${prefix}%(ext)s`);
+
+  let produced = null;
+  try {
+    const result = await runYtDlp(
+      [
+        "-f",
+        VIDEO_FORMAT_SELECTOR,
+        "--merge-output-format",
+        "mp4",
+        "--remux-video",
+        "mp4",
+        "--concurrent-fragments",
+        "8",
+        "--newline",
+        "--progress",
+        ...ytDlpCommonArgs(options),
+        ...extraArgs,
+        "-o",
+        template,
+        url,
+      ],
+      options,
+    );
+
+    produced = await findProducedFile(outputDir, prefix);
+    if (!produced) {
+      throw new Error(
+        result.success
+          ? "yt-dlp は成功しましたが出力ファイルが見つかりません"
+          : `yt-dlp でのダウンロードに失敗しました。${
+            authHint(result.stderr, options)
+          }`.trim(),
+      );
+    }
+    await Deno.remove(outputPath).catch(() => {});
+    await Deno.rename(produced, outputPath);
+    produced = outputPath;
+  } finally {
+    for await (const entry of Deno.readDir(outputDir)) {
+      if (!entry.isFile || !entry.name.startsWith(prefix)) continue;
+      const path = join(outputDir, entry.name);
+      if (path !== produced) await Deno.remove(path).catch(() => {});
+    }
+  }
+}
+
+const PRODUCED_EXTENSIONS = new Set([".mp4", ".m4v", ".mov", ".mkv", ".webm"]);
+
+async function findProducedFile(outputDir, prefix) {
+  let best = null;
+  for await (const entry of Deno.readDir(outputDir)) {
+    if (!entry.isFile || !entry.name.startsWith(prefix)) continue;
+    if (!PRODUCED_EXTENSIONS.has(extname(entry.name).toLowerCase())) continue;
+    const path = join(outputDir, entry.name);
+    const stat = await Deno.stat(path);
+    if (stat.size <= 0) continue;
+    const mtime = stat.mtime?.getTime() ?? 0;
+    if (
+      !best || mtime > best.mtime ||
+      (mtime === best.mtime && stat.size > best.size)
+    ) {
+      best = { path, mtime, size: stat.size };
+    }
+  }
+  return best?.path ?? null;
+}
+
+function ytDlpPlan(url, options) {
+  return {
+    source: "yt-dlp",
+    filename: async () =>
+      `${sanitizeFilename(await ytDlpTitle(url, options)) || "video"}.mp4`,
+    download: (outputPath) => ytDlpDownload(url, outputPath, options),
+  };
+}
+
+// =================================================================
+// ffmpeg（Zoom の mp4 を cookie 付きで取得する）
+// =================================================================
+
+/**
+ * 認証ヘッダ付きの動画 URL を mp4 に書き出す。まず再エンコード無しのコピーを試し、
+ * だめなら H.264 / AAC に変換する。
+ */
+async function ffmpegDownload(inputUrl, outputPath, { headers = [] } = {}) {
+  await ensureAvailable("ffmpeg", "-version");
+
+  const headerArgs = headers.length
+    ? ["-headers", headers.map((line) => `${line}\r\n`).join("")]
+    : [];
+  const base = [
+    "-hide_banner",
+    "-nostdin",
+    "-y",
+    "-loglevel",
+    "error",
+    "-stats",
+    ...headerArgs,
+    "-i",
+    inputUrl,
+    "-map",
+    "0:v?",
+    "-map",
+    "0:a?",
+  ];
+  const attempts = [
+    {
+      label: "コピー",
+      args: [...base, "-c", "copy", "-movflags", "+faststart", outputPath],
+    },
+    {
+      label: "H.264 / AAC へ変換",
+      args: [
+        ...base,
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "23",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-movflags",
+        "+faststart",
+        outputPath,
+      ],
+    },
+  ];
+
+  const errors = [];
+  for (const attempt of attempts) {
+    await Deno.remove(outputPath).catch(() => {});
+    const result = await runCommand("ffmpeg", attempt.args);
+    if (result.success) {
+      const stat = await Deno.stat(outputPath).catch(() => null);
+      if (stat && stat.size > 0) return;
+      errors.push(`${attempt.label}: 出力が空`);
+      continue;
+    }
+    errors.push(
+      `${attempt.label}: ${
+        result.stderr.trim().split("\n").pop() || "不明なエラー"
+      }`,
+    );
+  }
+  throw new Error(
+    `ffmpeg でのダウンロードに失敗しました: ${errors.join(" / ")}`,
+  );
+}
+
+// =================================================================
+// HLS（.m3u8 の直リンク）
+// =================================================================
+
+function isHlsUrl(url) {
+  const parsed = parseUrl(url);
+  if (!parsed) return false;
+  return parsed.pathname.toLowerCase().includes(".m3u8") ||
+    parsed.search.toLowerCase().includes(".m3u8");
+}
+
+function hlsFilename(streamUrl, fallback) {
+  const parsed = parseUrl(streamUrl);
+  const last = parsed?.pathname.split("/").filter(Boolean).pop() || fallback;
+  return `${sanitizeFilename(last.replace(/\.m3u8$/i, "")) || fallback}.mp4`;
+}
+
+// master playlist の variant 選択と音声 rendition の結合は yt-dlp に任せる。
+function hlsPlan(url, options) {
+  return {
+    source: "HLS",
+    filename: () => hlsFilename(url, "hls_video"),
+    download: (outputPath) => ytDlpDownload(url, outputPath, options),
+  };
+}
+
+// =================================================================
+// Zoom
+// =================================================================
+
+async function zoomPlan(url, options) {
+  const recording = await resolveZoomRecording(url, options.password);
+  const headers = [
+    `Referer: ${recording.referer}`,
+    `User-Agent: ${recording.userAgent}`,
+  ];
+  if (recording.cookieHeader) headers.push(`Cookie: ${recording.cookieHeader}`);
+  return {
+    source: "Zoom",
+    filename: () => `${sanitizeFilename(recording.title) || recording.id}.mp4`,
+    download: (outputPath) =>
+      ffmpegDownload(recording.mediaUrl, outputPath, { headers }),
+  };
+}
+
+// =================================================================
+// Utage
+// =================================================================
+
+function isUtageUrl(url) {
+  const parsed = parseUrl(url);
+  return Boolean(parsed) &&
+    parsed.hostname.toLowerCase().includes("utage-system.com") &&
+    parsed.pathname.includes("/video/");
+}
+
+async function utagePlan(url, options) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Utage のページを開けません (status ${response.status})`);
+  }
+  const html = await response.text();
+  const src = html.match(/src:\s*"([^"]+\.m3u8)"/)?.[1];
+  if (!src) throw new Error("Utage のページに m3u8 の URL が見つかりません");
+  const title =
+    html.match(/title="([^"]+)"/)?.[1]?.replace(/\.(mp4|m3u8)$/i, "") ||
+    "utage_video";
+  return {
+    source: "Utage",
+    filename: () => `${sanitizeFilename(title) || "utage_video"}.mp4`,
+    download: (outputPath) =>
+      ytDlpDownload(src, outputPath, options, ["--referer", url]),
+  };
+}
+
+// =================================================================
+// Vimeo Review（/reviews/{uuid}/videos/{id}）
+// =================================================================
+
+function isVimeoReviewUrl(url) {
+  const parsed = parseUrl(url);
+  return Boolean(parsed) &&
+    parsed.hostname.toLowerCase().includes("vimeo.com") &&
+    /\/reviews\/[^/]+\/videos\/\d+/.test(parsed.pathname);
+}
+
+/** レビューページからプレイヤー設定を引き、HLS の URL とタイトルを得る。 */
+async function vimeoReviewPlan(url, options) {
+  const pageResponse = await fetch(url);
+  if (!pageResponse.ok) {
+    throw new Error(
+      `Vimeo Review のページを開けません (status ${pageResponse.status})`,
+    );
+  }
+  const html = await pageResponse.text();
+  const configUrl = html.match(
+    /https:\/\/player\.vimeo\.com\/video\/\d+\/config\?[^"]+/,
+  )?.[0]
+    ?.replace(/\\u0026/g, "&");
+  if (!configUrl) {
+    throw new Error(
+      "Vimeo Review のページにプレイヤー設定の URL が見つかりません",
+    );
+  }
+
+  const configResponse = await fetch(configUrl, {
+    headers: { Referer: "https://vimeo.com/" },
+  });
+  if (!configResponse.ok) {
+    throw new Error(
+      `Vimeo のプレイヤー設定を取れません (status ${configResponse.status})`,
+    );
+  }
+  const config = await configResponse.json();
+
+  const cdns = config?.request?.files?.hls?.cdns;
+  const cdn = cdns?.[config?.request?.files?.hls?.default_cdn] ??
+    (cdns ? Object.values(cdns)[0] : undefined);
+  const hlsUrl = cdn?.url;
+  if (!hlsUrl) {
+    throw new Error("Vimeo のプレイヤー設定に HLS の URL がありません");
+  }
+  const title = config?.video?.title || "vimeo_review_video";
+
+  return {
+    source: "Vimeo Review",
+    filename: () => `${sanitizeFilename(title) || "vimeo_review_video"}.mp4`,
+    download: (outputPath) =>
+      ytDlpDownload(hlsUrl, outputPath, options, [
+        "--referer",
+        "https://vimeo.com/",
+      ]),
+  };
+}
+
+// =================================================================
+// Google Drive（サービスアカウント）
+// =================================================================
+
+function parseGoogleDriveFileId(url) {
+  for (
+    const pattern of [
+      /drive\.google\.com\/file\/d\/([a-zA-Z0-9-_]+)/,
+      /drive\.google\.com\/open\?id=([a-zA-Z0-9-_]+)/,
+      /drive\.google\.com\/uc\?.*id=([a-zA-Z0-9-_]+)/,
+    ]
+  ) {
+    const id = url.match(pattern)?.[1];
+    if (id) return id;
+  }
+  return null;
+}
+
+/** ~/dotfiles/.env.local と ~/.config/scribe/.env を、未設定の変数だけ環境へ取り込む。 */
+function loadEnvFiles() {
+  const candidates = [
+    resolve(homedir(), "dotfiles/.env.local"),
+    resolve(homedir(), ".config/scribe/.env"),
+  ];
+  for (const path of candidates) {
+    if (!existsSync(path)) continue;
+    for (const line of readFileSync(path, "utf8").split("\n")) {
+      const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
+      if (!m) continue;
+      let v = m[2];
+      if (
+        (v.startsWith('"') && v.endsWith('"')) ||
+        (v.startsWith("'") && v.endsWith("'"))
+      ) v = v.slice(1, -1);
+      if (Deno.env.get(m[1]) === undefined) Deno.env.set(m[1], v);
+    }
+  }
+}
+
+async function googleDriveClient() {
+  loadEnvFiles();
+  // 外部パッケージ解決: Deno なら npm: 指定、node なら bare specifier（他の bin スクリプトと同じ）
+  const NPM = typeof Deno !== "undefined" ? "npm:" : "";
+  const { google } = await import(`${NPM}googleapis`);
+  const impersonate = Deno.env.get("GOOGLE_IMPERSONATE_EMAIL");
+  const keyJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_KEY");
+  const clientEmail = Deno.env.get("GOOGLE_CLIENT_EMAIL");
+  const privateKey = Deno.env.get("GOOGLE_PRIVATE_KEY");
+
+  let auth;
+  if (keyJson) {
+    const credentials = JSON.parse(
+      keyJson.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t"),
+    );
+    auth = new google.auth.GoogleAuth({
+      credentials,
+      scopes: ["https://www.googleapis.com/auth/drive"],
+      clientOptions: impersonate ? { subject: impersonate } : undefined,
+    });
+  } else if (clientEmail && privateKey) {
+    auth = new google.auth.JWT({
+      email: clientEmail,
+      key: privateKey.replace(/\\n/g, "\n"),
+      scopes: ["https://www.googleapis.com/auth/drive"],
+      subject: impersonate,
+    });
+  } else {
+    throw new Error(
+      "Google Drive の認証情報がありません。~/dotfiles/.env.local の GOOGLE_SERVICE_ACCOUNT_KEY か、~/.config/scribe/.env の GOOGLE_CLIENT_EMAIL / GOOGLE_PRIVATE_KEY を設定してください。",
+    );
+  }
+  return google.drive({ version: "v3", auth });
+}
+
+async function googleDrivePlan(url) {
+  const fileId = parseGoogleDriveFileId(url);
+  const drive = await googleDriveClient();
+
+  let meta;
+  try {
+    meta = (await drive.files.get({
+      fileId,
+      fields: "id,name,mimeType,size",
+      supportsAllDrives: true,
+    })).data;
+  } catch (error) {
+    if (error?.code === 404) {
+      throw new Error(`Google Drive にファイルがありません (ID: ${fileId})`);
+    }
+    if (error?.code === 403) {
+      throw new Error(
+        "Google Drive のファイルにアクセスできません。サービスアカウントに共有されているか確認してください。",
+      );
+    }
+    throw new Error(
+      `Google Drive の情報を取れませんでした: ${error?.message ?? error}`,
+    );
+  }
+  assertVideo(meta.name, meta.mimeType, "Google Drive");
+
+  return {
+    source: "Google Drive",
+    filename: () => meta.name,
+    download: async (outputPath) => {
+      const response = await drive.files.get(
+        { fileId, alt: "media", supportsAllDrives: true },
+        { responseType: "stream", timeout: 3_600_000 },
+      );
+      const file = await Deno.open(outputPath, {
+        write: true,
+        create: true,
+        truncate: true,
+      });
+      const writer = file.writable.getWriter();
+      try {
+        for await (const chunk of response.data) {
+          await writer.write(
+            chunk instanceof Uint8Array ? chunk : new Uint8Array(chunk),
+          );
+        }
+      } finally {
+        await writer.close().catch(() => {});
+      }
+    },
+  };
+}
+
+// =================================================================
+// Dropbox（共有リンクを直リンクに変えて取得）
+// =================================================================
+
+function toDropboxDirectUrl(input) {
+  const url = parseUrl(input);
+  if (!url) return null;
+  const hostname = url.hostname.toLowerCase();
+  const isSharePath = url.pathname.startsWith("/s/") ||
+    url.pathname.startsWith("/scl/fi/");
+  if (
+    hostname !== "dl.dropboxusercontent.com" &&
+    !(hostname.endsWith("dropbox.com") && isSharePath)
+  ) {
+    return null;
+  }
+  url.searchParams.set("dl", "1");
+  return url.toString();
+}
+
+function filenameFromContentDisposition(value) {
+  if (!value) return undefined;
+  const star = value.match(/filename\*=(?:UTF-8''|utf-8'')([^;\n]+)/)?.[1];
+  if (star) {
+    try {
+      return decodeURIComponent(star);
+    } catch {
+      return star;
+    }
+  }
+  return value.match(/filename="?([^";]+)"?/)?.[1];
+}
+
+async function dropboxPlan(url) {
+  const directUrl = toDropboxDirectUrl(url);
+  const head = await fetch(directUrl, { method: "HEAD", redirect: "follow" });
+  if (!head.ok) {
+    throw new Error(
+      `Dropbox のリンクにアクセスできません (status ${head.status})`,
+    );
+  }
+  const name =
+    filenameFromContentDisposition(head.headers.get("content-disposition")) ||
+    parseUrl(directUrl)?.pathname.split("/").filter(Boolean).pop() ||
+    "dropbox_file";
+  assertVideo(
+    name,
+    head.headers.get("content-type") || "application/octet-stream",
+    "Dropbox",
+  );
+
+  return {
+    source: "Dropbox",
+    filename: () => name,
+    download: async (outputPath) => {
+      const response = await fetch(directUrl, { redirect: "follow" });
+      if (!response.ok || !response.body) {
+        throw new Error(
+          `Dropbox からダウンロードできません (status ${response.status})`,
+        );
+      }
+      await streamToFile(response.body, outputPath);
+    },
+  };
+}
+
+// =================================================================
+// 出力先
+// =================================================================
+
+const VIDEO_EXTENSIONS = new Set([
+  ".3gp",
+  ".avi",
+  ".flv",
+  ".m4v",
+  ".mkv",
+  ".mov",
+  ".mp4",
+  ".mpeg",
+  ".mpg",
+  ".webm",
+  ".wmv",
+]);
+const AUDIO_EXTENSIONS = new Set([
+  ".aac",
+  ".aif",
+  ".aiff",
+  ".flac",
+  ".m4a",
+  ".mp3",
+  ".oga",
+  ".ogg",
+  ".opus",
+  ".wav",
+  ".wma",
+]);
+
+/** 動画以外（音声・文書）を黙って落とさないための確認。 */
+function assertVideo(filename, mimeType, source) {
+  const mime = (mimeType || "").toLowerCase();
+  const ext = extname(filename).toLowerCase();
+  const looksLikeVideo = mime.startsWith("video/") ||
+    VIDEO_EXTENSIONS.has(ext) ||
+    (mime === "application/octet-stream" && !AUDIO_EXTENSIONS.has(ext));
+  if (!looksLikeVideo) {
+    throw new Error(
+      `${source} のファイルが動画ではないようです: ${filename} (${mimeType})`,
+    );
+  }
+}
+
+function withExtension(path, fallback = ".mp4") {
+  return extname(path) ? path : `${path}${fallback}`;
+}
+
+async function isDirectory(path) {
+  const stat = await Deno.stat(path).catch(() => null);
+  return Boolean(stat?.isDirectory);
+}
+
+/**
+ * -o があればそこへ（既存ディレクトリなら中へ）、無ければ --dir にソース由来の名前で保存する。
+ * 既存ファイルは --force が無い限り "(1)" "(2)" と別名にする。
+ */
+async function resolveOutputPath(plan, options) {
+  const needsName = !options.output || await isDirectory(options.output);
+  const suggested = needsName
+    ? withExtension(sanitizeFilename(await plan.filename()) || "video")
+    : null;
+
+  let outputPath = options.output
+    ? resolve(options.output)
+    : resolve(options.dir, suggested);
+  if (options.output && suggested && await isDirectory(outputPath)) {
+    outputPath = join(outputPath, suggested);
+  }
+  outputPath = withExtension(
+    outputPath,
+    suggested ? extname(suggested) || ".mp4" : ".mp4",
+  );
+
+  if (options.force || !existsSync(outputPath)) return outputPath;
+
+  const ext = extname(outputPath);
+  const stem = ext ? outputPath.slice(0, -ext.length) : outputPath;
+  for (let i = 1; i < 10_000; i++) {
+    const candidate = `${stem} (${i})${ext}`;
+    if (!existsSync(candidate)) return candidate;
+  }
+  throw new Error(`空いている保存先が見つかりません: ${outputPath}`);
+}
+
+// =================================================================
+// ルーティング
+// =================================================================
+
+async function buildPlan(url, options) {
+  if (!parseUrl(url)) throw new Error(`URL として読めません: ${url}`);
+  if (isUtageUrl(url)) return await utagePlan(url, options);
+  if (isVimeoReviewUrl(url) && !options.password) {
+    return await vimeoReviewPlan(url, options);
+  }
+  if (isZoomRecordingUrl(url)) return await zoomPlan(url, options);
+  if (parseGoogleDriveFileId(url)) return await googleDrivePlan(url);
+  if (toDropboxDirectUrl(url)) return await dropboxPlan(url);
+  if (isHlsUrl(url)) return hlsPlan(url, options);
+  // YouTube / Loom / Vimeo / 直リンクの動画ファイル / その他は yt-dlp に任せる
+  return ytDlpPlan(url, options);
+}
+
+async function main() {
+  const options = parseArgs(Deno.args);
+  const plan = await buildPlan(options.url, options);
+  const outputPath = await resolveOutputPath(plan, options);
+  await Deno.mkdir(dirname(outputPath), { recursive: true });
+
+  console.log(`Source: ${plan.source}`);
+  console.log(`Output: ${outputPath}`);
+
+  await plan.download(outputPath);
+  const size = await verifyOutputFile(outputPath);
+  console.log(`Done: ${outputPath} (${formatBytes(size)})`);
+}
+
+try {
+  await main();
+} catch (error) {
+  console.error(
+    `Error: ${error instanceof Error ? error.message : String(error)}`,
+  );
+  Deno.exit(1);
+}
