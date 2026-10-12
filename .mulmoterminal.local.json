@@ -1,11 +1,11 @@
 {
-  "badgeColor": "#374151",
-  "headerColor": "#4b5563",
-  "headerTextColor": "#ffffff",
-  "cellColor": "#f3f4f6",
-  "cellBorderColor": "#6b7280",
-  "dotColor": "#9ca3af",
-  "buttonColor": "#d1d5db",
+  "badgeColor": "#75471a",
+  "headerColor": "#a5692c",
+  "headerTextColor": "#000000",
+  "cellColor": "#faf5ef",
+  "cellBorderColor": "#d59453",
+  "dotColor": "#d59453",
+  "buttonColor": "#f4e3d2",
   "headerStatusTint": "none",
   "backgroundImage": {
     "image": ".mulmoterminal-background/dog.JPG",
