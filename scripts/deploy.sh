@@ -186,7 +186,10 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 
   # watch-downloads-copy: auto-copy plain text files from Downloads to clipboard
   chmod +x ~/dotfiles/bin/watch-downloads-copy
-  launchctl unload ~/Library/LaunchAgents/com.user.watch-downloads.plist 2>/dev/null
+  # The old agent is absent on a fresh Mac, or may already be unloaded.
+  if [[ -f ~/Library/LaunchAgents/com.user.watch-downloads.plist ]]; then
+    launchctl unload ~/Library/LaunchAgents/com.user.watch-downloads.plist 2>/dev/null || true
+  fi
   rm -f ~/Library/LaunchAgents/com.user.watch-downloads.plist
   mkdir -p ~/Library/Scripts/Folder\ Action\ Scripts
   osacompile -o ~/Library/Scripts/Folder\ Action\ Scripts/Copy\ Downloaded\ Text.scpt \
