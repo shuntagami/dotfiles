@@ -165,6 +165,19 @@ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts
 
 </details>
 
+### 別のユーザーのMacで使う場合
+
+シェルのパスは `$HOME` を使います。Codex・Claude Code・Claude Desktop・iTerm2の設定は、
+`deploy.sh` が実行ユーザーのホームディレクトリに合わせて配置します。
+既存の `/Users/shun.tagami/…` と `/Users/shuntagami/…` は設定内のテンプレートとして扱い、
+別ユーザーでは `~/.local/share/dotfiles/generated/` に解決済みの設定を作成します。
+既存の設定ファイルは置き換え前にバックアップします。
+田上のアカウントでは、AI設定をアプリからリポジトリへ保存する既存のリンクを維持します。
+
+MCPの `servers.json` では `${HOME}` を使えます。`sync-mcp.mjs` が各クライアントへの反映時に解決します。
+パスの置き換えはログイン情報やAPIキーを移しません。必要なアプリ・プロジェクトの配置と認証は各Macで行ってください。
+SSHの接続先、ブラウザ自動操作の接続先・Chromeアカウント、ショートカットなどは共通設定のままです。
+
 ---
 
 ## 🗂️ 管理している主なツール・設定

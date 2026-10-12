@@ -18,7 +18,7 @@
     "playwright": {
       "enabled": true,
       "type": "stdio",
-      "command": "/Users/shun.tagami/dotfiles/bin/playwright-mcp",
+      "command": "${HOME}/dotfiles/bin/playwright-mcp",
       "args": [
         "--account",
         "shun.tagami@ele-inc.com"
@@ -43,7 +43,7 @@
     "playwright-info": {
       "enabled": true,
       "type": "stdio",
-      "command": "/Users/shun.tagami/dotfiles/bin/playwright-mcp",
+      "command": "${HOME}/dotfiles/bin/playwright-mcp",
       "args": [
         "--account",
         "info@ele-inc.com"
@@ -82,7 +82,7 @@
     "supabase": {
       "enabled": true,
       "type": "stdio",
-      "command": "/Users/shun.tagami/dotfiles/mcp/run-supabase-mcp.sh"
+      "command": "${HOME}/dotfiles/mcp/run-supabase-mcp.sh"
     },
     "slack": {
       "enabled": true,

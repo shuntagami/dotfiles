@@ -46,12 +46,8 @@ ln -sf ~/dotfiles/.zshenv ~/.zshenv
 ln -sf ~/dotfiles/.zshrc ~/.zshrc
 mkdir -p ~/.docker
 ln -sf ~/dotfiles/misc/docker-config.json ~/.docker/config.json
-# Codex: config.toml includes standard Codex settings such as installed plugins.
-mkdir -p ~/.codex
-if [[ -e ~/.codex/config.toml && ! -L ~/.codex/config.toml ]]; then
-  mv ~/.codex/config.toml ~/.codex/config.toml.bak.$(date +%Y%m%d%H%M%S)
-fi
-ln -sf ~/dotfiles/codex/config.toml ~/.codex/config.toml
+# Resolve app settings to this user's home (JSON/TOML do not expand $HOME).
+python3 ~/dotfiles/scripts/install-user-configs.py codex
 
 # Codex skills: symlink each repository-managed skill directory.
 mkdir -p ~/.codex/skills
@@ -64,12 +60,8 @@ for skill_dir in "${HOME}"/dotfiles/codex/skills/*(/N); do
   ln -sfn "${skill_dir}" "${skill_target}"
 done
 
-# Claude Code: settings.json includes standard Claude Code settings such as enabled plugins.
-mkdir -p ~/.claude
-if [[ -e ~/.claude/settings.json && ! -L ~/.claude/settings.json ]]; then
-  mv ~/.claude/settings.json ~/.claude/settings.json.bak.$(date +%Y%m%d%H%M%S)
-fi
-ln -sf ~/dotfiles/claude/settings.json ~/.claude/settings.json
+# Claude Code: resolve hook commands as well as paths in settings.
+python3 ~/dotfiles/scripts/install-user-configs.py claude
 
 # Claude Code keybindings: Hammerspoon owns Ctrl+S globally, so chords ending in
 # ctrl+s never arrive; keybindings.json adds alternatives that avoid it.
@@ -180,8 +172,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   if [[ "${DOTFILES_PROFILE:-full}" != "minimal" ]]; then
     ln -sfn ~/dotfiles/hammerspoon ~/.hammerspoon
   fi
-  mkdir -p ~/Library/Application\ Support/Claude
-  ln -sf ~/dotfiles/misc/claude_desktop_config.json ~/Library/Application\ Support/Claude/claude_desktop_config.json
+  python3 ~/dotfiles/scripts/install-user-configs.py claude-desktop
   mkdir -p ~/.config/memo
   ln -sf ~/dotfiles/misc/memo-config.toml ~/.config/memo/config.toml
   mkdir -p ~/Library/Application\ Support/ngrok
@@ -220,7 +211,8 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   '
 
   # iTerm2: load preferences from custom folder
-  defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$HOME/dotfiles/misc"
+  iterm_preferences=$(python3 ~/dotfiles/scripts/install-user-configs.py iterm2)
+  defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$iterm_preferences"
   defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
 
   # The location of the configuration file for karabiner-elements

@@ -20,6 +20,12 @@ from pathlib import Path
 import tempfile
 import urllib.request
 
+from importlib.util import module_from_spec, spec_from_file_location
+
+_paths_spec = spec_from_file_location('user_configs', Path(__file__).with_name('install-user-configs.py'))
+_paths = module_from_spec(_paths_spec)
+_paths_spec.loader.exec_module(_paths)
+
 ROOT = Path(__file__).resolve().parent.parent
 DOTFILES_CONFIG = ROOT / 'mulmoterminal' / 'config.json'
 LIVE_CONFIG = Path.home() / '.mulmoterminal' / 'config.json'
@@ -71,7 +77,7 @@ def shared(config):
 
 
 def apply(dry_run):
-    wanted = read_object(DOTFILES_CONFIG)
+    wanted = _paths.relocate(read_object(DOTFILES_CONFIG), Path.home())
     try:
         live, running = request('GET'), True
     except OSError:

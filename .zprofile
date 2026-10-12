@@ -1,5 +1,5 @@
 # The following lines were added by Docker Desktop to add commands to your PATH.
-export PATH="$PATH:/Users/shun.tagami/.docker/bin"
+export PATH="$PATH:$HOME/.docker/bin"
 # End of Docker Desktop section.
 
 # ~/.zprofile — login-time setup.
@@ -29,4 +29,4 @@ export PATH
 
 
 # Added by Antigravity CLI installer
-export PATH="/Users/shun.tagami/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
