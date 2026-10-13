@@ -170,6 +170,7 @@ bash ~/dotfiles/scripts/macos-default-apps.sh  # 標準アプリ・CleanShot設�
 
 アプリごとの設定は `misc/aqua-voice-hotkeys.json` と `misc/clipy-hotkeys.json` に置き、
 `deploy.sh`から専用スクリプトで反映します。`macos.sh`を実行する必要はありません。
+実装はNode.jsの標準ライブラリとmacOS標準コマンドを使い、npmパッケージの追加は不要です。
 Aqua VoiceはFn（入力）、Control+Space（ロック）、Command+Control+V（直前の文字起こしを貼付）、
 Escape（キャンセル）。ClipyはCommand+Option+V（履歴）、Command+Shift+B（スニペット）、履歴数50です。
 
