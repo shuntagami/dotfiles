@@ -625,69 +625,12 @@ defaults write com.apple.TimeMachine DoNotOfferNewDisksForBackup -bool true
 sudo tmutil disablelocal 2>/dev/null || true
 
 ###############################################################################
-# Aqua Voice                                                                  #
+# App settings                                                                #
 ###############################################################################
 
-# Set hotkeys (default lock shortcut is different, override to ControlLeft+Space)
-AQUA_VOICE_SETTINGS="$HOME/Library/Application Support/Aqua Voice/settings.json"
-if [ -f "$AQUA_VOICE_SETTINGS" ]; then
-  python3 -c "
-import json, sys
-path = sys.argv[1]
-with open(path, 'r') as f:
-    settings = json.load(f)
-settings['hotkeys'] = [
-    {'keys': 'Fn', 'action': 'activate'},
-    {'keys': 'Meta+Control+KeyV', 'action': 'paste_last_transcript'},
-    {'keys': 'Escape', 'action': 'cancel'},
-    {'keys': 'ControlLeft+Space', 'action': 'lock'}
-]
-with open(path, 'w') as f:
-    json.dump(settings, f, indent=2)
-" "$AQUA_VOICE_SETTINGS"
-fi
-
-###############################################################################
-# Clipy                                                                       #
-###############################################################################
-
-# Set hotkeys (Magnet.KeyCombo format via NSKeyedArchiver)
-# History: Cmd+Option+V (keyCode=9, modifiers=2304)
-# Snippet: Cmd+Shift+B (keyCode=11, modifiers=768)
-python3 -c "
-import plistlib, subprocess
-
-def make_keycombo(key_code, modifiers):
-    return plistlib.dumps({
-        '\$version': 100000,
-        '\$archiver': 'NSKeyedArchiver',
-        '\$top': {'root': plistlib.UID(1)},
-        '\$objects': [
-            '\$null',
-            {
-                '\$class': plistlib.UID(2),
-                'modifiers': modifiers,
-                'keyCode': key_code,
-                'doubledModifiers': False,
-            },
-            {
-                '\$classname': 'Magnet.KeyCombo',
-                '\$classes': ['Magnet.KeyCombo', 'NSObject'],
-            },
-        ],
-    }, fmt=plistlib.FMT_BINARY)
-
-# Write each hotkey
-for key, kc, mod in [
-    ('kCPYHotKeyHistoryKeyCombo', 9, 2304),   # Cmd+Option+V
-    ('kCPYHotKeySnippetKeyCombo', 11, 768),    # Cmd+Shift+B
-]:
-    data = make_keycombo(kc, mod)
-    subprocess.run(['defaults', 'write', 'com.clipy-app.Clipy', key, '-data', data.hex()], check=True)
-"
-
-# Max history size
-defaults write com.clipy-app.Clipy kCPYPrefMaxHistorySizeKey -int 50
+# Kept in dedicated scripts and also applied by the normal deploy flow.
+bash "${HOME}/dotfiles/scripts/macos-aqua-voice.sh"
+bash "${HOME}/dotfiles/scripts/macos-clipy.sh"
 
 ###############################################################################
 # MonitorControl                                                               #

@@ -1,0 +1,89 @@
+{
+  "fileAssociations": [
+    {
+      "name": "IINA",
+      "bundleIds": [
+        "com.colliderli.iina"
+      ],
+      "extensions": [
+        "mp4",
+        "m4v",
+        "mov",
+        "mkv",
+        "webm",
+        "avi",
+        "mpg",
+        "mpeg",
+        "mp3",
+        "m4a",
+        "aac",
+        "wav",
+        "aiff",
+        "aif",
+        "flac",
+        "ogg",
+        "opus"
+      ]
+    },
+    {
+      "name": "CleanShot X",
+      "bundleIds": [
+        "pl.maketheweb.cleanshotx"
+      ],
+      "extensions": [
+        "png",
+        "jpg",
+        "jpeg",
+        "gif",
+        "tif",
+        "tiff",
+        "bmp",
+        "webp"
+      ]
+    },
+    {
+      "name": "Adobe Acrobat",
+      "bundleIds": [
+        "com.adobe.Acrobat.Pro",
+        "com.adobe.Reader"
+      ],
+      "extensions": [
+        "pdf"
+      ]
+    },
+    {
+      "name": "Google Chrome",
+      "bundleIds": [
+        "com.google.Chrome"
+      ],
+      "extensions": [
+        "html",
+        "htm"
+      ]
+    }
+  ],
+  "screenshots": {
+    "bundleId": "pl.maketheweb.cleanshotx",
+    "shortcuts": {
+      "LAVAtakeFullscreen": {
+        "carbonModifiers": 768,
+        "carbonKey": 20
+      },
+      "LAVAtakeAreaCopy": {
+        "carbonModifiers": 768,
+        "carbonKey": 21
+      },
+      "LAVAtakeAllInOne": {
+        "carbonModifiers": 768,
+        "carbonKey": 23
+      }
+    },
+    "disabledSystemShortcuts": [
+      "28",
+      "29",
+      "30",
+      "31",
+      "184"
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+[
+  {"action": "activate", "keys": "Fn"},
+  {"action": "lock", "keys": "ControlLeft+Space"},
+  {"action": "paste_last_transcript", "keys": "Meta+Control+KeyV"},
+  {"action": "cancel", "keys": "Escape"}
+]
