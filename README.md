@@ -160,10 +160,57 @@ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts
 ~/dotfiles/scripts/deploy.sh            # dotfilesのリンク作成・アプリ設定の反映（MonitorControlなど）
 ~/dotfiles/scripts/macos.sh             # macOSシステム設定の適用
 ~/dotfiles/scripts/macos-notifications.sh  # 通知設定（deploy.shに含まれる。Chromeのサイト許可・アプリごとの通知）
+bash ~/dotfiles/scripts/macos-default-apps.sh  # 標準アプリ・CleanShot設定（deploy.shに含まれる）
 ~/dotfiles/vscode/setup.sh              # VSCode/Cursorのセットアップ
 ```
 
 </details>
+
+### Aqua Voice・Clipyのショートカット
+
+アプリごとの設定は `misc/aqua-voice-hotkeys.json` と `misc/clipy-hotkeys.json` に置き、
+`deploy.sh`から専用スクリプトで反映します。`macos.sh`を実行する必要はありません。
+Aqua VoiceはFn（入力）、Control+Space（ロック）、Command+Control+V（直前の文字起こしを貼付）、
+Escape（キャンセル）。ClipyはCommand+Option+V（履歴）、Command+Shift+B（スニペット）、履歴数50です。
+
+```bash
+~/dotfiles/scripts/macos-aqua-voice.sh --check
+~/dotfiles/scripts/macos-clipy.sh --check
+# --dry-runで変更予定、オプションなしで適用
+```
+
+Aqua Voiceは管理するアクションだけ更新し、そのほかのショートカットや設定を保持します。
+Clipyも指定した設定キーだけ更新します。変更前の管理対象キーは
+`~/.local/state/dotfiles/app-hotkeys/`に保存します。変更した場合、アプリの再起動後に有効になります。
+アプリが未インストールならスキップします。Aqua Voiceの設定ファイルがまだない場合は、
+一度アプリを起動してから再実行してください（未設定を報告して終了コード1）。
+
+### 標準アプリ・スクリーンショット
+
+`misc/default-apps.json` で標準アプリとCleanShotの撮影ショートカットを管理します。
+動画・音声はIINA、画像はCleanShot X、PDFはAcrobat Pro（なければReader）、HTMLはChromeです。
+現在のインストール状況からアプリを選び、`deploy.sh`で毎回適用・確認します。
+必要なアプリがない場合は報告して非ゼロで終了します。自動インストールはしません。
+
+```bash
+~/dotfiles/scripts/macos-default-apps.sh --dry-run  # 変更予定
+~/dotfiles/scripts/macos-default-apps.sh            # 適用して確認
+~/dotfiles/scripts/macos-default-apps.sh --check    # 現状確認。不一致なら終了コード1
+```
+
+sudo不要で、実行したMacのログインユーザーに適用します。
+変更前の関連付けと管理対象のショートカットは `~/.local/state/dotfiles/default-apps/` に保存します。
+CleanShotのライセンス・ログイン情報は取り込みません。
+撮影はCmd+Shift+3（全画面）、4（範囲をコピー）、5（All-in-One）を設定し、
+同じキーを使うmacOS標準のスクリーンショット操作を無効にします。
+すでに有効なCleanShot設定は維持します。ショートカットを書き換えた場合は、撮影中の作業を
+中断せず、CleanShotの再起動が必要なことを表示して終了コード1を返します。
+
+別のアプリに関連付けが変わった場合は再実行して戻せます。
+ブラウザ内の再生・PDF表示、FinderのQuick Look、ファイル個別の関連付けは対象外です。
+既存のChromeのWeb・メールリンク設定は維持します。OSの標準ブラウザ変更には
+Chrome自身かシステム設定での操作が必要です（`deploy.sh`のコメント参照）。
+旧 `macos-media-defaults.sh` コマンドも同じ設定を適用します。
 
 ### 別のユーザーのMacで使う場合
 

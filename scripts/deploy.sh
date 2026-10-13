@@ -143,6 +143,10 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   # The installer skips machines where MonitorControl is not installed.
   bash "${HOME}/dotfiles/scripts/macos-monitorcontrol.sh"
 
+  # App shortcuts live separately from optional system-wide macOS settings.
+  bash "${HOME}/dotfiles/scripts/macos-aqua-voice.sh"
+  bash "${HOME}/dotfiles/scripts/macos-clipy.sh"
+
   # Apply the registered Mac mini connection's display policy without interrupting sessions.
   if command -v node >/dev/null 2>&1; then
     node "${HOME}/dotfiles/scripts/jump-desktop-display.mjs" --deploy
@@ -152,6 +156,9 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   # apps show anything. Idempotent and non-interactive -- it only opens the
   # configuration profile when that profile is missing or has changed.
   bash "${HOME}/dotfiles/scripts/macos-notifications.sh"
+
+  # Keep file associations and CleanShot screenshot shortcuts in sync.
+  bash "${HOME}/dotfiles/scripts/macos-default-apps.sh"
 
   # No URL router here any more, and no default-browser step either.
   #
