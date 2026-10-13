@@ -4,9 +4,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 import { aqua, clipy, shortcutValue } from './macos-app-hotkeys.mjs';
 import { manageDefaultApps } from './macos-default-apps.mjs';
-import { createContext, parsePlist, toPlist, run } from './macos-app-settings.mjs';
+import { createContext, parsePlist, toPlist, run, NEEDS_APP_ACTION } from './macos-app-settings.mjs';
 
 const configDir = fileURLToPath(new URL('../misc/', import.meta.url));
 
@@ -142,3 +143,77 @@ test('Clipy apply produces native archives, retains unrelated preferences and is
   assert.equal(clipy('apply', ctx), 0);
   assert.equal(writes, 3);
 }));
+
+test('missing Aqua settings requests first launch without reporting a write failure', () => isolated(home => {
+  const ctx = createContext({ home, log() {} });
+  assert.equal(aqua('apply', ctx), NEEDS_APP_ACTION);
+  assert.equal(aqua('check', ctx), 1);
+}));
+
+function screenshotScenario(options, callback) {
+  return isolated(home => {
+    const shot = options.changeShortcut ? {} : { capture: true };
+    const system = { AppleSymbolicHotKeys: { '28': { enabled: !options.alreadyDisabled, value: { parameters: [51, 20, 1179648], type: 'standard' } } } };
+    let activations = 0;
+    const configDir = path.join(home, 'config');
+    fs.mkdirSync(configDir);
+    fs.writeFileSync(path.join(configDir, 'default-apps.json'), JSON.stringify({
+      fileAssociations: [], screenshots: {
+        bundleId: 'pl.maketheweb.cleanshotx', shortcuts: { capture: { carbonModifiers: 768, carbonKey: 20 } },
+        disabledSystemShortcuts: ['28'],
+      },
+    }));
+    const ctx = createContext({
+      home, configDir, stateRoot: path.join(home, 'state'), log() {}, command: () => 'duti',
+      applications: () => new Map([['pl.maketheweb.cleanshotx', '/fake/CleanShot X.app']]),
+      preferences: domain => domain === 'com.apple.symbolichotkeys' ? system : shot,
+      run(file, args) {
+        if (file.endsWith('/activateSettings')) { activations++; return { status: options.activationFails ? 1 : 0 }; }
+        if (file === '/usr/bin/defaults' && args[0] === 'write') {
+          if (options.writeFails) return { status: 1 };
+          if (args[1] === 'com.apple.symbolichotkeys') system.AppleSymbolicHotKeys[args[4]] = parsePlist(args[5]);
+          else shot[args[2]] = Buffer.from(args[4], 'hex');
+        }
+        return { status: 0, stdout: '', stderr: '' };
+      },
+    });
+    return callback(ctx, () => activations);
+  });
+}
+
+test('saved CleanShot shortcut returns app-action status after verification', () => screenshotScenario({ changeShortcut: true, alreadyDisabled: true }, ctx => {
+  assert.equal(manageDefaultApps('apply', ctx), NEEDS_APP_ACTION);
+  assert.equal(manageDefaultApps('check', ctx), 0);
+}));
+
+test('CleanShot write failure is not masked by a restart requirement', () => screenshotScenario({ changeShortcut: true, alreadyDisabled: true, writeFails: true }, ctx => {
+  assert.equal(manageDefaultApps('apply', ctx), 1);
+}));
+
+test('native screenshot changes activate once and matching settings do not activate again', () => screenshotScenario({}, (ctx, activations) => {
+  assert.equal(manageDefaultApps('apply', ctx), 0);
+  assert.equal(activations(), 1);
+  assert.equal(manageDefaultApps('apply', ctx), 0);
+  assert.equal(activations(), 1);
+}));
+
+test('check and dry-run never activate native settings', () => screenshotScenario({}, (ctx, activations) => {
+  assert.equal(manageDefaultApps('check', ctx), 1);
+  assert.equal(manageDefaultApps('dry-run', ctx), 0);
+  assert.equal(activations(), 0);
+}));
+
+test('native settings activation failure is reported', () => screenshotScenario({ activationFails: true }, ctx => {
+  assert.equal(manageDefaultApps('apply', ctx), 1);
+}));
+
+test('deploy continues for app-action status and stops for real failures in Bash and Zsh', { skip: process.platform !== 'darwin' }, () => {
+  const helper = fileURLToPath(new URL('./app-settings-status.sh', import.meta.url));
+  for (const shell of ['/bin/bash', '/bin/zsh']) {
+    for (const code of [0, NEEDS_APP_ACTION, 1, 42]) {
+      const result = spawnSync(shell, ['-ec', 'source "$1"\ndotfiles_apply_app_settings /bin/sh -c "exit $2"\necho continued', 'test', helper, String(code)], { encoding: 'utf8' });
+      assert.equal(result.status, code === NEEDS_APP_ACTION ? 0 : code);
+      assert.equal(result.stdout.includes('continued'), code === 0 || code === NEEDS_APP_ACTION);
+    }
+  }
+});

@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
-import { createContext, toPlist, writePlist, parseMode, isMain, cli } from './macos-app-settings.mjs';
+import { createContext, toPlist, writePlist, parseMode, isMain, cli, NEEDS_APP_ACTION } from './macos-app-settings.mjs';
 
 export function mergeHotkeys(existing, desired) {
   const byAction = new Map(desired.map(item => [item.action, item]));
@@ -46,7 +46,7 @@ export function aqua(mode, ctx) {
   const filename = path.join(ctx.home, 'Library/Application Support/Aqua Voice/settings.json');
   if (!fs.existsSync(filename)) {
     ctx.log('Aqua Voice settings missing: launch the app once, then run deploy again.');
-    return 1;
+    return mode === 'apply' ? NEEDS_APP_ACTION : 1;
   }
   const settings = JSON.parse(fs.readFileSync(filename, 'utf8'));
   const desired = JSON.parse(fs.readFileSync(path.join(ctx.configDir, 'aqua-voice-hotkeys.json'), 'utf8'));

@@ -2,9 +2,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
-import { createContext, toPlist, writePlist, parseMode, isMain, cli } from './macos-app-settings.mjs';
+import { createContext, toPlist, writePlist, parseMode, isMain, cli, NEEDS_APP_ACTION } from './macos-app-settings.mjs';
 
 const LSREGISTER = '/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister';
+const ACTIVATE_SETTINGS = '/System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings';
 
 export function manageDefaultApps(mode, ctx) {
   const duti = ctx.command('duti');
@@ -78,6 +79,7 @@ export function manageDefaultApps(mode, ctx) {
     } else failed ||= mode === 'check';
   }
   const system = ctx.preferences('com.apple.symbolichotkeys').AppleSymbolicHotKeys ?? {};
+  const disabledKeys = [];
   for (const key of screenshot.disabledSystemShortcuts) {
     const value = system[key] ?? {};
     if (value.enabled === false || value.enabled === 0) { ctx.log(`OK native screenshot shortcut ${key}: disabled`); continue; }
@@ -87,10 +89,23 @@ export function manageDefaultApps(mode, ctx) {
       const xml = toPlist({ ...value, enabled: false });
       const result = ctx.run('/usr/bin/defaults', ['write', 'com.apple.symbolichotkeys', 'AppleSymbolicHotKeys', '-dict-add', key, xml]);
       failed ||= result.status !== 0;
+      if (result.status === 0) disabledKeys.push(key);
     } else failed ||= mode === 'check';
   }
-  if (reloadNeeded) { ctx.log('Restart CleanShot X to activate the changed shortcuts. Existing captures were not interrupted.'); failed = true; }
-  return apply && !failed ? manageDefaultApps('check', ctx) : Number(failed);
+  if (disabledKeys.length) {
+    const stored = ctx.preferences('com.apple.symbolichotkeys').AppleSymbolicHotKeys ?? {};
+    if (disabledKeys.some(key => stored[key]?.enabled !== false && stored[key]?.enabled !== 0)) failed = true;
+    else {
+      const result = ctx.run(ACTIVATE_SETTINGS, ['-u']);
+      if (result.status !== 0) { ctx.log('Could not activate native screenshot settings.'); failed = true; }
+    }
+  }
+  if (reloadNeeded) ctx.log('Restart CleanShot X to activate the changed shortcuts. Existing captures were not interrupted.');
+  if (apply && !failed) {
+    if (manageDefaultApps('check', ctx) !== 0) return 1;
+    return reloadNeeded ? NEEDS_APP_ACTION : 0;
+  }
+  return Number(failed);
 }
 
 export function main(args = process.argv.slice(2), ctx = createContext()) {

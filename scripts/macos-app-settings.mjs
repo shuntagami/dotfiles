@@ -5,6 +5,9 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+// Settings are saved, but an app must be launched/restarted to finish setup.
+export const NEEDS_APP_ACTION = 3;
+
 export function run(file, args = [], options = {}) {
   const result = spawnSync(file, args, { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, ...options });
   if (result.error) throw result.error;
