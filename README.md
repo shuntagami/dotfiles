@@ -230,7 +230,10 @@ SSHの接続先、ブラウザ自動操作の接続先・Chromeアカウント�
 
 ### 全リポジトリ共通のGit作業方針
 
-共通方針の本文は [docs/git-workflow.md](docs/git-workflow.md) で管理します。
+エージェントが別のフォルダからPRを作り、元のフォルダに編集を残すと、マージ後のpullや自動同期が止まることがあります。
+また、アプリが表示する場所とエージェントの編集先が分かれると、変更が画面に出ません。
+こうした後片付けや確認を利用者に残さないため、作業場所の選び方とPR前後の確認を全リポジトリ共通の方針にしています。
+本文と具体例は [docs/git-workflow.md](docs/git-workflow.md) で管理します。
 Codexは `~/.codex/AGENTS.md`、Claude Codeは `~/.claude/rules/git-workflow.md` から参照します。
 `deploy.sh` がリンクを配置します。指示のリンクだけ更新する場合は次を実行します。
 

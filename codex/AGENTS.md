@@ -1,6 +1,6 @@
 # GitとPRの共通方針
 
-全リポジトリで、Git管理下のファイル（シンボリックリンクの実体を含む）の変更やGit操作を行う前に `~/dotfiles/docs/git-workflow.md` を読む。作業場所の選択、既存workspaceの扱い、変更の移動、PR後の整理はこの共通方針に従う。
+PRに出した変更が元のフォルダに未コミットで残ってpullを妨げたり、画面とエージェントの作業場所が分かれたりすることを防ぐ。全リポジトリで、Git管理下のファイル（シンボリックリンクの実体を含む）の変更やGit操作を行う前に `~/dotfiles/docs/git-workflow.md` を読み、作業場所と担当分の後片付けを確認する。
 
 # Browser operation preference
 
