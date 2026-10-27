@@ -1,3 +1,7 @@
+# GitとPRの共通方針
+
+通常は今の作業場所で作業ブランチを使い、commit・push・PR作成・GitHubでのマージ・リモートブランチ削除・ローカルへの取り込みを普段の運用で進める。PRのためだけに追加worktreeを作ったり、変更を別フォルダへコピーしたりしない。全リポジトリで、Git管理下のファイル（リンク先を含む）の変更やGit操作の前に `~/dotfiles/docs/git-workflow.md` を読み、作業場所と担当分の後片付けを確認する。
+
 # Browser operation preference
 
 - For ordinary browser work, use Playwright MCP (`playwright`) on the **MacBook** (`shun-tagami-mbp`), in the `shun.tagami@ele-inc.com` Chrome profile. Use `playwright-info` only when the task calls for `info@ele-inc.com`.

@@ -49,6 +49,13 @@ ln -sf ~/dotfiles/misc/docker-config.json ~/.docker/config.json
 # Resolve app settings to this user's home (JSON/TOML do not expand $HOME).
 python3 ~/dotfiles/scripts/install-user-configs.py codex
 
+# 全リポジトリ共通の指示。本文はdotfiles、ホーム側は標準の場所へのリンク。
+python3 ~/dotfiles/scripts/install-user-configs.py agent-instructions
+# Studioが独立したClaude設定を使っている場合も、同じGit管理下の本文を参照する。
+if [[ -d ~/.marunage-studio-claude ]]; then
+  python3 ~/dotfiles/scripts/install-user-configs.py agent-instructions --claude-config-dir ~/.marunage-studio-claude
+fi
+
 # Codex skills: symlink each repository-managed skill directory.
 mkdir -p ~/.codex/skills
 for skill_dir in "${HOME}"/dotfiles/codex/skills/*(/N); do

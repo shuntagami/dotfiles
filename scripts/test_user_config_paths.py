@@ -18,6 +18,44 @@ spec.loader.exec_module(configs)
 
 
 class UserConfigPathsTest(unittest.TestCase):
+    def test_agent_instructions_link_to_tracked_sources_and_preserve_existing_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory) / '別の利用者'
+            old = home / '.codex/AGENTS.md'
+            old.parent.mkdir(parents=True)
+            old.write_text('既存の共通指示\n')
+            other_rule = home / '.claude/rules/other.md'
+            other_rule.parent.mkdir(parents=True)
+            other_rule.write_text('別のルール\n')
+            expected = {
+                '.codex/AGENTS.md': 'codex/AGENTS.md',
+                '.claude/rules/git-workflow.md': 'docs/git-workflow.md',
+            }
+            configs.install('agent-instructions', home)
+            for target, source in expected.items():
+                self.assertTrue((home / target).is_symlink())
+                self.assertEqual((home / target).resolve(), (ROOT / source).resolve())
+            backups = list(old.parent.glob('AGENTS.md.bak.*'))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_text(), '既存の共通指示\n')
+            configs.install('agent-instructions', home)
+            self.assertEqual(len(list(old.parent.glob('AGENTS.md.bak.*'))), 1)
+            self.assertEqual(other_rule.read_text(), '別のルール\n')
+            self.assertFalse((home / '.gitconfig').exists())
+
+    def test_separate_claude_profile_uses_the_same_tracked_rule(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory) / '利用者'
+            profile = home / '.studio-claude'
+            existing = profile / 'rules/local.md'
+            existing.parent.mkdir(parents=True)
+            existing.write_text('アプリの既存ルール\n')
+            configs.install('agent-instructions', home, claude_config_dir=profile)
+            target = profile / 'rules/git-workflow.md'
+            self.assertEqual(target.resolve(), (ROOT / 'docs/git-workflow.md').resolve())
+            self.assertEqual((home / '.claude/rules/git-workflow.md').resolve(), target.resolve())
+            self.assertEqual(existing.read_text(), 'アプリの既存ルール\n')
+
     def test_deploy_for_another_user_preserves_sources_and_existing_settings(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory) / 'Hirata Mac'
