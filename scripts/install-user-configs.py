@@ -102,18 +102,20 @@ def link(target, source):
     target.symlink_to(source)
 
 
-def install(name, home, root=ROOT):
+def install(name, home, root=ROOT, claude_config_dir=None):
     if name == 'agent-instructions':
         # 本文はGit管理下に置き、標準の共通指示の置き場所にはリンクだけを作る。
-        instructions = {
-            'codex/AGENTS.md': '.codex/AGENTS.md',
-            'docs/git-workflow.md': '.claude/rules/git-workflow.md',
-        }
-        for source in instructions:
+        instructions = [
+            ('codex/AGENTS.md', home / '.codex/AGENTS.md'),
+            ('docs/git-workflow.md', home / '.claude/rules/git-workflow.md'),
+        ]
+        if claude_config_dir is not None:
+            instructions.append(('docs/git-workflow.md', Path(claude_config_dir) / 'rules/git-workflow.md'))
+        for source, _ in instructions:
             if not (root / source).is_file():
                 raise FileNotFoundError(root / source)
-        for source, target in instructions.items():
-            link(home / target, root / source)
+        for source, target in instructions:
+            link(target, root / source)
         return root
     generated = home / '.local/share/dotfiles/generated'
     if name == 'iterm2':
@@ -136,8 +138,13 @@ def install(name, home, root=ROOT):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('config', choices=[*CONFIGS, 'iterm2', 'agent-instructions'])
+    parser.add_argument('--claude-config-dir', type=Path,
+                        help='別のCLAUDE_CONFIG_DIRにも共通ルールを配置する（agent-instructionsのみ）')
     args = parser.parse_args()
-    print(install(args.config, Path.home()))
+    if args.claude_config_dir is not None and args.config != 'agent-instructions':
+        parser.error('--claude-config-dir は agent-instructions と組み合わせてください')
+    profile = args.claude_config_dir.expanduser().resolve() if args.claude_config_dir is not None else None
+    print(install(args.config, Path.home(), claude_config_dir=profile))
 
 
 if __name__ == '__main__':

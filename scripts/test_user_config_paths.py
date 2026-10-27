@@ -43,6 +43,19 @@ class UserConfigPathsTest(unittest.TestCase):
             self.assertEqual(other_rule.read_text(), '別のルール\n')
             self.assertFalse((home / '.gitconfig').exists())
 
+    def test_separate_claude_profile_uses_the_same_tracked_rule(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory) / '利用者'
+            profile = home / '.studio-claude'
+            existing = profile / 'rules/local.md'
+            existing.parent.mkdir(parents=True)
+            existing.write_text('アプリの既存ルール\n')
+            configs.install('agent-instructions', home, claude_config_dir=profile)
+            target = profile / 'rules/git-workflow.md'
+            self.assertEqual(target.resolve(), (ROOT / 'docs/git-workflow.md').resolve())
+            self.assertEqual((home / '.claude/rules/git-workflow.md').resolve(), target.resolve())
+            self.assertEqual(existing.read_text(), 'アプリの既存ルール\n')
+
     def test_deploy_for_another_user_preserves_sources_and_existing_settings(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory) / 'Hirata Mac'

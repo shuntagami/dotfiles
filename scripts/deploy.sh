@@ -51,6 +51,10 @@ python3 ~/dotfiles/scripts/install-user-configs.py codex
 
 # 全リポジトリ共通の指示。本文はdotfiles、ホーム側は標準の場所へのリンク。
 python3 ~/dotfiles/scripts/install-user-configs.py agent-instructions
+# Studioが独立したClaude設定を使っている場合も、同じGit管理下の本文を参照する。
+if [[ -d ~/.marunage-studio-claude ]]; then
+  python3 ~/dotfiles/scripts/install-user-configs.py agent-instructions --claude-config-dir ~/.marunage-studio-claude
+fi
 
 # Codex skills: symlink each repository-managed skill directory.
 mkdir -p ~/.codex/skills

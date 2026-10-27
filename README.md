@@ -239,6 +239,8 @@ python3 ~/dotfiles/scripts/install-user-configs.py agent-instructions
 ```
 
 実ファイルがすでにある場合は退避し、他のルールは変更しません。ホーム側に独立した本文は作りません。
+Studioの標準プロファイル `~/.marunage-studio-claude` がある場合は、deploy時にそこにも同じルールをリンクします。
+別の `CLAUDE_CONFIG_DIR` を使う場合は、上のコマンドに `--claude-config-dir <実際の設定ディレクトリ>` を付けます。
 Gitの独自フックや設定キーは追加せず、既存のpull・push・同期の設定も変更しません。
 共通指示はエージェントへの作業方針であり、Git操作を強制的に禁止する仕組みではありません。
 
