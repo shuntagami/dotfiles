@@ -1,4 +1,4 @@
 interface:
-  display_name: "説明・操作動画を作る"
-  short_description: "MulmoScriptで台本・画像・操作映像を管理し、音声と字幕付きの動画を制作・改訂する"
-  default_prompt: "$mulmo-workflow-video を使って、構成案から説明・操作手順の動画を作成してください。"
+  display_name: "説明・操作動画を作る・編集する"
+  short_description: "説明動画の制作・場面単位の改訂と、既存動画のカット・倍速化・音声調整・字幕追加"
+  default_prompt: "$mulmo-workflow-video を使って、目的と手元の素材に合わせて動画を制作・編集してください。"
