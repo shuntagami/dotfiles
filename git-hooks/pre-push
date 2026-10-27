@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-# 有効化したリポジトリだけを確認する。worktreeの移動や編集は行わない。
-set -eu
-[[ "$(git config --bool --get workflow.checkDuplicateEdits || true)" == true ]] || exit 0
-root=$(cd "$(dirname "$0")/.." && pwd)
-exec python3 "$root/scripts/check-worktree-duplicates.py" "$@"

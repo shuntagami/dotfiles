@@ -103,6 +103,18 @@ def link(target, source):
 
 
 def install(name, home, root=ROOT):
+    if name == 'agent-instructions':
+        # 本文はGit管理下に置き、標準の共通指示の置き場所にはリンクだけを作る。
+        instructions = {
+            'codex/AGENTS.md': '.codex/AGENTS.md',
+            'docs/git-workflow.md': '.claude/rules/git-workflow.md',
+        }
+        for source in instructions:
+            if not (root / source).is_file():
+                raise FileNotFoundError(root / source)
+        for source, target in instructions.items():
+            link(home / target, root / source)
+        return root
     generated = home / '.local/share/dotfiles/generated'
     if name == 'iterm2':
         source = root / 'misc/com.googlecode.iterm2.plist'
@@ -123,7 +135,7 @@ def install(name, home, root=ROOT):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('config', choices=[*CONFIGS, 'iterm2'])
+    parser.add_argument('config', choices=[*CONFIGS, 'iterm2', 'agent-instructions'])
     args = parser.parse_args()
     print(install(args.config, Path.home()))
 

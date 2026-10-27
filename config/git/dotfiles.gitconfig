@@ -1,6 +1,0 @@
-[pull]
-	# 稼働中のmainの更新で、意図しないmerge commitを作らない。
-	ff = only
-[workflow]
-	# PR用にコピーした変更が元のmainに残っていれば、push前に知らせる。
-	checkDuplicateEdits = true

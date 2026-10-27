@@ -228,6 +228,22 @@ MCPの `servers.json` では `${HOME}` を使えます。`sync-mcp.mjs` が各�
 パスの置き換えはログイン情報やAPIキーを移しません。必要なアプリ・プロジェクトの配置と認証は各Macで行ってください。
 SSHの接続先、ブラウザ自動操作の接続先・Chromeアカウント、ショートカットなどは共通設定のままです。
 
+### 全リポジトリ共通のGit作業方針
+
+共通方針の本文は [docs/git-workflow.md](docs/git-workflow.md) で管理します。
+Codexは `~/.codex/AGENTS.md`、Claude Codeは `~/.claude/rules/git-workflow.md` から参照します。
+`deploy.sh` がリンクを配置します。指示のリンクだけ更新する場合は次を実行します。
+
+```sh
+python3 ~/dotfiles/scripts/install-user-configs.py agent-instructions
+```
+
+実ファイルがすでにある場合は退避し、他のルールは変更しません。ホーム側に独立した本文は作りません。
+Gitの独自フックや設定キーは追加せず、既存のpull・push・同期の設定も変更しません。
+共通指示はエージェントへの作業方針であり、Git操作を強制的に禁止する仕組みではありません。
+
+標準の読み込み先：[Codexの共通指示](https://developers.openai.com/cookbook/examples/gpt-5/codex_prompting_guide#using-agentsmd)、[Claude Codeのユーザールール](https://code.claude.com/docs/en/memory#user-level-rules)。
+
 ### インストール中のパスワード入力
 
 `setup.sh` と `install-packages.sh` は、最初に管理者認証を行い、実行中は通常の `sudo` の認証キャッシュを維持します。
