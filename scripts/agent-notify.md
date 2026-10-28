@@ -19,6 +19,17 @@ Cursorの完了通知はMulmoTerminal標準のStopイベント処理に従う。
 
 音源は `SOUNDS`、音量は `VOLUME` で変更できる。再生済みIDのハッシュだけを `~/.cache/agent-completion-chime/` に保存し、同じ通知の二重再生を防ぐ。会話本文は保存しない。
 
+## 一時停止
+
+`~/.config/agent-notify/disabled` が存在する間、このスクリプトによる通知音をすべて停止する。実行中のセッションも次の通知から反映され、エージェントの再起動は不要。MulmoTerminal標準の通知音は別設定のため影響しない。
+
+```sh
+mkdir -p ~/.config/agent-notify
+touch ~/.config/agent-notify/disabled
+```
+
+再開するときは `~/.config/agent-notify/disabled` を削除する。この設定は端末ごとに保持し、Gitには保存しない。停止中は再生済みIDも記録しないが、解除時に過去の通知をまとめて再生する処理はない。
+
 ## 反映と検証
 
 Codex は既存のスクリプト呼び出し先を保っているので、次の通知から適用される。Claude Code は設定を読み直すためセッションを再起動すると確実。MulmoTerminal の音設定を変えた場合は開いているページも再読み込みする。
