@@ -140,6 +140,9 @@ def claude_waiting(path, payload):
 
 
 def play_once(token, kind):
+    # A per-machine pause also reaches hooks in already-running agent sessions.
+    if (Path.home() / ".config/agent-notify/disabled").exists():
+        return
     state = Path.home() / ".cache/agent-completion-chime"
     state.mkdir(parents=True, exist_ok=True, mode=0o700)
     # Atomic across duplicate notify processes; store no prompt or response text.
