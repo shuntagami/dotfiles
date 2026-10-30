@@ -11,31 +11,6 @@
     "defaultMode": "bypassPermissions"
   },
   "model": "opus",
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 /Users/shun.tagami/dotfiles/scripts/agent-notify.py claude",
-            "async": true
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "matcher": "permission_prompt|elicitation_dialog|elicitation_url_dialog",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 /Users/shun.tagami/dotfiles/scripts/agent-notify.py claude",
-            "async": true
-          }
-        ]
-      }
-    ]
-  },
   "statusLine": {
     "type": "command",
     "command": "/Users/shun.tagami/dotfiles/claude/statusline.sh"
