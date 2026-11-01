@@ -23,13 +23,19 @@ open -a Raycast
 1. 初回案内を完了する。呼び出しはOption+Space、Open at Loginはオン。
 2. `Import Snippets` を実行し、上のJSONを選ぶ。既存のスニペットがある場合は
    重複を確認し、繰り返し一括インポートしない。
-3. Settings → Snippetsで `settings.json` の値を設定する。
-   Expansion ModeはAfter Delimiter (discarding)：短縮語の後にスペースを打つと展開し、
-   スペース自体は残さない。Expand within Wordsはオフ。
-4. 同じ短縮語がMac標準にもあるのでOverride System Snippetsをオンにする。
-   この項目が無効ならRaycastの展開がスキップされる場合がある。
-5. 自動展開にはmacOSのDevice Control and Data Access（アクセシビリティ）許可が必要。
+3. 自動展開にはmacOSのDevice Control and Data Access（アクセシビリティ）許可が必要。
    OSの許可は各Macでユーザーが承認する。dotfilesから権限DBを書き換えない。
+   Request Permissionで進めない場合は、システム設定 → Privacy & Security →
+   Device Control and Data Access → ＋ から `/Applications/Raycast.app` を追加する。
+   Macの認証後、Raycastのスイッチがオンになったことを確認する。
+4. Raycastをメニューから終了して起動し直し、Settings → Snippetsの
+   Enable Snippet Expansionをオンにする。
+5. `settings.json` に合わせる。ImmediatelyモードでExpand within Wordsをオフ、
+   Override System Snippetsをオンにした後、Expansion Modeを
+   After Delimiter (discarding)にする。このモードでは前の2項目は画面から隠れる。
+   短縮語の後にスペースを打つと展開し、スペース自体は残さない。
+   選択肢の文字クリックで切り替わらない場合は、メニューの検索欄で絞り込み、
+   ↓ → Enterで選び、表示値が変わったことを確認する。
 6. 未送信の入力欄で `lgm`、`gm`、`elegm`＋スペースを試す。
    ターミナルで取りこぼす場合はResponse Timeを遅くし、動作を確認する。
 
