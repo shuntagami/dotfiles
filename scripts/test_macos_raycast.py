@@ -69,6 +69,49 @@ class RaycastSetupTests(unittest.TestCase):
             self.assertNotIn("example.com", str(error.exception))
             self.assertFalse(self.receipt.exists())
 
+    def test_open_timeout_is_bounded_and_does_not_leak_private_arguments(self):
+        command = ["/usr/bin/open", raycast.import_url(self.snippets, 2)]
+        with patch.object(raycast, "installed_app", return_value=self.app), \
+             patch.object(raycast.subprocess, "run", side_effect=raycast.subprocess.TimeoutExpired(command, 30)) as run:
+            with self.assertRaisesRegex(ValueError, "Timed out opening") as error:
+                raycast.deploy(self.snippets)
+            self.assertNotIn("example.com", str(error.exception))
+            self.assertNotIn("context=", str(error.exception))
+            self.assertEqual(run.call_args.kwargs["timeout"], 30)
+            self.assertFalse(self.receipt.exists())
+
+    def test_defaults_timeout_does_not_touch_local_data_or_receipt(self):
+        self.target.write_text("original local contents")
+        with patch.object(raycast.sys, "platform", "darwin"), patch.object(raycast.sys, "argv", ["setup", "--deploy"]), \
+             patch.object(raycast, "installed_app", return_value=self.app), \
+             patch.object(raycast.subprocess, "run", side_effect=raycast.subprocess.TimeoutExpired(["defaults"], 30)) as run:
+            with self.assertRaisesRegex(ValueError, "Timed out reading"):
+                raycast.main()
+            self.assertEqual(run.call_args.kwargs["timeout"], 30)
+            self.assertEqual(self.target.read_text(), "original local contents")
+            self.assertFalse(self.receipt.exists())
+
+    def test_invalid_keywords_are_rejected_on_generated_and_local_paths(self):
+        for char in " \t\n\u3000`'\"‘’“”":
+            with self.subTest(character=repr(char)):
+                keyword = "my" + char + "email"
+                with self.assertRaisesRegex(ValueError, "keywords cannot"):
+                    raycast.validate([{"name": "sample", "text": "mail@example.com", "keyword": keyword}])
+                with self.assertRaisesRegex(ValueError, "keywords cannot"):
+                    raycast.convert([{"replace": keyword, "with": "mail@example.com"}])
+        raycast.validate([{"name": "valid", "keyword": "$cmd_日本-123", "text": "sample"}])
+
+    def test_placeholders_are_rejected_on_check_and_confirmation(self):
+        for text in ("{clipboard}", "literal {", "literal }"):
+            self.target.write_text(json.dumps([{"name": "sample", "text": text, "keyword": "sample"}]))
+            for mode in ("--check", "--confirm-setup"):
+                with self.subTest(text=text, mode=mode), patch.object(raycast.sys, "argv", ["setup", mode]):
+                    with self.assertRaisesRegex(ValueError, "contains braces"):
+                        raycast.main()
+            with self.assertRaisesRegex(ValueError, "contains braces"):
+                raycast.convert([{"replace": "sample", "with": text}])
+        self.assertFalse(self.receipt.exists())
+
     def test_conflicting_keywords_are_not_silently_chosen(self):
         items = [{"replace": "dup", "with": "a"}, {"replace": "dup", "with": "b"},
                  {"replace": "gm", "with": "ok"}, {"replace": "gm", "with": "ok"},

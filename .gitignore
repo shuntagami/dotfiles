@@ -29,4 +29,4 @@ claude/skills/vfr-sync-rife/bin/
 # Raycast: personal snippet contents and encrypted full exports stay local.
 raycast/*.local.json
 raycast/*.local.json.backup-*
-raycast/*.rayconfig
+*.rayconfig

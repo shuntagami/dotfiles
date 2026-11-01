@@ -19,6 +19,7 @@ CONFIRMED = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/stat
 
 
 def private_write(target, content):
+    """Replace a local file atomically with permissions 0600 from creation."""
     target.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(dir=target.parent, prefix=".raycast-", suffix=".local.json")
     try:
@@ -30,24 +31,29 @@ def private_write(target, content):
 
 
 def encoded(snippets):
+    """Serialize deterministically for URLs and confirmation fingerprints."""
     return json.dumps(snippets, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
 def fingerprint(snippets, settings):
+    """Identify the desired import contents and settings without storing secrets."""
     return hashlib.sha256(encoded({"snippets": snippets, "settings": settings}).encode()).hexdigest()
 
 
 def import_url(snippets, major):
+    """Build the version-specific URL used by Raycast's Snippet Explorer."""
     if major >= 2:
         return "raycast://extensions/raycast/snippets/import-snippets?context=" + quote(encoded(snippets), safe="")
     return "raycast://snippets/import?" + "&".join("snippet=" + quote(encoded(s), safe="") for s in snippets)
 
 
 def installed_app():
+    """Find Raycast in the system or current user's Applications directory."""
     return next((p for p in (Path("/Applications/Raycast.app"), Path.home() / "Applications/Raycast.app") if p.is_dir()), None)
 
 
 def deploy(snippets):
+    """Request an additive import, returning 3 until the user confirms setup."""
     settings = json.loads(SETTINGS.read_text())
     digest = fingerprint(snippets, settings)
     if CONFIRMED.exists():
@@ -58,17 +64,24 @@ def deploy(snippets):
     app = installed_app()
     info = plistlib.loads((app / "Contents/Info.plist").read_bytes())
     major = int(info["CFBundleShortVersionString"].split(".")[0])
-    result = subprocess.run(["/usr/bin/open", import_url(snippets, major)], capture_output=True)
+    try:
+        result = subprocess.run(["/usr/bin/open", import_url(snippets, major)], capture_output=True, timeout=30)
+    except subprocess.TimeoutExpired:
+        # TimeoutExpired includes argv (and therefore private snippet text).
+        raise ValueError("Timed out opening Raycast import; no import has been marked complete") from None
     if result.returncode:
         raise ValueError("Could not open Raycast import; no import has been marked complete")
     print("Raycast import requested. This does NOT confirm that import completed.")
+    print("Import only adds snippets; it does not update or delete existing ones. Resolve keyword conflicts in Raycast.")
     print("Finish the import confirmation; allow Accessibility if requested; enable Snippet Expansion,")
     print("choose Immediately, disable Expand within Words, and enable Override System Snippets.")
-    print("After verifying expansion, run: python3 ~/dotfiles/scripts/macos-raycast.py --confirm-setup")
+    print("After manually applying any edits/deletions and verifying expansion, run:")
+    print("python3 ~/dotfiles/scripts/macos-raycast.py --confirm-setup")
     return 3
 
 
 def validate(snippets):
+    """Reject malformed imports, unusable triggers and implicit placeholders."""
     if not isinstance(snippets, list):
         raise ValueError("Snippets must be a JSON array")
     keywords = set()
@@ -78,12 +91,18 @@ def validate(snippets):
             for key in ("name", "text", "keyword")
         ):
             raise ValueError("Every snippet needs nonempty name, text and keyword strings")
+        if any(char.isspace() or char in "`'\"‘’“”" for char in snippet["keyword"]):
+            raise ValueError("Snippet keywords cannot contain whitespace, backticks or quotation marks")
+        # Apply this to generated data AND manually edited local JSON.
+        if "{" in snippet["text"] or "}" in snippet["text"]:
+            raise ValueError("A replacement contains braces; convert its Raycast placeholders manually")
         if snippet["keyword"] in keywords:
             raise ValueError("Duplicate snippet keyword; resolve locally before importing")
         keywords.add(snippet["keyword"])
 
 
 def convert(items):
+    """Convert active macOS replacements, omitting ambiguous duplicate triggers."""
     by_keyword = {}
     conflicts = set()
     for item in items:
@@ -91,9 +110,6 @@ def convert(items):
         if item.get("on", True) in (False, 0):
             continue
         if isinstance(keyword, str) and keyword and isinstance(text, str) and text:
-            # Raycast evaluates {...} placeholders. Do not silently reinterpret literals.
-            if "{" in text or "}" in text:
-                raise ValueError("A replacement contains braces; convert its Raycast placeholders manually")
             if keyword in by_keyword and by_keyword[keyword]["text"] != text:
                 conflicts.add(keyword)
             by_keyword[keyword] = {"name": keyword, "text": text, "keyword": keyword}
@@ -107,12 +123,13 @@ def convert(items):
 
 
 def main():
+    """Prepare, validate or request import using this Mac's text replacements."""
     parser = argparse.ArgumentParser(description=__doc__)
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument("--check", action="store_true", help="validate the local import file only")
     modes.add_argument("--refresh-from-macos", action="store_true", help="back up and rebuild the local file")
     modes.add_argument("--deploy", action="store_true", help="use this Mac's dictionary and request import unless previously confirmed")
-    modes.add_argument("--confirm-setup", action="store_true", help="record YOUR confirmation of import, settings and expansion on this Mac")
+    modes.add_argument("--confirm-setup", action="store_true", help="record YOUR confirmation of additions, manual edits/deletions, settings and expansion")
     args = parser.parse_args()
     if args.confirm_setup:
         snippets = json.loads(TARGET.read_text())
@@ -134,7 +151,10 @@ def main():
         return
     if sys.platform != "darwin":
         raise ValueError("Run the macOS export on a Mac")
-    result = subprocess.run(["/usr/bin/defaults", "export", "-g", "-"], capture_output=True, check=True)
+    try:
+        result = subprocess.run(["/usr/bin/defaults", "export", "-g", "-"], capture_output=True, check=True, timeout=30)
+    except subprocess.TimeoutExpired:
+        raise ValueError("Timed out reading macOS text replacements; local snippets were not changed") from None
     items = plistlib.loads(result.stdout).get("NSUserDictionaryReplacementItems", [])
     if args.deploy and not any(item.get("on", True) and item.get("replace") and item.get("with") for item in items):
         print("Raycast: no active text replacements on this Mac; nothing to import.")
