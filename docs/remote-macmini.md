@@ -172,37 +172,23 @@ Touch ID、AirDrop、近距離通信を使うContinuity機能などはリモー�
 
 ### 左右Commandによる英数・かな切り替え
 
-Jump DesktopはKarabiner-Elementsが生成する `japanese_eisuu` / `japanese_kana`
-をFluid接続先へ安定して転送しない。このdotfilesではJump Desktopが前面のときだけ、
-左Command単押しをF18、右Command単押しをF19として送る。接続先Macの
-HammerspoonがF18をABC、F19を日本語入力へ変換する。
+Karabiner-Elementsが左Command単押しを `japanese_eisuu`、右Command単押しを
+`japanese_kana` へ変換し、Jump Desktopへ渡す。Jump専用のF18/F19への変換や、
+Hammerspoonによる入力ソース切り替え・監視・自動復旧は使用しない。
 
-この機能には両方のMacへの最新dotfilesの反映と、Hammerspoonの起動が必要。
-通常アプリでは従来どおりKarabiner-Elementsが直接英数・かなキーを送信する。
+Jump Desktop公式は[10.15.36（2026-10-03）の更新履歴](https://docs.jumpdesktop.com/whats-new/changelog/jump-desktop/#jump-desktop-101536)で、
+Fluid接続中に英数・かなキーが効かない不具合の修正を公表している。
+9月に導入したF18/F19の迂回は、この既知不具合を踏まえて2026-11-01に撤去した。
+当時の導入記録には転送経路の比較検証がなく、個別の原因が確定していたわけではない。
 
-#### 再起動しないと切り替わらなくなる場合
+同日の10.15.46での一時テストでは、利用者が左右Commandを押しても英数のままで、
+Mac mini側では英数のキーイベントのみを観測した。公式修正の存在だけを根拠に、
+この環境でも切り替えが正常になったとは判断しない。更新後の実機確認では、
+右Commandで日本語、左Commandで英数になるかを両方向で確認する。
 
-`b0707ab`（2026-09-12）でスリープ・ロック解除・Secure Input終了後の
-入力監視の再作成と、2秒ごとの稼働確認を追加した。ただし、この確認は
-`isEnabled()` の表示だけを見ており、実際のイベント受信を確認していなかった。
-
-現在は2秒ごとに識別タグ付きのnullイベント（キー入力を伴わないイベント）を送り、
-次の確認まで応答がなければ入力監視だけを再作成する。発生するタイミングにより
-検出・復旧には約2〜4秒かかる。入力ソースの変更もキー監視のコールバックから
-タイマーへ移し、入力メソッドの起動待ちが監視を止める原因になりにくくしている。
-これは従来の検知漏れへの対策であり、個々の再発原因を特定したものではない。
-
-Hammerspoon Consoleで次を実行すると、監視状態を確認できる。
-
-```lua
-hs.inspect(require('keyboard.remote-input-source').status())
-```
-
-`probeReplies` が増え続けていれば、稼働表示だけでなくイベント受信も確認できている。
-`secureInput = true` の間はmacOSがキー監視を遮断するため、解除を待って復旧する。
-Consoleには応答なしによる監視再作成や入力ソースの選択失敗も記録する。
-MacBookからF18/F19が転送されていない場合や、Hammerspoon自体が停止した場合は
-この監視の対象外。反映時には接続先Mac miniのHammerspoon設定を一度リロードする。
+最新版は[公式ダウンロード](https://jumpdesktop.com/download-web-mac.html)を確認する。
+2026-11-01時点ではMac版の更新フィードとHomebrewは10.15.46を案内したが、
+公式ダウンロードのアプリ実体は10.15.51だった。Connectも10.15.51を使用する。
 
 ## SSH の改善
 
