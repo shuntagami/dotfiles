@@ -1,8 +1,7 @@
 [
   {
     "name": "mt",
-    "link": "http://localhost:34567/terminals",
-    "openWith": "Google Chrome"
+    "link": "http://localhost:34567/terminals"
   },
   {
     "name": "slack",

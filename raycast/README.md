@@ -14,12 +14,19 @@ iTerm2を終了して起動し直した後に確認する。
 
 `quicklinks.json` にWebリンクを保存する。RaycastのImport QuicklinksからこのJSONを
 読み込むと、`mt`（MulmoTerminal）、`slack`、`discord` の短い名前で検索して開ける。
-3件ともOpen WithはGoogle Chrome。インポート後、Settings → Quicklinksで各項目の
+SlackとDiscordのOpen WithはGoogle Chrome。`mt` は既定のブラウザを使う。
+インポート後、Settings → Quicklinksで各項目の
 Aliasにも名前と同じ文字（`mt`・`slack`・`discord`）を入力する。
 エイリアスはJSONインポートでは復元されない。同名のSlack/Discordアプリより
 Webリンクを先頭に出すため、各Macで設定する。
 `mt` は実行したMacのlocalhost:34567を開く。
 MulmoTerminalのサーバーはそのMacで起動しておく。
+`quicklinks-settings.json` に合わせ、Settings → QuicklinksのPrefer Existing Tabsをオンにする。
+`mt` のOpen Withは明示的なアプリ指定ではなく、Defaultと表示される既定ブラウザの項目を選ぶ。
+この経路で既存タブの再利用を有効にする。Mac miniでは既定ブラウザがChromeであることを確認済み。
+別のMacでもChromeの既存タブへ移動する場合は、Chromeを既定ブラウザにしておく。
+同じURLのタブがあればそこへ移動し、なければ新しく開く。
+これらの画面設定はJSONを置くだけでは自動適用されない。
 既存リンクのURL変更はインポートでは上書きされないため、Raycastの編集画面でも更新する。
 
 ## 導入・復元
