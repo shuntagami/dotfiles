@@ -26,6 +26,9 @@ Aliasにも名前と同じ文字（`mt`・`slack`・`discord`）を入力する�
 エイリアスはJSONインポートでは復元されない。同名のSlack/Discordアプリより
 Webリンクを先頭に出すため、各Macで設定する。
 `mt` は実行したMacのlocalhost:34567を開く。
+`MULMOTERMINAL_PORT` で別ポートを使うMacでは、Raycastの `mt` を編集し、
+URLを `http://localhost:<ポート番号>/terminals` に変更する。
+JSONのURLは固定値なので、環境変数の変更だけでは自動追従しない。
 MulmoTerminalのサーバーはそのMacで起動しておく。
 `quicklinks-settings.json` に合わせ、Settings → QuicklinksのPrefer Existing Tabsをオンにする。
 `mt` のOpen Withは明示的なアプリ指定ではなく、Defaultと表示される既定ブラウザの項目を選ぶ。
