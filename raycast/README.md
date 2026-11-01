@@ -3,6 +3,40 @@
 Macのテキスト置換にある短縮語をRaycastに移し、ブラウザのターミナルでも使う。
 アプリは `misc/Brewfile`、目標の設定値は `settings.json` で管理する。
 `settings.json` は手順の正本であり、Raycastが直接読み込む設定ファイルではない。
+ただし `snippets.keywordPrefix` は移行スクリプトが読み、生成する短縮語の先頭に付ける。
+現在は `;`。Mac標準の `lgm`・`gm`・`elegm` は、Raycastでは `;lgm`・`;gm`・`;elegm` になる。
+Mac標準の登録を残して、実験的な上書き機能を使わずにxtermで展開するための設定。
+
+Raycastの呼び出しはCommand+Spaceにする。
+Settings → GeneralのReplace Spotlightを使い、SpotlightのCommand+Spaceを解除して置き換える。
+`settings.json` の `replaceSpotlight` はこの目標設定の記録であり、JSONだけでは自動適用されない。
+Aqua VoiceはControl+Spaceを使う。
+iTerm2のHotkey Windowは元のOption+Spaceを使う。
+こちらの保存先は `misc/com.googlecode.iterm2.plist` のDefaultプロファイル。
+`deploy.sh` がiTerm2のカスタム設定フォルダを設定する。起動済みのiTerm2への反映は
+iTerm2を終了して起動し直した後に確認する。
+
+## よく開くページ（Quicklinks）
+
+`quicklinks.json` にWebリンクを保存する。RaycastのImport QuicklinksからこのJSONを
+読み込むと、`mt`（MulmoTerminal）、`slack`、`discord` の短い名前で検索して開ける。
+SlackとDiscordのOpen WithはGoogle Chrome。`mt` は既定のブラウザを使う。
+インポート後、Settings → Quicklinksで各項目の
+Aliasにも名前と同じ文字（`mt`・`slack`・`discord`）を入力する。
+エイリアスはJSONインポートでは復元されない。同名のSlack/Discordアプリより
+Webリンクを先頭に出すため、各Macで設定する。
+`mt` は実行したMacのlocalhost:34567を開く。
+`MULMOTERMINAL_PORT` で別ポートを使うMacでは、Raycastの `mt` を編集し、
+URLを `http://localhost:<ポート番号>/terminals` に変更する。
+JSONのURLは固定値なので、環境変数の変更だけでは自動追従しない。
+MulmoTerminalのサーバーはそのMacで起動しておく。
+`quicklinks-settings.json` に合わせ、Settings → QuicklinksのPrefer Existing Tabsをオンにする。
+`mt` のOpen Withは明示的なアプリ指定ではなく、Defaultと表示される既定ブラウザの項目を選ぶ。
+この経路で既存タブの再利用を有効にする。Mac miniでは既定ブラウザがChromeであることを確認済み。
+別のMacでもChromeの既存タブへ移動する場合は、Chromeを既定ブラウザにしておく。
+同じURLのタブがあればそこへ移動し、なければ新しく開く。
+これらの画面設定はJSONを置くだけでは自動適用されない。
+既存リンクのURL変更はインポートでは上書きされないため、Raycastの編集画面でも更新する。
 
 ## 導入・復元
 
@@ -26,7 +60,7 @@ Raycast未導入ならスキップする（インストールはBrewfileの担�
 衝突を防ぐためエラーにするので、手動で変換する。
 キーワードに空白・改行・引用符・バッククォートがある場合もエラーにする。
 
-1. 初回案内を完了する。呼び出しはOption+Space、Open at Loginはオン。
+1. 初回案内を完了する。General → Replace Spotlightで呼び出しをCommand+Spaceにし、Open at Loginはオン。
 2. 開いたインポート画面で確認する。起動URLの実行確認が出る場合もある。
    既存のスニペットがある場合は重複を確認する。URLで開けないときは
    `Import Snippets` を実行し、上のJSONを選ぶ。
@@ -38,12 +72,18 @@ Raycast未導入ならスキップする（インストールはBrewfileの担�
 4. Raycastをメニューから終了して起動し直し、Settings → Snippetsの
    Enable Snippet Expansionをオンにする。
 5. `settings.json` に合わせ、Expansion ModeをImmediately、Expand within Wordsをオフ、
-   Override System Snippetsをオンにする。短縮語を入力し終わると、スペースを待たずに展開する。
-   Mac miniのxtermではAfter Delimiter (discarding)で展開できず、Immediatelyへの変更後に
-   ユーザーの手入力でメールアドレスに展開することを確認済み（2026-11-01）。
+   Override System Snippetsをオフにする。Raycastが処理する短縮語には即時展開を使う。
+   このMac miniでは、実験的なOverride System Snippetsをオンにすると手打ち・Aqua Voiceが
+   二重になり、オフで正常になることを利用者が確認（2026-11-02）。オンに戻さない。
+   オフではMac標準と同じ短縮語をRaycast側で上書きしない。
+   通常欄の `lgm`＋Spaceと、Raycastのxterm用の `;lgm` は区別する。
+   Mac標準と衝突しない `;lgm` の保存を画面で確認し、利用者の手入力で
+   xterm上でメールアドレスに展開することを確認済み（2026-11-02）。
    選択肢の文字クリックで切り替わらない場合は、メニューの検索欄で絞り込み、
    ↓ → Enterで選び、表示値が変わったことを確認する。
-6. 未送信の入力欄で英数入力にして `lgm`、`gm`、`elegm` を手打ちする（スペース不要）。
+6. xtermの未送信入力欄で半角の `;lgm`・`;gm`・`;elegm` を手打ちする（スペース不要）。
+   手打ち・Aqua Voiceが二重にならないことも確認する。
+   通常の入力欄だけで展開できても、xterm対応の確認済みとはしない。
    ターミナルで取りこぼす場合はResponse Timeを遅くし、動作を確認する。
 7. インポート・既存スニペットの手動更新／削除・展開設定・動作を確認できたら、次を実行する。
 
@@ -73,6 +113,8 @@ Raycast未導入ならスキップする（インストールはBrewfileの担�
 更新後にdeployでJSONを作り直し、Raycast内に古い内容や不要な項目が残っていないことを
 確認してから `--confirm-setup` を実行する。フィンガープリントの記録は同期処理ではない。
 JSONだけを編集してもRaycastへ自動反映されない。
+生成済みの短縮語がMac標準の辞書にも存在するときは、衝突としてエラーにする。
+`keywordPrefix` を変更して再生成する。以前のRaycast項目は自動削除しない。
 
 ```sh
 python3 ~/dotfiles/scripts/macos-raycast.py --check

@@ -1,11 +1,13 @@
 {
   "openAtLogin": true,
-  "hotkey": "Option+Space",
+  "hotkey": "Command+Space",
+  "replaceSpotlight": true,
   "snippets": {
     "enabled": true,
+    "keywordPrefix": ";",
     "expansionMode": "Immediately",
     "expandWithinWords": false,
-    "overrideSystemSnippets": true,
+    "overrideSystemSnippets": false,
     "responseTime": "Default",
     "completionSound": "None"
   }
