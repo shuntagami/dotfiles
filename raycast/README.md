@@ -4,9 +4,11 @@ Macのテキスト置換にある短縮語をRaycastに移し、ブラウザの�
 アプリは `misc/Brewfile`、目標の設定値は `settings.json` で管理する。
 `settings.json` は手順の正本であり、Raycastが直接読み込む設定ファイルではない。
 
-Raycastの呼び出しはデフォルトのOption+Spaceを使う。
+Raycastの呼び出しはCommand+Spaceにする。
+Settings → GeneralのReplace Spotlightを使い、SpotlightのCommand+Spaceを解除して置き換える。
+`settings.json` の `replaceSpotlight` はこの目標設定の記録であり、JSONだけでは自動適用されない。
 Aqua VoiceはControl+Spaceを使う。
-iTerm2のHotkey Windowは競合を避けるためControl+Option+Tにする。
+iTerm2のHotkey Windowは元のOption+Spaceを使う。
 こちらの保存先は `misc/com.googlecode.iterm2.plist` のDefaultプロファイル。
 `deploy.sh` がiTerm2のカスタム設定フォルダを設定する。起動済みのiTerm2への反映は
 iTerm2を終了して起動し直した後に確認する。
@@ -52,7 +54,7 @@ Raycast未導入ならスキップする（インストールはBrewfileの担�
 衝突を防ぐためエラーにするので、手動で変換する。
 キーワードに空白・改行・引用符・バッククォートがある場合もエラーにする。
 
-1. 初回案内を完了する。呼び出しはOption+Space、Open at Loginはオン。
+1. 初回案内を完了する。General → Replace Spotlightで呼び出しをCommand+Spaceにし、Open at Loginはオン。
 2. 開いたインポート画面で確認する。起動URLの実行確認が出る場合もある。
    既存のスニペットがある場合は重複を確認する。URLで開けないときは
    `Import Snippets` を実行し、上のJSONを選ぶ。

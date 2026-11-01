@@ -1,6 +1,7 @@
 {
   "openAtLogin": true,
-  "hotkey": "Option+Space",
+  "hotkey": "Command+Space",
+  "replaceSpotlight": true,
   "snippets": {
     "enabled": true,
     "expansionMode": "Immediately",
