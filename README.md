@@ -186,6 +186,13 @@ Clipyも指定した設定キーだけ更新します。変更前の管理対象
 アプリが未インストールならスキップします。Aqua Voiceの設定ファイルがまだない場合は、
 一度アプリを起動してから再実行してください（適用時は終了コード3で報告し、deployは警告を出して続行）。
 
+### Raycastの定型文入力
+
+Raycastは `misc/Brewfile` で導入します。設定方針は `raycast/settings.json`、
+Mac標準のテキスト置換からの移行は `python3 ~/dotfiles/scripts/macos-raycast.py`。
+実データはGit対象外の `raycast/snippets.local.json` に保存します。
+アプリ内へのインポートと必要な権限・展開設定は [raycast/README.md](raycast/README.md) を参照してください。
+
 ### 標準アプリ・スクリーンショット
 
 `misc/default-apps.json` で標準アプリとCleanShotの撮影ショートカットを管理します。
