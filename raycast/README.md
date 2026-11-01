@@ -8,21 +8,25 @@ Macのテキスト置換にある短縮語をRaycastに移し、ブラウザの�
 
 ```sh
 brew install --cask raycast
-python3 ~/dotfiles/scripts/macos-raycast.py
-open -a Raycast
+python3 ~/dotfiles/scripts/macos-raycast.py --deploy
+# 同じ処理は scripts/deploy.sh からも実行される
 ```
 
-スクリプトは、そのMacの有効なテキスト置換を
+`--deploy` は、そのMacの有効なテキスト置換を毎回読み取り、
 `~/dotfiles/raycast/snippets.local.json` に変換する。
-このファイルはGit対象外・権限600。既存ファイルは上書きしない。
-別のMacへ移す場合はこのJSONを安全な方法でコピーするか、そのMacで再生成する。
+そのままRaycast公式サイトと同じ起動URLでインポートを要求するため、
+JSONの手動選択やMac miniからのデータコピーは不要。MacBookではMacBookの辞書が元になる。
+このファイルはGit対象外・権限600。内容に変更があればバックアップして更新する。
+Raycast未導入ならスキップする（インストールはBrewfileの担当）。
+辞書が空の場合もスキップする。
 同じ短縮語に異なる内容が複数ある場合、その短縮語は除外して件数を通知する。
 内容が同じ重複は1件にまとめる。波括弧を含む置換はRaycastのプレースホルダーとの
 衝突を防ぐためエラーにするので、手動で変換する。
 
 1. 初回案内を完了する。呼び出しはOption+Space、Open at Loginはオン。
-2. `Import Snippets` を実行し、上のJSONを選ぶ。既存のスニペットがある場合は
-   重複を確認し、繰り返し一括インポートしない。
+2. 開いたインポート画面で確認する。起動URLの実行確認が出る場合もある。
+   既存のスニペットがある場合は重複を確認する。URLで開けないときは
+   `Import Snippets` を実行し、上のJSONを選ぶ。
 3. 自動展開にはmacOSのDevice Control and Data Access（アクセシビリティ）許可が必要。
    OSの許可は各Macでユーザーが承認する。dotfilesから権限DBを書き換えない。
    Request Permissionで進めない場合は、システム設定 → Privacy & Security →
@@ -38,25 +42,43 @@ open -a Raycast
    ↓ → Enterで選び、表示値が変わったことを確認する。
 6. 未送信の入力欄で英数入力にして `lgm`、`gm`、`elegm` を手打ちする（スペース不要）。
    ターミナルで取りこぼす場合はResponse Timeを遅くし、動作を確認する。
+7. インポート・展開設定・動作を確認できたら、次を実行する。
+
+   ```sh
+   python3 ~/dotfiles/scripts/macos-raycast.py --confirm-setup
+   ```
+
+   これはユーザーによる完了確認の記録であり、アプリの状態を自動検証するコマンドではない。
+   `~/.local/state/dotfiles/raycast/confirmed.json` に内容と設定値のハッシュだけを保存する
+   （`XDG_STATE_HOME` があればその配下）。次のdeployでは辞書・設定値に変更がなければ
+   インポート画面を繰り返し開かない。辞書や `settings.json` が変わると再確認が必要になる。
+
+初回・変更時は終了コード3で未完了を知らせる。`deploy.sh` は警告を出して残りを続行する。
+アプリの起動に成功しただけで、インポートや設定を完了扱いにはしない。
 
 ## 更新
 
-ローカルJSONを編集してから、必要なスニペットをRaycast側でも更新する。
-JSONの編集はRaycastへ自動反映されない。
+通常はMac標準の辞書を更新してdeployを再実行する。
+`--deploy` はそのMacの辞書を正本にするので、ローカルJSONへの独自変更はバックアップして更新される。
+JSONだけを編集してもRaycastへ自動反映されない。
 
 ```sh
 python3 ~/dotfiles/scripts/macos-raycast.py --check
 # Mac標準の登録から作り直す場合（既存JSONはバックアップされる）
 python3 ~/dotfiles/scripts/macos-raycast.py --refresh-from-macos
+# 生成だけ行い、既存JSONは保持する（従来の動作）
+python3 ~/dotfiles/scripts/macos-raycast.py
 ```
 
 ## 管理範囲
 
 Raycast v2の設定はアプリ内のDBに保存されるため、DBを直接書き換えたりリンクしない。
 画面で設定を適用し、復元時も `settings.json` に合わせる。
+公式の起動URLはSnippetsのインポートに使えるが、展開設定を直接適用する公式CLIは確認できていない。
 アカウント情報、履歴、メールアドレスなどを含む実データはGitに入れない。
 全設定のバックアップが必要なら公式のExport Settings & Dataを使う。
 暗号化された `.rayconfig` はGit対象外。パスフレーズは別途安全に保管する。
 
 公式仕様：[Snippets](https://manual.raycast.com/snippets)、
 [Import & Export](https://manual.raycast.com/import-export)。
+起動URLは [Raycast公式Snippet Explorerの実装](https://github.com/raycast/ray-so/blob/main/app/%28navigation%29/snippets/%5B%5B...slug%5D%5D/snippets.tsx) に合わせる。

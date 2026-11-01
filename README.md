@@ -188,10 +188,10 @@ Clipyも指定した設定キーだけ更新します。変更前の管理対象
 
 ### Raycastの定型文入力
 
-Raycastは `misc/Brewfile` で導入します。設定方針は `raycast/settings.json`、
-Mac標準のテキスト置換からの移行は `python3 ~/dotfiles/scripts/macos-raycast.py`。
+Raycastは `misc/Brewfile` で導入します。設定方針は `raycast/settings.json`。
+`deploy.sh` は実行したMacのテキスト置換からSnippetsを生成し、初回・変更時にインポート画面を開きます。
 実データはGit対象外の `raycast/snippets.local.json` に保存します。
-アプリ内へのインポートと必要な権限・展開設定は [raycast/README.md](raycast/README.md) を参照してください。
+初回の確認・権限・展開設定は [raycast/README.md](raycast/README.md) を参照してください。
 
 ### 標準アプリ・スクリーンショット
 
