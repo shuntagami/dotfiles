@@ -101,10 +101,8 @@ def validate(snippets):
         keywords.add(snippet["keyword"])
 
 
-def convert(items, prefix=""):
-    """Convert active replacements to optional prefixed, nonconflicting triggers."""
-    if not isinstance(prefix, str):
-        raise ValueError("Snippet keywordPrefix must be a string")
+def convert(items):
+    """Convert active macOS replacements, omitting ambiguous duplicate triggers."""
     by_keyword = {}
     conflicts = set()
     for item in items:
@@ -118,13 +116,6 @@ def convert(items, prefix=""):
     snippets = [snippet for key, snippet in by_keyword.items() if key not in conflicts]
     if conflicts:
         print(f"Skipped {len(conflicts)} conflicting duplicate keywords; resolve them in macOS before refreshing.")
-    if prefix:
-        for snippet in snippets:
-            keyword = prefix + snippet["keyword"]
-            if keyword in by_keyword:
-                raise ValueError("A prefixed keyword already exists in macOS; choose another keywordPrefix")
-            snippet["keyword"] = keyword
-            snippet["name"] = keyword
     validate(snippets)
     if not snippets:
         raise ValueError("No active macOS text replacements found")
@@ -168,8 +159,7 @@ def main():
     if args.deploy and not any(item.get("on", True) and item.get("replace") and item.get("with") for item in items):
         print("Raycast: no active text replacements on this Mac; nothing to import.")
         return 0
-    prefix = json.loads(SETTINGS.read_text()).get("snippets", {}).get("keywordPrefix", "")
-    snippets = convert(items, prefix)
+    snippets = convert(items)
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     content = json.dumps(snippets, ensure_ascii=False, indent=2) + "\n"
     changed = not TARGET.exists() or TARGET.read_text() != content

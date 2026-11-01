@@ -3,9 +3,6 @@
 Macのテキスト置換にある短縮語をRaycastに移し、ブラウザのターミナルでも使う。
 アプリは `misc/Brewfile`、目標の設定値は `settings.json` で管理する。
 `settings.json` は手順の正本であり、Raycastが直接読み込む設定ファイルではない。
-ただし `snippets.keywordPrefix` は移行スクリプトが読み、生成する短縮語の先頭に付ける。
-現在は `;` なので、Mac標準の `lgm` はRaycastでは `;lgm` になる。
-Mac標準の登録を残して、実験的な上書き機能を使わずに展開するための設定。
 
 Raycastの呼び出しはCommand+Spaceにする。
 Settings → GeneralのReplace Spotlightを使い、SpotlightのCommand+Spaceを解除して置き換える。
@@ -69,13 +66,15 @@ Raycast未導入ならスキップする（インストールはBrewfileの担�
 4. Raycastをメニューから終了して起動し直し、Settings → Snippetsの
    Enable Snippet Expansionをオンにする。
 5. `settings.json` に合わせ、Expansion ModeをImmediately、Expand within Wordsをオフ、
-   Override System Snippetsをオフにする。短縮語を入力し終わると、スペースを待たずに展開する。
+   Override System Snippetsをオフにする。Raycastが処理する短縮語には即時展開を使う。
    このMac miniでは、実験的なOverride System Snippetsをオンにすると手打ち・Aqua Voiceが
    二重になり、オフで正常になることを利用者が確認（2026-11-02）。オンに戻さない。
-   オフではMac標準と同じ短縮語は展開されないため、生成時に `keywordPrefix` を付ける。
+   オフではMac標準と同じ短縮語をRaycast側で上書きしない。
+   この端末では `lgm`＋Spaceで展開される動作を利用者が確認し、その操作を維持している。
+   Mac標準とRaycastのどちらが展開を担当するかは未切り分けのため、機能の帰属は断定しない。
    選択肢の文字クリックで切り替わらない場合は、メニューの検索欄で絞り込み、
    ↓ → Enterで選び、表示値が変わったことを確認する。
-6. 未送信の入力欄で英数入力にして `;lgm`、`;gm`、`;elegm` を手打ちする（スペース不要）。
+6. 未送信の入力欄で `lgm`、`gm`、`elegm`＋Spaceの動作と、手打ち・Aqua Voiceが二重にならないことを確認する。
    ターミナルで取りこぼす場合はResponse Timeを遅くし、動作を確認する。
 7. インポート・既存スニペットの手動更新／削除・展開設定・動作を確認できたら、次を実行する。
 
@@ -105,7 +104,6 @@ Raycast未導入ならスキップする（インストールはBrewfileの担�
 更新後にdeployでJSONを作り直し、Raycast内に古い内容や不要な項目が残っていないことを
 確認してから `--confirm-setup` を実行する。フィンガープリントの記録は同期処理ではない。
 JSONだけを編集してもRaycastへ自動反映されない。
-旧形式の短縮語がRaycast内にあっても自動削除はしない。新しい `;` 付きの項目を追加する。
 
 ```sh
 python3 ~/dotfiles/scripts/macos-raycast.py --check
