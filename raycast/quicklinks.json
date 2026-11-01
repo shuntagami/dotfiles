@@ -1,0 +1,17 @@
+[
+  {
+    "name": "mt",
+    "link": "http://localhost:34567/terminals",
+    "openWith": "Google Chrome"
+  },
+  {
+    "name": "slack",
+    "link": "https://app.slack.com/client/T01D7PKTX9D/C08NWFU3Z9U",
+    "openWith": "Google Chrome"
+  },
+  {
+    "name": "discord",
+    "link": "https://discord.com/channels/1389403501582487723/1389412843136487454",
+    "openWith": "Google Chrome"
+  }
+]

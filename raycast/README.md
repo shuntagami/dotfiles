@@ -4,6 +4,18 @@ Macのテキスト置換にある短縮語をRaycastに移し、ブラウザの�
 アプリは `misc/Brewfile`、目標の設定値は `settings.json` で管理する。
 `settings.json` は手順の正本であり、Raycastが直接読み込む設定ファイルではない。
 
+## よく開くページ（Quicklinks）
+
+`quicklinks.json` にWebリンクを保存する。RaycastのImport QuicklinksからこのJSONを
+読み込むと、`mt`（MulmoTerminal）、`slack`、`discord` の短い名前で検索して開ける。
+3件ともOpen WithはGoogle Chrome。インポート後、Settings → Quicklinksで各項目の
+Aliasにも名前と同じ文字（`mt`・`slack`・`discord`）を入力する。
+エイリアスはJSONインポートでは復元されない。同名のSlack/Discordアプリより
+Webリンクを先頭に出すため、各Macで設定する。
+`mt` は実行したMacのlocalhost:34567を開く。
+MulmoTerminalのサーバーはそのMacで起動しておく。
+既存リンクのURL変更はインポートでは上書きされないため、Raycastの編集画面でも更新する。
+
 ## 導入・復元
 
 ```sh
