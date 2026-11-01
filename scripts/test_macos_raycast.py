@@ -118,6 +118,20 @@ class RaycastSetupTests(unittest.TestCase):
                  {"replace": "off", "with": "disabled", "on": 0}]
         self.assertEqual(raycast.convert(items), [{"name": "gm", "keyword": "gm", "text": "ok"}])
 
+    def test_prefix_preserves_text_and_avoids_native_keyword_collisions(self):
+        items = [{"replace": "lgm", "with": "mail@example.com"}]
+        self.assertEqual(raycast.convert(items, ";"), [
+            {"name": ";lgm", "keyword": ";lgm", "text": "mail@example.com"}])
+        self.assertEqual(items, [{"replace": "lgm", "with": "mail@example.com"}])
+        items.append({"replace": ";lgm", "with": "existing native replacement"})
+        with self.assertRaisesRegex(ValueError, "already exists in macOS"):
+            raycast.convert(items, ";")
+
+    def test_invalid_prefix_is_not_imported(self):
+        for prefix in (1, " ", "'", "`"):
+            with self.subTest(prefix=prefix), self.assertRaises(ValueError):
+                raycast.convert([{"replace": "gm", "with": "mail@example.com"}], prefix)
+
     def test_private_writes_remain_private_on_replace(self):
         target = self.root / "private.json"
         target.write_text("old")

@@ -4,6 +4,7 @@
   "replaceSpotlight": true,
   "snippets": {
     "enabled": true,
+    "keywordPrefix": ";",
     "expansionMode": "Immediately",
     "expandWithinWords": false,
     "overrideSystemSnippets": false,

@@ -3,6 +3,9 @@
 Macのテキスト置換にある短縮語をRaycastに移し、ブラウザのターミナルでも使う。
 アプリは `misc/Brewfile`、目標の設定値は `settings.json` で管理する。
 `settings.json` は手順の正本であり、Raycastが直接読み込む設定ファイルではない。
+ただし `snippets.keywordPrefix` は移行スクリプトが読み、生成する短縮語の先頭に付ける。
+現在は `;`。Mac標準の `lgm`・`gm`・`elegm` は、Raycastでは `;lgm`・`;gm`・`;elegm` になる。
+Mac標準の登録を残して、実験的な上書き機能を使わずにxtermで展開するための設定。
 
 Raycastの呼び出しはCommand+Spaceにする。
 Settings → GeneralのReplace Spotlightを使い、SpotlightのCommand+Spaceを解除して置き換える。
@@ -70,12 +73,13 @@ Raycast未導入ならスキップする（インストールはBrewfileの担�
    このMac miniでは、実験的なOverride System Snippetsをオンにすると手打ち・Aqua Voiceが
    二重になり、オフで正常になることを利用者が確認（2026-11-02）。オンに戻さない。
    オフではMac標準と同じ短縮語をRaycast側で上書きしない。
-   通常の入力欄で `lgm`＋Spaceが動いても、xtermで動くとは限らない。
-   この端末では通常欄での展開を確認したが、xtermでは元の短縮語は展開されていない。
-   xterm用にMac標準と衝突しない `;lgm` を1件追加し、動作を検証中。
+   通常欄の `lgm`＋Spaceと、Raycastのxterm用の `;lgm` は区別する。
+   Mac標準と衝突しない `;lgm` の保存を画面で確認し、利用者の手入力で
+   xterm上でメールアドレスに展開することを確認済み（2026-11-02）。
    選択肢の文字クリックで切り替わらない場合は、メニューの検索欄で絞り込み、
    ↓ → Enterで選び、表示値が変わったことを確認する。
-6. xtermの未送信入力欄で展開を確認し、手打ち・Aqua Voiceが二重にならないことも確認する。
+6. xtermの未送信入力欄で半角の `;lgm`・`;gm`・`;elegm` を手打ちする（スペース不要）。
+   手打ち・Aqua Voiceが二重にならないことも確認する。
    通常の入力欄だけで展開できても、xterm対応の確認済みとはしない。
    ターミナルで取りこぼす場合はResponse Timeを遅くし、動作を確認する。
 7. インポート・既存スニペットの手動更新／削除・展開設定・動作を確認できたら、次を実行する。
@@ -106,6 +110,8 @@ Raycast未導入ならスキップする（インストールはBrewfileの担�
 更新後にdeployでJSONを作り直し、Raycast内に古い内容や不要な項目が残っていないことを
 確認してから `--confirm-setup` を実行する。フィンガープリントの記録は同期処理ではない。
 JSONだけを編集してもRaycastへ自動反映されない。
+生成済みの短縮語がMac標準の辞書にも存在するときは、衝突としてエラーにする。
+`keywordPrefix` を変更して再生成する。以前のRaycast項目は自動削除しない。
 
 ```sh
 python3 ~/dotfiles/scripts/macos-raycast.py --check
