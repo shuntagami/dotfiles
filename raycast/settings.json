@@ -1,0 +1,12 @@
+{
+  "openAtLogin": true,
+  "hotkey": "Option+Space",
+  "snippets": {
+    "enabled": true,
+    "expansionMode": "Immediately",
+    "expandWithinWords": false,
+    "overrideSystemSnippets": true,
+    "responseTime": "Default",
+    "completionSound": "None"
+  }
+}
