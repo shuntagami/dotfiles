@@ -30,13 +30,13 @@ open -a Raycast
    Macの認証後、Raycastのスイッチがオンになったことを確認する。
 4. Raycastをメニューから終了して起動し直し、Settings → Snippetsの
    Enable Snippet Expansionをオンにする。
-5. `settings.json` に合わせる。ImmediatelyモードでExpand within Wordsをオフ、
-   Override System Snippetsをオンにした後、Expansion Modeを
-   After Delimiter (discarding)にする。このモードでは前の2項目は画面から隠れる。
-   短縮語の後にスペースを打つと展開し、スペース自体は残さない。
+5. `settings.json` に合わせ、Expansion ModeをImmediately、Expand within Wordsをオフ、
+   Override System Snippetsをオンにする。短縮語を入力し終わると、スペースを待たずに展開する。
+   Mac miniのxtermではAfter Delimiter (discarding)で展開できず、Immediatelyへの変更後に
+   ユーザーの手入力でメールアドレスに展開することを確認済み（2026-11-01）。
    選択肢の文字クリックで切り替わらない場合は、メニューの検索欄で絞り込み、
    ↓ → Enterで選び、表示値が変わったことを確認する。
-6. 未送信の入力欄で `lgm`、`gm`、`elegm`＋スペースを試す。
+6. 未送信の入力欄で英数入力にして `lgm`、`gm`、`elegm` を手打ちする（スペース不要）。
    ターミナルで取りこぼす場合はResponse Timeを遅くし、動作を確認する。
 
 ## 更新

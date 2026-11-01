@@ -3,7 +3,7 @@
   "hotkey": "Option+Space",
   "snippets": {
     "enabled": true,
-    "expansionMode": "After Delimiter (discarding)",
+    "expansionMode": "Immediately",
     "expandWithinWords": false,
     "overrideSystemSnippets": true,
     "responseTime": "Default",
