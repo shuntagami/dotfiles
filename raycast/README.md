@@ -5,7 +5,8 @@ Macのテキスト置換にある短縮語をRaycastに移し、ブラウザの�
 `settings.json` は手順の正本であり、Raycastが直接読み込む設定ファイルではない。
 
 Raycastの呼び出しはデフォルトのOption+Spaceを使う。
-iTerm2のHotkey Windowは競合を避けるためControl+Option+Spaceにする。
+Aqua VoiceはControl+Spaceを使う。
+iTerm2のHotkey Windowは競合を避けるためControl+Option+Tにする。
 こちらの保存先は `misc/com.googlecode.iterm2.plist` のDefaultプロファイル。
 `deploy.sh` がiTerm2のカスタム設定フォルダを設定する。起動済みのiTerm2への反映は
 iTerm2を終了して起動し直した後に確認する。

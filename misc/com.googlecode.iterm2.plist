@@ -300,11 +300,11 @@
 			<key>HotKey Alternate Shortcuts</key>
 			<array/>
 			<key>HotKey Characters</key>
-			<string> </string>
+			<string>t</string>
 			<key>HotKey Characters Ignoring Modifiers</key>
-			<string> </string>
+			<string>t</string>
 			<key>HotKey Key Code</key>
-			<integer>49</integer>
+			<integer>17</integer>
 			<key>HotKey Modifier Activation</key>
 			<integer>0</integer>
 			<key>HotKey Modifier Flags</key>
