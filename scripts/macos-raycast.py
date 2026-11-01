@@ -74,7 +74,7 @@ def deploy(snippets):
     print("Raycast import requested. This does NOT confirm that import completed.")
     print("Import only adds snippets; it does not update or delete existing ones. Resolve keyword conflicts in Raycast.")
     print("Finish the import confirmation; allow Accessibility if requested; enable Snippet Expansion,")
-    print("choose Immediately, disable Expand within Words, and enable Override System Snippets.")
+    print("choose Immediately, disable Expand within Words, and disable Override System Snippets.")
     print("After manually applying any edits/deletions and verifying expansion, run:")
     print("python3 ~/dotfiles/scripts/macos-raycast.py --confirm-setup")
     return 3
@@ -101,8 +101,10 @@ def validate(snippets):
         keywords.add(snippet["keyword"])
 
 
-def convert(items):
-    """Convert active macOS replacements, omitting ambiguous duplicate triggers."""
+def convert(items, prefix=""):
+    """Convert active replacements to optional prefixed, nonconflicting triggers."""
+    if not isinstance(prefix, str):
+        raise ValueError("Snippet keywordPrefix must be a string")
     by_keyword = {}
     conflicts = set()
     for item in items:
@@ -116,6 +118,13 @@ def convert(items):
     snippets = [snippet for key, snippet in by_keyword.items() if key not in conflicts]
     if conflicts:
         print(f"Skipped {len(conflicts)} conflicting duplicate keywords; resolve them in macOS before refreshing.")
+    if prefix:
+        for snippet in snippets:
+            keyword = prefix + snippet["keyword"]
+            if keyword in by_keyword:
+                raise ValueError("A prefixed keyword already exists in macOS; choose another keywordPrefix")
+            snippet["keyword"] = keyword
+            snippet["name"] = keyword
     validate(snippets)
     if not snippets:
         raise ValueError("No active macOS text replacements found")
@@ -159,7 +168,8 @@ def main():
     if args.deploy and not any(item.get("on", True) and item.get("replace") and item.get("with") for item in items):
         print("Raycast: no active text replacements on this Mac; nothing to import.")
         return 0
-    snippets = convert(items)
+    prefix = json.loads(SETTINGS.read_text()).get("snippets", {}).get("keywordPrefix", "")
+    snippets = convert(items, prefix)
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     content = json.dumps(snippets, ensure_ascii=False, indent=2) + "\n"
     changed = not TARGET.exists() or TARGET.read_text() != content

@@ -4,9 +4,10 @@
   "replaceSpotlight": true,
   "snippets": {
     "enabled": true,
+    "keywordPrefix": ";",
     "expansionMode": "Immediately",
     "expandWithinWords": false,
-    "overrideSystemSnippets": true,
+    "overrideSystemSnippets": false,
     "responseTime": "Default",
     "completionSound": "None"
   }
