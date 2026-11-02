@@ -82,6 +82,32 @@ def run(arguments, *, timeout=30):
         raise ValueError("Setup command timed out; retry setup") from None
 
 
+def disable_system_replacements():
+    """Turn off native substitution, retaining the dictionary as generation input."""
+    managed = {
+        "NSGlobalDomain": ["NSAutomaticTextReplacementEnabled", "WebAutomaticTextReplacementEnabled"],
+        "com.google.Chrome": ["WebAutomaticTextReplacementEnabled"],
+    }
+    previous = {}
+    for domain, keys in managed.items():
+        exported = run(["/usr/bin/defaults", "export", domain, "-"])
+        if exported.returncode:
+            raise ValueError("Could not read native text replacement preferences")
+        preferences = plistlib.loads(exported.stdout.encode())
+        previous[domain] = {key: preferences.get(key) for key in keys}
+    original = STATE / "native-text-replacement-preferences.json"
+    if not original.exists():
+        private_write(original, json.dumps(previous, indent=2) + "\n")
+    for domain, keys in managed.items():
+        for key in keys:
+            if run(["/usr/bin/defaults", "write", domain, key, "-bool", "false"]).returncode:
+                raise ValueError("Could not disable native text replacement")
+            checked = run(["/usr/bin/defaults", "read", domain, key])
+            if checked.returncode or checked.stdout.strip() != "0":
+                raise ValueError("Native text replacement preference did not stay disabled")
+    print("macOS and Chrome native text replacement preferences are off; dictionary data retained.")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true")
@@ -94,7 +120,8 @@ def main():
     if result.returncode:
         raise ValueError("Could not read this Mac's text replacements")
     items = plistlib.loads(result.stdout.encode()).get("NSUserDictionaryReplacementItems", [])
-    prefix = json.loads((ROOT / "espanso/settings.json").read_text())["keywordPrefix"]
+    settings = json.loads((ROOT / "espanso/settings.json").read_text())
+    prefix = settings["keywordPrefix"]
     matches, conflicts = convert(items, prefix)
     print(f"Espanso: {len(matches)} matches; {conflicts} conflicting native keywords excluded.")
     if args.dry_run:
@@ -129,6 +156,11 @@ def main():
             print("If macOS requests terminal Accessibility / System Events permission, approve it locally.")
             return 3
         print("Raycast snippet expansion is off.")
+    if settings.get("disableSystemTextReplacement", False):
+        disable_system_replacements()
+        after = run(["/usr/bin/defaults", "export", "-g", "-"])
+        if after.returncode or plistlib.loads(after.stdout.encode()).get("NSUserDictionaryReplacementItems", []) != items:
+            raise ValueError("Native dictionary data changed during setup; inspect locally before continuing")
     # Parse configuration before registering or starting the background service.
     result = run([binary, "match", "list"])
     if result.returncode:
