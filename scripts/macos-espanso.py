@@ -120,7 +120,10 @@ def main():
     if any(p.exists() for p in [Path("/Applications/Raycast.app"), Path.home() / "Applications/Raycast.app"]):
         result = run(["/usr/bin/osascript", str(ROOT / "scripts/macos-raycast-disable-snippets.applescript")], timeout=90)
         if result.returncode:
-            print("Raycast expansion could not be verified off; Espanso was not started.")
+            stopped = run([binary, "service", "stop"])
+            if stopped.returncode and "not running" not in (stopped.stdout + stopped.stderr).lower():
+                print("Espanso stop could not be verified; quit Espanso before using expansion.")
+            print("Raycast expansion could not be verified off; Espanso start was skipped.")
             print("Disable Raycast Settings > Snippets > Enable Snippet Expansion and rerun.")
             print("If macOS requests terminal Accessibility / System Events permission, approve it locally.")
             return 3
