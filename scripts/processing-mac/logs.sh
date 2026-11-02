@@ -7,6 +7,8 @@
 
 LOGS_LABEL=com.ele-inc.processing-mac.logs
 LOGS_HOME="$HOME/.local/state/processing-mac-logs"
+# logs/ の写し。LaunchAgent はここから動かす（dotfiles のブランチを切り替えても、動いている Vector が変わらない）。
+LOGS_APP="$LOGS_HOME/app"
 LOGS_KEY_SECRET=PROCESSING_MAC_LOGS_GCP_CREDENTIALS
 LOGS_PROJECT=automatic-recording-of-minutes
 # 起動し直した時刻。logs_verify はこれより後に届いた稼働確認だけを数える。
@@ -27,7 +29,7 @@ logs_plist() {
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>$LIB/logs/run-vector.sh</string>
+    <string>$LOGS_APP/run-vector.sh</string>
   </array>
   <key>EnvironmentVariables</key>
   <dict>
@@ -51,23 +53,46 @@ logs_plist() {
 EOF
 }
 
-# 何度実行してもよい。Vector・鍵・LaunchAgent のうち、無いものや変わったものだけを用意する。
-logs_install() {
-  local plist="$AGENTS_DIR/$LOGS_LABEL.plist" new
-  command -v vector >/dev/null || run "brew install vectordotdev/brew/vector"
+logs_check() {
+  gcloud secrets versions describe latest --secret="$LOGS_KEY_SECRET" --project="$LOGS_PROJECT" >/dev/null 2>&1 || {
+    note "✗ ログ用の鍵（Secret Manager の $LOGS_KEY_SECRET）を読めない → gcloud auth login。鍵が無ければ ele-inc/elevenlabs-transcribe-bot の docs/MAC_SERVICE.md「ログと停止通知」で登録する"
+    return 1
+  }
+}
+
+# Vector と鍵。旧Macから写すものは無い。
+# 呼び出し元が || で受けると set -e が効かないので、失敗はすべて return 1 で返す（logs_install も同じ）。
+logs_prepare() {
+  command -v vector >/dev/null || run "brew install vectordotdev/brew/vector" || return 1
   # 鍵は Secret Manager から一度だけ取る（登録手順は docs/MAC_SERVICE.md）。
   [ -s "$LOGS_HOME/gcp-credentials.json" ] ||
-    run "mkdir -p '$LOGS_HOME' && (umask 077 && gcloud secrets versions access latest --secret=$LOGS_KEY_SECRET --project=$LOGS_PROJECT >'$LOGS_HOME/gcp-credentials.json.tmp') && mv '$LOGS_HOME/gcp-credentials.json.tmp' '$LOGS_HOME/gcp-credentials.json'"
+    run "mkdir -p '$LOGS_HOME' && (umask 077 && gcloud secrets versions access latest --secret=$LOGS_KEY_SECRET --project=$LOGS_PROJECT >'$LOGS_HOME/gcp-credentials.json.tmp') && mv '$LOGS_HOME/gcp-credentials.json.tmp' '$LOGS_HOME/gcp-credentials.json'" ||
+    return 1
+}
+
+# 何度実行してもよい。Vector・鍵・logs/ の写し・LaunchAgent のうち、無いものや変わったものだけを用意し、
+# 写しが変わったときは Vector を起動し直す。
+logs_install() {
+  local plist="$AGENTS_DIR/$LOGS_LABEL.plist" new copied=0
+  logs_prepare || return 1
+  if ! diff -rq "$LIB/logs" "$LOGS_APP" >/dev/null 2>&1; then
+    run "mkdir -p '$LOGS_APP' && rsync -a --delete '$LIB/logs/' '$LOGS_APP/'" || return 1
+    copied=1
+  fi
   new="$(logs_plist)"
   if [ "$(cat "$plist" 2>/dev/null)" != "$new" ] || ! logs_installed; then
     note "\$ $LOGS_LABEL を登録して起動する（${plist}）"
-    if [ "$DRY_RUN" != 1 ]; then
-      LOGS_STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-      mkdir -p "$AGENTS_DIR" "$HOME/Library/Logs/processing-mac-logs"
-      printf '%s\n' "$new" >"$plist"
-      launchctl bootout "$GUI/$LOGS_LABEL" 2>/dev/null || true
-      launchctl bootstrap "$GUI" "$plist"
-    fi
+    [ "$DRY_RUN" = 1 ] && return 0
+    LOGS_STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    mkdir -p "$AGENTS_DIR" "$HOME/Library/Logs/processing-mac-logs" || return 1
+    printf '%s\n' "$new" >"$plist" || return 1
+    launchctl bootout "$GUI/$LOGS_LABEL" 2>/dev/null || true
+    launchctl bootstrap "$GUI" "$plist" || return 1
+  elif [ $copied = 1 ]; then
+    note "\$ launchctl kickstart -k $GUI/$LOGS_LABEL（写しが変わったので起動し直す）"
+    [ "$DRY_RUN" = 1 ] && return 0
+    LOGS_STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    launchctl kickstart -k "$GUI/$LOGS_LABEL" || return 1
   fi
 }
 
@@ -92,7 +117,12 @@ logs_verify() {
 
 logs_stop_old() {
   on_old <<EOF
-launchctl bootout gui/\$(id -u)/$LOGS_LABEL 2>/dev/null || true
+U=gui/\$(id -u)
+launchctl bootout \$U/$LOGS_LABEL 2>/dev/null || true
+if launchctl print \$U/$LOGS_LABEL >/dev/null 2>&1; then
+  echo "旧Macのログ送信が止まりません" >&2
+  exit 1
+fi
 EOF
 }
 

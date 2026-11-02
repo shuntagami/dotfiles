@@ -1,5 +1,6 @@
 # 処理用Macのログと稼働確認を、Cloud Logging（GCP プロジェクト automatic-recording-of-minutes）へ送る。
-# run-vector.sh が起動し、${…} の環境変数もそこで決める。このファイルを書き換えると、Vector が読み直す。
+# run-vector.sh が起動し、${…} の環境変数もそこで決める。動くのは ~/.local/state/processing-mac-logs/app に写したもの
+# なので、書き換えたら processing-mac.sh deploy で写し直す（Vector も起動し直す）。
 # 見方と通知の条件は ele-inc/elevenlabs-transcribe-bot の docs/MAC_SERVICE.md「ログと停止通知」。
 
 data_dir: "${PROCESSING_MAC_LOGS_HOME}/data"
@@ -11,9 +12,10 @@ sources:
       - "${HOME}/Library/Logs/scribe-bot/*.log"
       - "${HOME}/Library/Logs/launch-video-gen/*.log"
       - "${HOME}/Library/Logs/marunage-studio/*.log"
-    # 初めて見るファイルは末尾から読む（入れる前の古い行は送らない）。動いている間にできたファイルは先頭から読む。
+    # 読んだ位置の記録が無いファイルを、先頭と末尾のどちらから読むか（run-vector.sh が決める）。
+    # 動いている間にできたファイルは、いつも先頭から読む。
     # ファイルは1行目で見分けるので、ログを空にするときは1行目を前と違う行にする（scribe の auto-update.sh）。
-    read_from: end
+    read_from: "${PROCESSING_MAC_LOGS_READ_FROM}"
     # スタックトレースのように空白で始まる行は、前の行とまとめて1件にする。
     multiline:
       start_pattern: '^\S'

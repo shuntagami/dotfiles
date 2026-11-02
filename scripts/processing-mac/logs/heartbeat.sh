@@ -62,6 +62,9 @@ report() {
 running scribe-bot.slack
 returns 200 http://127.0.0.1:8091/status
 tunnel_ready scribe-bot.tunnel
+# 外から Cloudflare を通って、このMacの Tunnel まで届くか。`/` は Tunnel 自身が 404 を返し、アプリには届かない
+# （アプリまで届く URL にすると、毎分のリクエストが文字起こしのログに残る）。Tunnel が切れていれば 530 になる。
+returns 404 https://scribe.ele-studio.app/
 report scribe-bot
 
 running launch-video-gen.web

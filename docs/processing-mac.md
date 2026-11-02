@@ -16,10 +16,12 @@ app と marunage は Cloudflare Access のログインを通ります。Tunnel�
 
 - **見る：** [Logs Explorer](https://console.cloud.google.com/logs/query;query=resource.labels.namespace%3D%22processing-mac%22?project=automatic-recording-of-minutes)。ログ名はサービスごと（`processing-mac-scribe-bot` など）、稼働確認は `processing-mac-heartbeat`。30日残ります。
 - **通知が来るとき：** 稼働確認が10分届かない（Mac・回線・Vector が止まった）、またはあるサービスが10分のうち8回以上応答しない。戻ればもう一度メールが届きます。宛先と条件は ele-inc/elevenlabs-transcribe-bot の `infra/processing-mac-logs.tf`、詳しくは同じリポジトリの `docs/MAC_SERVICE.md`「ログと停止通知」。
-- **このMacの中：** LaunchAgent `com.ele-inc.processing-mac.logs`（[`scripts/processing-mac/logs.sh`](../scripts/processing-mac/logs.sh) が登録）が [`logs/run-vector.sh`](../scripts/processing-mac/logs/run-vector.sh) を起動します。設定は [`logs/vector.yaml`](../scripts/processing-mac/logs/vector.yaml)、稼働確認は [`logs/heartbeat.sh`](../scripts/processing-mac/logs/heartbeat.sh)。設定を書き換えると Vector が読み直します。Vector 自身のログは `~/Library/Logs/processing-mac-logs/vector.log`、鍵は `~/.local/state/processing-mac-logs/gcp-credentials.json`（Secret Manager の `PROCESSING_MAC_LOGS_GCP_CREDENTIALS`）。
-- **入れる・直す：** 処理用Macで `deploy.sh`（または `scripts/processing-mac.sh deploy`）を実行すると、Vector・鍵・LaunchAgent のうち無いものを用意し、Cloud Logging に届くことを確かめます。
+- **このMacの中：** LaunchAgent `com.ele-inc.processing-mac.logs`（[`scripts/processing-mac/logs.sh`](../scripts/processing-mac/logs.sh) が登録）が `run-vector.sh` を起動します。設定は [`logs/vector.yaml`](../scripts/processing-mac/logs/vector.yaml)、稼働確認は [`logs/heartbeat.sh`](../scripts/processing-mac/logs/heartbeat.sh)。
+  - 動くのは `~/.local/state/processing-mac-logs/app` に写したものです。dotfiles のブランチを切り替えても、動いている Vector は変わりません。
+  - Vector 自身のログは `~/Library/Logs/processing-mac-logs/vector.log`、鍵は `~/.local/state/processing-mac-logs/gcp-credentials.json`（Secret Manager の `PROCESSING_MAC_LOGS_GCP_CREDENTIALS`）。
+- **入れる・直す：** 処理用Macで `deploy.sh`（または `scripts/processing-mac.sh deploy`）を実行します。Vector・鍵・写し・LaunchAgent のうち、無いものや変わったものを用意し（写しが変われば Vector を起動し直す）、Cloud Logging に届くことを確かめます。`logs/` を書き換えたときも、これで反映します。
 
-サービスを足したときは、`logs/vector.yaml` の `include` と `logs/heartbeat.sh` の確認を足します。
+サービスを足したときは、`logs/vector.yaml` の `include` と `logs/heartbeat.sh` の確認を足して、`deploy` で反映します。
 
 ## 新しいMacへ移す
 

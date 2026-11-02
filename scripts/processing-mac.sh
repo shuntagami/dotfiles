@@ -107,6 +107,7 @@ check() {
     ok=1
   }
   for s in "${SERVICES[@]}"; do "${s}_check" || ok=1; done
+  logs_check || ok=1
   [ $ok = 0 ] && note "✓ 揃っています"
   return $ok
 }
@@ -127,6 +128,8 @@ prepare() {
     say "$("${s}_name") を用意します"
     "${s}_prepare"
   done
+  say "$(logs_name) の道具と鍵を用意します"
+  logs_prepare
 }
 
 # What has been stopped on the old Mac so far, to say how to undo it if a step fails.
@@ -194,12 +197,13 @@ $unpushed"
   if [ $ok != 0 ]; then
     fail "確認に通らないものがあります。旧Macの登録はそのまま残しているので、上の表示を見て直すか、docs/processing-mac.md の「戻す」で旧Macに戻してください"
   fi
-  say "ログと停止通知をこのMacから送り始めます"
-  logs_install
-  logs_verify || note "サービスは切り替わっています。ログと停止通知は、直してから processing-mac.sh deploy を実行し直してください。"
   # Only now keep the old Mac from starting them again at its next login.
   for s in "${SERVICES[@]}"; do "${s}_retire_old"; done
   logs_retire_old
+  # Last, so that a problem here cannot leave the old Mac's agents in place.
+  say "ログと停止通知をこのMacから送り始めます"
+  { logs_install && logs_verify; } ||
+    note "サービスは切り替わっています。ログと停止通知は、上の表示を見て直してから processing-mac.sh deploy を実行し直してください。"
   say "切り替えが終わりました"
   note "misc/processing-mac.conf の PREVIOUS_PROCESSING_MAC を空に戻して commit してください。"
   note "旧Macの後片付け（秘密の値や鍵を消す）は docs/processing-mac.md の手順で、数日たってから行います。"
@@ -225,9 +229,10 @@ case "$command" in
     fi
     if all_installed; then
       say "処理用Mac: このMacで動いています"
-      logs_install
+      # Services are fine whatever happens here, so report problems without failing deploy.sh.
+      logs_install || note "✗ ログと停止通知を用意できませんでした。上の表示を見て直し、processing-mac.sh deploy を実行し直してください。"
       status
-      logs_verify
+      logs_verify || true
       exit 0
     fi
     say "このMac（${this_mac}）は処理用Macです。まだ動いていないサービスを引き受けます"
