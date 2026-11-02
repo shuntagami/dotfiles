@@ -239,6 +239,10 @@ MCPの `servers.json` では `${HOME}` を使えます。`sync-mcp.mjs` が各�
 パスの置き換えはログイン情報やAPIキーを移しません。必要なアプリ・プロジェクトの配置と認証は各Macで行ってください。
 SSHの接続先、ブラウザ自動操作の接続先・Chromeアカウント、ショートカットなどは共通設定のままです。
 
+### 処理用Mac（社内サービスを常駐させるMac）
+
+文字起こし・launch-video-gen・marunage-studio を動かすMacは `misc/processing-mac.conf` に書きます。新しいMacへ移すときは、新しいMacで `deploy.sh` を実行すると、旧Macからデータを写し、確認のうえで切り替えます。手順は [docs/processing-mac.md](docs/processing-mac.md) を参照してください。
+
 ### 全リポジトリ共通のGit作業方針
 
 エージェントが別のフォルダからPRを作り、元のフォルダに編集を残すと、マージ後のpullや自動同期が止まることがあります。

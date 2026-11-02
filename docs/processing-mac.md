@@ -1,0 +1,136 @@
+# 処理用Mac
+
+社内サービスを常駐させるMacです。どのMacかは [`misc/processing-mac.conf`](../misc/processing-mac.conf) に書きます。新しいMacへ移すときは、新しいMacで `deploy.sh` を実行すると、旧Macからデータを写し、確認のうえで切り替えます（[`scripts/processing-mac.sh`](../scripts/processing-mac.sh)）。
+
+| サービス | 受け口 | 常駐（LaunchAgent） | Mac に置くデータ | 詳しい資料 |
+|---|---|---|---|---|
+| 文字起こし | Slack（Socket Mode）、`https://scribe.ele-studio.app`（Tunnel `scribe`） | `com.ele-inc.scribe-bot.{slack,tunnel,update}` | なし（記録はクラウド） | ele-inc/elevenlabs-transcribe-bot の `docs/MAC_SERVICE.md` |
+| launch-video-gen | `https://app.ele-studio.app`（Tunnel `launch-video-gen`） | `com.ele-inc.launch-video-gen.{web,update,tunnel}` | `~/AIEditor-service`（約 470 GB） | ele-inc/launch-video-gen の `docs/processing-mac.md` |
+| marunage-studio | `https://marunage.ele-studio.app`（launch-video-gen の Tunnel） | `com.ele-inc.marunage-studio.{web,runtime,update}` | env の3ファイル、チャットの記録 | ele-inc/marunage-studio の `docs/design-2026-10-26-local-files-on-mac.md` |
+
+app と marunage は Cloudflare Access のログインを通ります。Tunnel・DNS・Access の設定は、Mac を替えても変わりません。
+
+## 新しいMacへ移す
+
+### 1. 新しいMacの下準備（手で行う）
+
+- **ユーザー名を旧Macと同じにする**（`shun.tagami`）。launch-video-gen のデータには `/Users/shun.tagami/AIEditor-service/...` の絶対パスが DB と JSON に数千件入っていて、書き換える仕組みがありません。
+- macOS 27 以上にする。launch-video-gen の音素合わせのランタイムが 27 向けにビルドされています。
+- Mac の名前（`scutil --get LocalHostName`）を旧Macと違う名前にする。
+- [README](../README.md) の手順で dotfiles を入れる。文字起こし・launch-video-gen・marunage-studio に要る道具は Brewfile と `install-packages.sh` で入ります（Claude Code のコマンド版を含む）。
+- 次のログインを済ませる。
+
+  ```bash
+  gh auth login             # HTTPS、Git の認証にも使う
+  gcloud auth login         # automatic-recording-of-minutes の Secret Manager を読めるアカウント
+  cloudflared tunnel login  # ブラウザで ele-studio.app を選ぶ
+  codex login               # launch-video-gen のレイアウト作成
+  vercel login              # launch-video-gen の共有リンク
+  ```
+
+- Tailscale アプリにログインする。
+- 旧Macへパスワードなしで SSH できるようにする。旧Macで「システム設定 → 一般 → 共有 → リモートログイン」を有効にし、新しいMacで次を実行します（パスワードを聞かれるのはここだけ）。
+
+  ```bash
+  ssh-copy-id shun-tagami-mac-mini   # Tailscale の名前
+  ssh shun-tagami-mac-mini true      # 何も聞かれずに終わればよい
+  ```
+
+  2台を Thunderbolt ケーブルでつなぐと、データのコピーがずっと速くなります。その場合は、旧Macの Thunderbolt Bridge の IP を SSH 先に使います。
+
+### 2. どのMacからどのMacへ移すかを書く
+
+新しいMacの `misc/processing-mac.conf` を次のようにします。
+
+```bash
+PROCESSING_MAC=<新しいMacの LocalHostName>
+PREVIOUS_PROCESSING_MAC=shun-tagami-mac-mini   # 旧Macへの SSH 先
+```
+
+### 3. 事前に確かめる・写しておく
+
+```bash
+~/dotfiles/scripts/processing-mac.sh check     # ✗ が出たものを直す
+~/dotfiles/scripts/processing-mac.sh prepare   # 任意。前日などに、旧Macを動かしたまま大きなデータを写しておく
+```
+
+`prepare` は何度実行してもよく、2回目以降は変わった分だけを写します。最初は launch-video-gen のデータ（約 470 GB）を写すので時間がかかります。
+
+切り替えの前に、次を済ませます。
+
+- marunage-studio の人ごとの worktree（`~/ele-workspace/launch-consulting-studio-worktrees/`）の作業を、すべて commit・push する。旧Macにしか無い作業があると、切り替えは止まります。
+- app と marunage が少しの間止まることを、使っている人に伝える。
+
+### 4. 切り替える
+
+新しいMacで `deploy.sh`（または `~/dotfiles/scripts/processing-mac.sh deploy`）を実行します。このMacが処理用Macで、まだサービスが無いので、次の順に進みます。
+
+1. **check**：ログイン・SSH・ユーザー名・空き容量などを確かめる。
+2. **prepare**：旧Macを動かしたまま写す。
+   - 社内リポジトリ（marunage の Studio 用の clone は full clone）
+   - launch-video-gen の `.env`・Python 環境・Qwen のモデル・データ・Tunnel の認証ファイルと設定
+   - marunage-studio の env（最初の版のビルドまで行う）
+3. **旧Macが空いているか**を確かめる。marunage の worktree に未 push の作業があれば止まります。launch-video-gen の処理と marunage のチャットは、終わるまで最大10分待ちます。
+4. **確認**：「旧Macのサービスを止めて切り替えます。続けますか？」に `y` と答える。
+5. **switch**：
+   1. 文字起こしをこのMacで起動してから、旧Macの文字起こしを止める（止まる時間なし）。
+   2. 旧Macの launch-video-gen（新しい処理の受付を止めてから）と marunage-studio を止める。
+   3. 最後の同期をする（launch-video-gen のデータを完全に一致させる）。
+   4. このMacで launch-video-gen と marunage-studio を起動する。
+   5. 公開URL（app・marunage）を、旧Macの Tunnel からこのMacの Tunnel へ付け替える。
+   6. 外と中から動作を確かめる。
+   7. 通れば、旧Macの登録ファイル（plist）を `~/<サービス名>-retired/` へ退避する。次に旧Macへログインしても動き出さないようにするためです。
+
+**止まる時間**：app と marunage は 5-2 から 5-5 の間止まります。文字起こしは止まりません。
+
+実行するコマンドだけを先に見るには、次を使います。
+
+```bash
+~/dotfiles/scripts/processing-mac.sh switch --dry-run
+~/dotfiles/scripts/processing-mac.sh switch --from . --dry-run   # 旧Macが無くても、このMacを旧Mac役にして通しで見る
+```
+
+### 5. 終わったら
+
+- `misc/processing-mac.conf` の `PREVIOUS_PROCESSING_MAC` を空に戻し、commit・push する。
+- 画面で確かめる。
+  - **app**：ログインして案件一覧が出る。既存の動画のプレビューが再生できる。書き出しの画面で BGM・効果音を選べる。小さな素材でカットを1回試す。
+  - **marunage**：ログインし、チャットを1ターン動かす。「main に push」が通る。
+  - **Slack**：文字起こしくんに短い動画の URL を送る。
+
+## 戻す
+
+- **切り替えの途中で止まったとき**：止めた旧Macのサービスと、旧Macで戻すコマンドが表示されます。旧Macのターミナルで実行してください。
+- **切り替えた後に問題が見つかったとき**：
+  1. 新しいMacで、9つの常駐を止める。
+
+     ```bash
+     for l in scribe-bot.{slack,tunnel,update} launch-video-gen.{web,update,tunnel} marunage-studio.{web,runtime,update}; do
+       launchctl bootout gui/$(id -u)/com.ele-inc.$l
+     done
+     ```
+
+  2. 旧Macで、`~/scribe-bot-retired/`・`~/launch-video-gen-retired/`・`~/marunage-studio-retired/` の plist を `~/Library/LaunchAgents/` へ戻し、それぞれ `launchctl bootstrap gui/$(id -u) <plist>` で起動する。
+
+  切り替えた後に新しいMacで作ったジョブや素材は、新しいMacに残ります。
+
+## 旧Macの後片付け（数日たって問題がなければ）
+
+旧Macは、初期化してから手放してください。ここにある秘密の値（各サービスの API キー、GCP のサービスアカウントの鍵、Tunnel の認証ファイル）は、新しいMacでも同じものを使っているためです。初期化せずに手元に残すなら、次を消します。
+
+```bash
+rm -rf ~/scribe-bot-service ~/AIEditor-service ~/ele-workspace/marunage-studio-service \
+  ~/scribe-bot-retired ~/launch-video-gen-retired ~/marunage-studio-retired
+rm -f ~/.cloudflared/*.json ~/.cloudflared/config.yml
+```
+
+## 決めておくこと：自動ログイン
+
+常駐（LaunchAgent）は、ユーザーがログインしている間だけ動きます。今の処理用Macは FileVault が有効で、自動ログインはありません。そのため停電のあと Mac は自動で起動しますが、誰かがログインするまでサービスは止まったままです。
+
+- **このままにする**：停電のあとは手でログインする。
+- **自動ログインにする**：FileVault を切る必要があり、Mac の中の秘密の値が守られにくくなる。
+
+## 処理用Mac以外で deploy.sh を実行したとき
+
+何もしません。処理用Macでないのに常駐が残っていれば、そのことだけを表示します。
