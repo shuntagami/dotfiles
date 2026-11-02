@@ -21,5 +21,6 @@ export PROCESSING_MAC_LOGS_READ_FROM
 mkdir -p "$PROCESSING_MAC_LOGS_HOME/data"
 # 設定の ${…} を展開するには、今の Vector（0.61）では明示の許可が要る。展開するのは上の4つと HOME だけ
 # （秘密の値は環境変数に入れない。鍵はファイルで渡す）。
-exec /opt/homebrew/bin/vector --dangerously-allow-env-var-interpolation \
+# LaunchAgent の PATH（/opt/homebrew/bin・/usr/local/bin）から探す。
+exec vector --dangerously-allow-env-var-interpolation \
   --config "$PROCESSING_MAC_LOGS_DIR/vector.yaml"

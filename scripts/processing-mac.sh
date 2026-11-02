@@ -48,7 +48,7 @@ status() {
   for s in "${SERVICES[@]}"; do
     if "${s}_installed"; then note "● $("${s}_name"): このMacで動いている"; else note "○ $("${s}_name"): このMacには無い"; fi
   done
-  if logs_installed; then note "● $(logs_name): このMacから送っている"; else note "○ $(logs_name): このMacからは送っていない"; fi
+  logs_status
 }
 
 all_installed() {
@@ -202,9 +202,14 @@ $unpushed"
   logs_retire_old
   # Last, so that a problem here cannot leave the old Mac's agents in place.
   say "ログと停止通知をこのMacから送り始めます"
-  { logs_install && logs_verify; } ||
-    note "サービスは切り替わっています。ログと停止通知は、上の表示を見て直してから processing-mac.sh deploy を実行し直してください。"
-  say "切り替えが終わりました"
+  local logs_ok=1
+  { logs_install && logs_verify; } || logs_ok=0
+  if [ $logs_ok = 1 ]; then
+    say "切り替えが終わりました"
+  else
+    say "サービスの切り替えは終わりましたが、ログと停止通知はまだです"
+    note "上の表示を見て直してから、processing-mac.sh deploy を実行し直してください。それまで、止まってもメールは来ません。"
+  fi
   note "misc/processing-mac.conf の PREVIOUS_PROCESSING_MAC を空に戻して commit してください。"
   note "旧Macの後片付け（秘密の値や鍵を消す）は docs/processing-mac.md の手順で、数日たってから行います。"
   note "リモート接続の名前（Jump Desktop・agent-browser）を新しいMacへ向け直す一覧も docs/processing-mac.md にあります。"

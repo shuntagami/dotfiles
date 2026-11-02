@@ -18,6 +18,18 @@ logs_name() { echo "ログと停止通知"; }
 
 logs_installed() { agent_loaded "$LOGS_LABEL"; }
 
+logs_running() { launchctl print "$GUI/$LOGS_LABEL" 2>/dev/null | grep -q '^[[:space:]]state = running$'; }
+
+logs_status() {
+  if logs_running; then
+    note "● $(logs_name): このMacから送っている"
+  elif logs_installed; then
+    note "▲ $(logs_name): 登録されているが動いていない（~/Library/Logs/processing-mac-logs/vector.log）"
+  else
+    note "○ $(logs_name): このMacからは送っていない"
+  fi
+}
+
 logs_plist() {
   cat <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -97,8 +109,9 @@ logs_install() {
 }
 
 # このMacの稼働確認が Cloud Logging に届いているか。起動し直したなら、その後に届いたものだけを見る。
+# 起動し直していなければ、直近75秒の分を見る（稼働確認は1分ごとなので、Vector が動いていれば必ずある）。
 logs_arrived() {
-  local since="${LOGS_STARTED_AT:-$(date -u -v-3M +%Y-%m-%dT%H:%M:%SZ)}"
+  local since="${LOGS_STARTED_AT:-$LOGS_VERIFY_SINCE}"
   gcloud logging read --project="$LOGS_PROJECT" --freshness=1h --limit=1 --format='value(timestamp)' \
     "logName=\"projects/$LOGS_PROJECT/logs/processing-mac-heartbeat\" AND resource.labels.node_id=\"$this_mac\" AND timestamp>=\"$since\"" 2>/dev/null | grep -q .
 }
@@ -108,6 +121,7 @@ logs_verify() {
     note "（確認: $(logs_name)）"
     return 0
   }
+  LOGS_VERIFY_SINCE="$(date -u -v-75S +%Y-%m-%dT%H:%M:%SZ)"
   wait_for 180 "Cloud Logging への稼働確認" logs_arrived || {
     note "✗ ログと停止通知: 稼働確認が Cloud Logging に届かない（~/Library/Logs/processing-mac-logs/vector.log）"
     return 1
