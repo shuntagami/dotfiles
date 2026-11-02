@@ -40,11 +40,18 @@ transforms:
     source: |
       parts = split(string!(.file), "/")
       message = strip_ansi_escape_codes(string!(.message))
-      # 厳密ではないが、エラーや警告らしい行に重要度を付けて、Logs Explorer で絞り込めるようにする。
+      # エラーや警告らしい行に重要度を付けて、Logs Explorer で絞り込めるようにする。
+      # cloudflared の行（「時刻 INF/WRN/ERR …」）はその印に従い、ほかは言葉で見分ける（厳密ではない）。
       severity = "INFO"
-      if match(message, r'\b(?i:error|fatal|panic|uncaught)\b|\w+Error\b|\bERR\b|✗|失敗|エラー') {
+      if match(message, r'^\S+ (ERR|FTL|PNC) ') {
         severity = "ERROR"
-      } else if match(message, r'\b(?i:warn|warning)\b|\bWRN\b|⚠') {
+      } else if match(message, r'^\S+ WRN ') {
+        severity = "WARNING"
+      } else if match(message, r'^\S+ (INF|DBG) ') {
+        severity = "INFO"
+      } else if match(message, r'\b(?i:error|fatal|panic|uncaught|failed|failure|could not)\b|\w+Error\b|✗|失敗|エラー') {
+        severity = "ERROR"
+      } else if match(message, r'\b(?i:warn|warning)\b|⚠') {
         severity = "WARNING"
       }
       . = {
