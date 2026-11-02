@@ -218,7 +218,7 @@ def main():
             print("Espanso is not running. Finish its first-launch Accessibility approval and rerun setup.")
             return 3
     print("Espanso service is running. Accessibility approval must be completed on this Mac.")
-    print("Verify ;lgm in both a normal input and xterm, including cursor position and repeated expansions.")
+    print(f"Verify {prefix}lgm in both a normal input and xterm, including cursor position and repeated expansions.")
     return 0
 
 
