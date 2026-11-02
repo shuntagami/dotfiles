@@ -10,6 +10,14 @@ Host macmini
   # VNC: vnc://100.81.153.22
   # VNC by name: vnc://shun-tagami-mac-mini
 
+# The Mac Studio that takes over from the Mac mini as the processing Mac
+# (docs/processing-mac.md). Tailscale MagicDNS, so it works as soon as the Studio has
+# joined the tailnet as Shun-Tagami-Mac-Studio; no IP is baked in here.
+Host studio
+  HostName shun-tagami-mac-studio.tail33e6cf.ts.net
+  User shun.tagami
+  # VNC by name: vnc://shun-tagami-mac-studio
+
 # The MacBook, reached over Tailscale (MagicDNS, so no IP is baked in here).
 # This direction exists so the Mac mini can start and tunnel the browser an
 # AGENT drives -- see bin/agent-browser. Key auth rather than password, because

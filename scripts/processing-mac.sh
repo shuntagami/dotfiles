@@ -190,6 +190,7 @@ $unpushed"
   say "切り替えが終わりました"
   note "misc/processing-mac.conf の PREVIOUS_PROCESSING_MAC を空に戻して commit してください。"
   note "旧Macの後片付け（秘密の値や鍵を消す）は docs/processing-mac.md の手順で、数日たってから行います。"
+  note "リモート接続の名前（Jump Desktop・agent-browser）を新しいMacへ向け直す一覧も docs/processing-mac.md にあります。"
 }
 
 # A dry run shows the whole plan even when something is missing.

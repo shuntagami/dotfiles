@@ -594,13 +594,17 @@ defaults write com.google.Chrome.canary DisablePrintPreview -bool true
 defaults write com.google.Chrome PMPrintingExpandedStateForPrint2 -bool true
 defaults write com.google.Chrome.canary PMPrintingExpandedStateForPrint2 -bool true
 
-# computer name (distinguish laptop vs desktop)
+# computer name (distinguish laptop vs desktop). Desktops are named after their model
+# ("Mac mini" -> Shun-Tagami-Mac-mini, "Mac Studio" -> Shun-Tagami-Mac-Studio), so a new
+# desktop never takes the name of the one it replaces: the processing-Mac takeover and
+# Tailscale both tell the Macs apart by name (docs/processing-mac.md).
 if $IS_LAPTOP; then
   sudo scutil --set ComputerName "Shun-Tagami-MBP"
   sudo scutil --set LocalHostName "Shun-Tagami-MBP"
 else
-  sudo scutil --set ComputerName "Shun-Tagami-Mac-mini"
-  sudo scutil --set LocalHostName "Shun-Tagami-Mac-mini"
+  desktop_model=$(system_profiler SPHardwareDataType | awk -F': ' '/Model Name/ {print $2; exit}' | tr -c 'A-Za-z0-9\n' '-')
+  sudo scutil --set ComputerName "Shun-Tagami-${desktop_model:-Mac}"
+  sudo scutil --set LocalHostName "Shun-Tagami-${desktop_model:-Mac}"
 fi
 
 ###############################################################################
