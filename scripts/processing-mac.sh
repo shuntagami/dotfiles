@@ -6,7 +6,8 @@
 #   processing-mac.sh prepare [opts]    旧Macを動かしたまま、データと設定を写す（何度でも実行できる）
 #   processing-mac.sh switch  [opts]    旧Macを止めて、このMacで動かし始める
 #   processing-mac.sh deploy            deploy.sh から呼ぶ。このMacが処理用Macで、まだサービスが
-#                                       無ければ check → prepare → switch を行う。それ以外は何もしない
+#                                       無ければ check → prepare → switch を行う。サービスがそろっていれば、
+#                                       ログと停止通知（logs.sh）だけを用意し直す。処理用Macでなければ何もしない
 #
 # opts:
 #   --from HOST   旧Macへの SSH 先（既定は misc/processing-mac.conf の PREVIOUS_PROCESSING_MAC）
@@ -37,6 +38,8 @@ source "$LIB/scribe.sh"
 source "$LIB/launch-video-gen.sh"
 source "$LIB/marunage-studio.sh"
 SERVICES=(scribe lvg marunage)
+# Logs and alerts are not a service to take over: they start fresh on whichever Mac is the processing Mac.
+source "$LIB/logs.sh"
 
 this_mac="$(scutil --get LocalHostName)"
 
@@ -45,6 +48,7 @@ status() {
   for s in "${SERVICES[@]}"; do
     if "${s}_installed"; then note "● $("${s}_name"): このMacで動いている"; else note "○ $("${s}_name"): このMacには無い"; fi
   done
+  if logs_installed; then note "● $(logs_name): このMacから送っている"; else note "○ $(logs_name): このMacからは送っていない"; fi
 }
 
 all_installed() {
@@ -55,7 +59,7 @@ all_installed() {
 any_installed() {
   local s
   for s in "${SERVICES[@]}"; do "${s}_installed" && return 0; done
-  return 1
+  logs_installed
 }
 
 check() {
@@ -153,6 +157,11 @@ $unpushed"
     fail "切り替えをやめました。旧Macはそのまま動いています"
 
   trap on_switch_error EXIT
+  # The old Mac would report its services down as they stop; this Mac starts sending after the checks.
+  say "旧Macのログと停止通知を止めます"
+  stopped+=(processing-mac)
+  logs_stop_old
+
   # Transcription can overlap: start here first, then retire the old Mac's copy.
   say "文字起こしをこのMacで起動し、旧Macを止めます"
   scribe_start
@@ -185,8 +194,12 @@ $unpushed"
   if [ $ok != 0 ]; then
     fail "確認に通らないものがあります。旧Macの登録はそのまま残しているので、上の表示を見て直すか、docs/processing-mac.md の「戻す」で旧Macに戻してください"
   fi
+  say "ログと停止通知をこのMacから送り始めます"
+  logs_install
+  logs_verify || note "サービスは切り替わっています。ログと停止通知は、直してから processing-mac.sh deploy を実行し直してください。"
   # Only now keep the old Mac from starting them again at its next login.
   for s in "${SERVICES[@]}"; do "${s}_retire_old"; done
+  logs_retire_old
   say "切り替えが終わりました"
   note "misc/processing-mac.conf の PREVIOUS_PROCESSING_MAC を空に戻して commit してください。"
   note "旧Macの後片付け（秘密の値や鍵を消す）は docs/processing-mac.md の手順で、数日たってから行います。"
@@ -212,7 +225,9 @@ case "$command" in
     fi
     if all_installed; then
       say "処理用Mac: このMacで動いています"
+      logs_install
       status
+      logs_verify
       exit 0
     fi
     say "このMac（${this_mac}）は処理用Macです。まだ動いていないサービスを引き受けます"

@@ -10,6 +10,17 @@
 
 app と marunage は Cloudflare Access のログインを通ります。Tunnel・DNS・Access の設定は、Mac を替えても変わりません。
 
+## ログと停止通知
+
+3サービスのログ（`~/Library/Logs/{scribe-bot,launch-video-gen,marunage-studio}/*.log`）は、Vector が Cloud Logging（GCP プロジェクト `automatic-recording-of-minutes`）へ送ります。Vector は1分ごとに各サービスが動いているかも確かめて送り、止まっていればメールが届きます。
+
+- **見る：** [Logs Explorer](https://console.cloud.google.com/logs/query;query=resource.labels.namespace%3D%22processing-mac%22?project=automatic-recording-of-minutes)。ログ名はサービスごと（`processing-mac-scribe-bot` など）、稼働確認は `processing-mac-heartbeat`。30日残ります。
+- **通知が来るとき：** 稼働確認が10分届かない（Mac・回線・Vector が止まった）、またはあるサービスが10分のうち8回以上応答しない。戻ればもう一度メールが届きます。宛先と条件は ele-inc/elevenlabs-transcribe-bot の `infra/processing-mac-logs.tf`、詳しくは同じリポジトリの `docs/MAC_SERVICE.md`「ログと停止通知」。
+- **このMacの中：** LaunchAgent `com.ele-inc.processing-mac.logs`（[`scripts/processing-mac/logs.sh`](../scripts/processing-mac/logs.sh) が登録）が [`logs/run-vector.sh`](../scripts/processing-mac/logs/run-vector.sh) を起動します。設定は [`logs/vector.yaml`](../scripts/processing-mac/logs/vector.yaml)、稼働確認は [`logs/heartbeat.sh`](../scripts/processing-mac/logs/heartbeat.sh)。設定を書き換えると Vector が読み直します。Vector 自身のログは `~/Library/Logs/processing-mac-logs/vector.log`、鍵は `~/.local/state/processing-mac-logs/gcp-credentials.json`（Secret Manager の `PROCESSING_MAC_LOGS_GCP_CREDENTIALS`）。
+- **入れる・直す：** 処理用Macで `deploy.sh`（または `scripts/processing-mac.sh deploy`）を実行すると、Vector・鍵・LaunchAgent のうち無いものを用意し、Cloud Logging に届くことを確かめます。
+
+サービスを足したときは、`logs/vector.yaml` の `include` と `logs/heartbeat.sh` の確認を足します。
+
 ## 新しいMacへ移す
 
 ### 1. 新しいMacの下準備（手で行う）
@@ -90,15 +101,17 @@ Thunderbolt ケーブルでつなぐ場合は、2台を近くに置きます。
 3. **旧Macが空いているか**を確かめる。marunage の worktree に未 push の作業があれば止まります。launch-video-gen の処理と marunage のチャットは、終わるまで最大10分待ちます。
 4. **確認**：「旧Macのサービスを止めて切り替えます。続けますか？」に `y` と答える。
 5. **switch**：
-   1. 文字起こしをこのMacで起動してから、旧Macの文字起こしを止める（止まる時間なし）。
-   2. 旧Macの launch-video-gen（新しい処理の受付を止めてから）と marunage-studio を止める。
-   3. 最後の同期をする（launch-video-gen のデータを完全に一致させる）。
-   4. このMacで launch-video-gen と marunage-studio を起動する。
-   5. 公開URL（app・marunage）を、旧Macの Tunnel からこのMacの Tunnel へ付け替える。
-   6. 外と中から動作を確かめる。
-   7. 通れば、旧Macの登録ファイル（plist）を `~/<サービス名>-retired/` へ退避する。次に旧Macへログインしても動き出さないようにするためです。
+   1. 旧Macのログ送信（Vector）を止める。止めていくサービスを、旧Macが「応答しない」と報告しないようにするためです。
+   2. 文字起こしをこのMacで起動してから、旧Macの文字起こしを止める（止まる時間なし）。
+   3. 旧Macの launch-video-gen（新しい処理の受付を止めてから）と marunage-studio を止める。
+   4. 最後の同期をする（launch-video-gen のデータを完全に一致させる）。
+   5. このMacで launch-video-gen と marunage-studio を起動する。
+   6. 公開URL（app・marunage）を、旧Macの Tunnel からこのMacの Tunnel へ付け替える。
+   7. 外と中から動作を確かめる。
+   8. 通れば、このMacからログを送り始め、Cloud Logging に届くことを確かめる。
+   9. 旧Macの登録ファイル（plist）を `~/<サービス名>-retired/` へ退避する。次に旧Macへログインしても動き出さないようにするためです。
 
-**止まる時間**：app と marunage は 5-2 から 5-5 の間止まります。文字起こしは止まりません。
+**止まる時間**：app と marunage は 5-3 から 5-6 の間止まります。文字起こしは止まりません。5-1 から 5-8 までが10分を超えると、「稼働確認が届かない」のメールが来ます（その間はログを送る Mac がいないため）。
 
 実行するコマンドだけを先に見るには、次を使います。
 
@@ -128,25 +141,26 @@ Thunderbolt ケーブルでつなぐ場合は、2台を近くに置きます。
 
 - **切り替えの途中で止まったとき**：止めた旧Macのサービスと、旧Macで戻すコマンドが表示されます。旧Macのターミナルで実行してください。
 - **切り替えた後に問題が見つかったとき**：
-  1. 新しいMacで、9つの常駐を止める。
+  1. 新しいMacで、10の常駐を止める。
 
      ```bash
-     for l in scribe-bot.{slack,tunnel,update} launch-video-gen.{web,update,tunnel} marunage-studio.{web,runtime,update}; do
+     for l in scribe-bot.{slack,tunnel,update} launch-video-gen.{web,update,tunnel} marunage-studio.{web,runtime,update} processing-mac.logs; do
        launchctl bootout gui/$(id -u)/com.ele-inc.$l
      done
      ```
 
-  2. 旧Macで、`~/scribe-bot-retired/`・`~/launch-video-gen-retired/`・`~/marunage-studio-retired/` の plist を `~/Library/LaunchAgents/` へ戻し、それぞれ `launchctl bootstrap gui/$(id -u) <plist>` で起動する。
+  2. 旧Macで、`~/scribe-bot-retired/`・`~/launch-video-gen-retired/`・`~/marunage-studio-retired/`・`~/processing-mac-retired/` の plist を `~/Library/LaunchAgents/` へ戻し、それぞれ `launchctl bootstrap gui/$(id -u) <plist>` で起動する。
 
   切り替えた後に新しいMacで作ったジョブや素材は、新しいMacに残ります。
 
 ## 旧Macの後片付け（数日たって問題がなければ）
 
-旧Macは、初期化してから手放してください。ここにある秘密の値（各サービスの API キー、GCP のサービスアカウントの鍵、Tunnel の認証ファイル）は、新しいMacでも同じものを使っているためです。初期化せずに手元に残すなら、次を消します。
+旧Macは、初期化してから手放してください。ここにある秘密の値（各サービスの API キー、GCP のサービスアカウントの鍵（ログ用を含む）、Tunnel の認証ファイル）は、新しいMacでも同じものを使っているためです。初期化せずに手元に残すなら、次を消します。
 
 ```bash
 rm -rf ~/scribe-bot-service ~/AIEditor-service ~/ele-workspace/marunage-studio-service \
-  ~/scribe-bot-retired ~/launch-video-gen-retired ~/marunage-studio-retired
+  ~/scribe-bot-retired ~/launch-video-gen-retired ~/marunage-studio-retired \
+  ~/.local/state/processing-mac-logs ~/processing-mac-retired
 rm -f ~/.cloudflared/*.json ~/.cloudflared/config.yml
 ```
 
