@@ -154,7 +154,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   source "${HOME}/dotfiles/scripts/app-settings-status.sh"
   dotfiles_apply_app_settings bash "${HOME}/dotfiles/scripts/macos-aqua-voice.sh"
   dotfiles_apply_app_settings bash "${HOME}/dotfiles/scripts/macos-clipy.sh"
-  # Espanso owns text expansion; disable Raycast snippets before starting it.
+  # Espanso owns text expansion; retire Raycast and restore Spotlight.
   dotfiles_apply_app_settings python3 "${HOME}/dotfiles/scripts/macos-espanso.py"
 
   # Apply the registered Mac mini connection's display policy without interrupting sessions.

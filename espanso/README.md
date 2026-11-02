@@ -1,7 +1,7 @@
 # Espansoによる文字展開
 
 Raycastの自動展開で全文の二重挿入・カーソルの先頭への移動が発生したため、
-文字展開をEspansoで試す。Raycastのランチャーと既存Quicklinksは残す。
+文字展開をEspansoへ移行済み。Raycastはアンインストールし、Command+SpaceはSpotlightに戻す。
 
 ```sh
 brew install --cask espanso
@@ -16,13 +16,13 @@ Espansoを許可し、同じコマンドを再実行する。
 `/Applications/Espanso.app` を追加してオンにする。
 macOS 27ではEspanso 2.4.1の `service start` が失敗したため、
 スクリプトは登録済みLaunchAgentを `launchctl enable/bootstrap` で起動する。
-Raycastの自動展開停止には実行元ターミナルのAccessibilityとSystem EventsのAutomationも必要。
-未対応のRaycast UIや権限不足で停止を確認できなければ、Espansoは開始せず終了コード3を返す。
+Raycastが残っているMacではHomebrew経由でアンインストールする。
+アプリの保存データはpurgeしない。アンインストールに失敗した場合は終了コード3を返す。
 
 ## 管理するもの
 
 - `config/default.yml`: 挿入方式はinject（キー入力）。貼り付け方式は通常のWeb入力で不安定だったため使わない。検索キーとダブルタップの切り替えキーは無効。
-  Option+Space（iTerm2）、Control+Space（Aqua Voice）、Command+Space（Raycast）と競合させない。
+  Option+Space（iTerm2）、Control+Space（Aqua Voice）、Command+Space（Spotlight）と競合させない。
 - `settings.json`: 短縮語の接頭辞（現在は `;`）とMac標準の自動置換停止を管理する。
   `disableSystemTextReplacement: true` でmacOSの `NSAutomaticTextReplacementEnabled` と
   `WebAutomaticTextReplacementEnabled`、Chrome独自の `WebAutomaticTextReplacementEnabled` をオフにする。

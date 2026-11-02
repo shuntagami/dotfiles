@@ -1,4 +1,5 @@
 {
   "keywordPrefix": ";",
-  "disableSystemTextReplacement": true
+  "disableSystemTextReplacement": true,
+  "restoreSpotlight": true
 }

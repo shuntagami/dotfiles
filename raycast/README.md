@@ -1,9 +1,8 @@
 # Raycast
 
-文字の自動展開は [Espanso](../espanso/README.md) に移行する。
-Raycastで全文の二重挿入とカーソルが先頭へ戻る症状が発生したため、
-`settings.json` の `snippets.enabled` は false とし、deploy時にもオフを確認する。
-Raycastのランチャー・既存Quicklinksはそのまま利用できる。
+現在は利用しない。文字展開は [Espanso](../espanso/README.md) へ移行した。
+RaycastはBrewfileから削除し、Espansoのdeploy時にも残っていればアンインストールする。
+Command+SpaceはSpotlightへ戻す。以下のリンク設定は移行前の記録として保持する。
 
 ## よく開くページ（Quicklinks）
 

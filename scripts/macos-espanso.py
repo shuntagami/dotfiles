@@ -108,6 +108,30 @@ def disable_system_replacements():
     print("macOS and Chrome text replacement preferences saved as off; dictionary data retained.")
 
 
+def restore_spotlight():
+    """Return Command+Space to Spotlight without changing other symbolic keys."""
+    domain = "com.apple.symbolichotkeys"
+    exported = run(["/usr/bin/defaults", "export", domain, "-"])
+    if exported.returncode:
+        raise ValueError("Could not read Spotlight shortcut preferences")
+    keys = plistlib.loads(exported.stdout.encode()).get("AppleSymbolicHotKeys", {})
+    original = STATE / "spotlight-shortcut.json"
+    if not original.exists():
+        private_write(original, json.dumps({"64": keys.get("64")}, indent=2) + "\n")
+    desired = {"enabled": True, "value": {"parameters": [32, 49, 1048576], "type": "standard"}}
+    if keys.get("64") != desired:
+        value = plistlib.dumps(desired).decode()
+        if run(["/usr/bin/defaults", "write", domain, "AppleSymbolicHotKeys", "-dict-add", "64", value]).returncode:
+            raise ValueError("Could not restore Spotlight shortcut")
+        activation = "/System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings"
+        if Path(activation).exists() and run([activation, "-u"]).returncode:
+            raise ValueError("Spotlight shortcut saved; log out and back in to activate it")
+    checked = run(["/usr/bin/defaults", "export", domain, "-"])
+    if checked.returncode or plistlib.loads(checked.stdout.encode()).get("AppleSymbolicHotKeys", {}).get("64") != desired:
+        raise ValueError("Spotlight shortcut verification failed")
+    print("Spotlight shortcut: Command+Space.")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true")
@@ -146,16 +170,13 @@ def main():
         print("Install Espanso with brew install --cask espanso, then rerun setup.")
         return 3
     if any(p.exists() for p in [Path("/Applications/Raycast.app"), Path.home() / "Applications/Raycast.app"]):
-        result = run(["/usr/bin/osascript", str(ROOT / "scripts/macos-raycast-disable-snippets.applescript")], timeout=90)
-        if result.returncode:
-            stopped = run([binary, "service", "stop"])
-            if stopped.returncode and "not running" not in (stopped.stdout + stopped.stderr).lower():
-                print("Espanso stop could not be verified; quit Espanso before using expansion.")
-            print("Raycast expansion could not be verified off; Espanso start was skipped.")
-            print("Disable Raycast Settings > Snippets > Enable Snippet Expansion and rerun.")
-            print("If macOS requests terminal Accessibility / System Events permission, approve it locally.")
+        brew = shutil.which("brew")
+        if not brew or run([brew, "uninstall", "--cask", "raycast"], timeout=120).returncode:
+            print("Remove Raycast with brew uninstall --cask raycast, then rerun setup.")
             return 3
-        print("Raycast snippet expansion is off.")
+        print("Raycast uninstalled; its saved data was not purged.")
+    if settings.get("restoreSpotlight", False):
+        restore_spotlight()
     if settings.get("disableSystemTextReplacement", False):
         disable_system_replacements()
         after = run(["/usr/bin/defaults", "export", "-g", "-"])

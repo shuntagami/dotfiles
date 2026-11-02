@@ -1,7 +1,7 @@
 # Clipboard injection is unreliable in browser inputs on this Mac.
 backend: inject
 preserve_clipboard: true
-# Keep Option+Space (iTerm2), Ctrl+Space (Aqua), Cmd+Space (Raycast) available.
+# Keep Option+Space (iTerm2), Ctrl+Space (Aqua), Cmd+Space (Spotlight) available.
 search_shortcut: off
 search_trigger: off
 toggle_key: OFF
