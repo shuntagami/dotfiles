@@ -1,31 +1,22 @@
 #!/bin/bash
+# Clone this repository to ~/dotfiles. It is private, so log in to GitHub first
+# (`gh auth login`, choosing HTTPS and letting it authenticate Git). The anonymous
+# tarball download that used to be the fallback no longer works.
 
 set -eux
 
-OS="$(uname -s)"
 DOTFILES="${HOME}/dotfiles"
-DOT_TARBALL="https://github.com/shuntagami/dotfiles/tarball/main"
-REMOTE_URL="https://github.com/shuntagami/dotfiles"
 
 has() {
   type "$1" > /dev/null 2>&1
 }
 
-cd $HOME
-
-# If missing, download and extract the dotfiles repository
-if [ ! -d ${DOTFILES} ]; then
+if [ ! -d "${DOTFILES}" ]; then
   echo "Downloading dotfiles..."
-  mkdir ${DOTFILES}
-
-  if has "git"; then
-    git clone "${REMOTE_URL}"
+  if has "gh"; then
+    gh repo clone shuntagami/dotfiles "${DOTFILES}"
   else
-    curl -fsSLo ${HOME}/dotfiles.tar.gz ${DOT_TARBALL}
-    tar -zxf ${HOME}/dotfiles.tar.gz --strip-components 1 -C ${DOTFILES}
-    rm -f ${HOME}/dotfiles.tar.gz
+    git clone https://github.com/shuntagami/dotfiles "${DOTFILES}"
   fi
-
   echo $(tput setaf 2)Download dotfiles complete!. ✔︎$(tput sgr0)
 fi
-

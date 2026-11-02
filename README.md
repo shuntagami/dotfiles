@@ -9,12 +9,14 @@
 ![VSCode](https://img.shields.io/badge/VS_Code-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white)
 ![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
 
-### 新しいMacを手に入れた。<br>コマンド1つで、全部入ってる。
+### 新しいMacを手に入れた。<br>コマンド3行で、全部入ってる。
 
 <br>
 
 ```bash
-bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts/install-dotfiles.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && eval "$(/opt/homebrew/bin/brew shellenv)"
+brew install gh && gh auth login   # GitHub.com・HTTPS を選び、Git の認証にも使う（Yes）
+gh repo clone shuntagami/dotfiles ~/dotfiles && ~/dotfiles/scripts/setup.sh
 ```
 
 </div>
@@ -135,14 +137,17 @@ Claude Desktop、Cursor、MCPサーバー設定を含む、**最新のAIツー�
 | 🍎 macOS  | XCode Command Line Tools（`xcode-select --install`で取得） |
 | 🐧 Ubuntu | 20.04以上                                                  |
 
-### セットアップ（2ステップで完了）
+### セットアップ
+
+このリポジトリは非公開なので、先に GitHub CLI でログインしてから取得します（Ubuntu では Homebrew の行の代わりに `sudo apt install gh` で入れる）。
 
 ```bash
-# 1. dotfilesをダウンロード
-bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts/install-dotfiles.sh)"
+# 1. Homebrew と GitHub CLI を入れてログインする
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && eval "$(/opt/homebrew/bin/brew shellenv)"
+brew install gh && gh auth login   # GitHub.com・HTTPS を選び、Git の認証にも使う（Yes）
 
-# 2. セットアップを実行（パッケージ、シンボリックリンク、macOS設定、エディタ設定 ── 全部まとめて）
-~/dotfiles/scripts/setup.sh
+# 2. dotfilesを取得してセットアップを実行（パッケージ、シンボリックリンク、macOS設定、エディタ設定 ── 全部まとめて）
+gh repo clone shuntagami/dotfiles ~/dotfiles && ~/dotfiles/scripts/setup.sh
 ```
 
 > [!TIP]
