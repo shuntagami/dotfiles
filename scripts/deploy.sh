@@ -245,6 +245,12 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
       open -a "Karabiner-Elements"
     fi
   fi
+
+  # Processing Mac (company services). Does nothing unless misc/processing-mac.conf names this
+  # Mac; then it takes over the services that are not running here yet from the previous Mac,
+  # after asking (docs/processing-mac.md). A failure here should not undo the rest of the deploy.
+  bash ~/dotfiles/scripts/processing-mac.sh deploy ||
+    echo "処理用Macの引き継ぎは終わっていません。docs/processing-mac.md を見て、scripts/processing-mac.sh deploy を実行し直してください。"
 fi
 
 # change shell
