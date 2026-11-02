@@ -64,3 +64,11 @@ elif [[ `uname` == "Darwin" ]]; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
   fi
 fi
+
+# Claude Code CLI. The native installer puts it at ~/.local/bin/claude (already on
+# PATH via .zprofile/.zshrc) and keeps it up to date by itself. Services on the
+# processing Mac (marunage-studio's agent runtime) run that exact path, so Homebrew's
+# claude-code cask, which lives elsewhere and only updates on brew upgrade, is not used.
+if [[ ! -x "${HOME}/.local/bin/claude" ]]; then
+  curl -fsSL https://claude.ai/install.sh | bash
+fi
