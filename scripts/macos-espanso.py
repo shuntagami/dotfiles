@@ -18,8 +18,8 @@ STATE = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))
 
 
 def convert(items, prefix):
-    if not isinstance(prefix, str) or not prefix or any(c.isspace() for c in prefix):
-        raise ValueError("keywordPrefix must be a nonempty string without whitespace")
+    if not isinstance(prefix, str) or any(c.isspace() for c in prefix):
+        raise ValueError("keywordPrefix must be a string without whitespace")
     replacements, conflicts = {}, set()
     for item in items:
         key, text = item.get("replace"), item.get("with")
@@ -34,14 +34,18 @@ def convert(items, prefix):
     for key, text in sorted(replacements.items()):
         if key in conflicts:
             continue
-        if prefix + key in replacements:
+        if prefix and prefix + key in replacements:
             raise ValueError("A generated trigger conflicts with a native replacement")
         # Avoid interpreting native literal text as an Espanso variable/cursor command.
         if "{{" in text or "}}" in text or "$|$" in text:
             raise ValueError("A replacement contains Espanso syntax; convert it manually")
         if any(c.isspace() or ord(c) < 32 for c in key):
             raise ValueError("A dictionary trigger contains whitespace or control characters")
-        matches.append({"trigger": prefix + key, "replace": text})
+        match = {"trigger": prefix + key, "replace": text}
+        if not prefix:
+            # Prevent short suffixes such as gm from matching inside lgm/elegm.
+            match["left_word"] = True
+        matches.append(match)
     return matches, len(conflicts)
 
 
@@ -218,7 +222,7 @@ def main():
             print("Espanso is not running. Finish its first-launch Accessibility approval and rerun setup.")
             return 3
     print("Espanso service is running. Accessibility approval must be completed on this Mac.")
-    print("Verify ;lgm in both a normal input and xterm, including cursor position and repeated expansions.")
+    print(f"Verify {prefix}lgm in both a normal input and xterm, including cursor position and repeated expansions.")
     return 0
 
 

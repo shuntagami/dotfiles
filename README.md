@@ -189,7 +189,7 @@ Clipyも指定した設定キーだけ更新します。変更前の管理対象
 ### 定型文入力（Espanso）
 
 Espansoは `misc/Brewfile` で導入します。`deploy.sh` は実行したMacのテキスト置換から
-`;lgm` などの短縮語を生成し、設定・ログイン時の起動を適用します。
+`lgm` などApple側と同じ短縮語を生成し、設定・ログイン時の起動を適用します。
 Raycastはアンインストールし、Command+SpaceはSpotlightへ戻します。初回のOS権限と試し方は [espanso/README.md](espanso/README.md) を参照してください。
 
 ### 標準アプリ・スクリーンショット
