@@ -186,12 +186,11 @@ Clipyも指定した設定キーだけ更新します。変更前の管理対象
 アプリが未インストールならスキップします。Aqua Voiceの設定ファイルがまだない場合は、
 一度アプリを起動してから再実行してください（適用時は終了コード3で報告し、deployは警告を出して続行）。
 
-### Raycastの定型文入力
+### 定型文入力（Espanso）
 
-Raycastは `misc/Brewfile` で導入します。設定方針は `raycast/settings.json`。
-`deploy.sh` は実行したMacのテキスト置換からSnippetsを生成し、初回・変更時にインポート画面を開きます。
-実データはGit対象外の `raycast/snippets.local.json` に保存します。
-初回の確認・権限・展開設定は [raycast/README.md](raycast/README.md) を参照してください。
+Espansoは `misc/Brewfile` で導入します。`deploy.sh` は実行したMacのテキスト置換から
+`;lgm` などの短縮語を生成し、設定・ログイン時の起動を適用します。
+Raycastはアンインストールし、Command+SpaceはSpotlightへ戻します。初回のOS権限と試し方は [espanso/README.md](espanso/README.md) を参照してください。
 
 ### 標準アプリ・スクリーンショット
 

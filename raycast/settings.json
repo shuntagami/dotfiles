@@ -3,7 +3,7 @@
   "hotkey": "Command+Space",
   "replaceSpotlight": true,
   "snippets": {
-    "enabled": true,
+    "enabled": false,
     "keywordPrefix": ";",
     "expansionMode": "Immediately",
     "expandWithinWords": false,
