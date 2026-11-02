@@ -1,5 +1,5 @@
-# Use one paste operation in native fields and browser terminals.
-backend: clipboard
+# Clipboard injection is unreliable in browser inputs on this Mac.
+backend: inject
 preserve_clipboard: true
 # Keep Option+Space (iTerm2), Ctrl+Space (Aqua), Cmd+Space (Raycast) available.
 search_shortcut: off

@@ -21,7 +21,7 @@ Raycastの自動展開停止には実行元ターミナルのAccessibilityとSys
 
 ## 管理するもの
 
-- `config/default.yml`: 挿入方式はclipboard。検索キーとダブルタップの切り替えキーは無効。
+- `config/default.yml`: 挿入方式はinject（キー入力）。貼り付け方式は通常のWeb入力で不安定だったため使わない。検索キーとダブルタップの切り替えキーは無効。
   Option+Space（iTerm2）、Control+Space（Aqua Voice）、Command+Space（Raycast）と競合させない。
 - `settings.json`: 短縮語の接頭辞。現在は `;`。
 - 実行したMacのテキスト置換から `;lgm`・`;gm`・`;elegm` などを生成する。
