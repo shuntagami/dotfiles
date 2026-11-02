@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = Path.home() / "Library/Application Support/espanso"
@@ -135,15 +136,27 @@ def main():
     if run([binary, "service", "check"]).returncode:
         if run([binary, "service", "register"]).returncode:
             raise ValueError("Could not register Espanso login service")
-    status = run([binary, "service", "status"])
-    action = "restart" if status.returncode == 0 and "not running" not in status.stdout.lower() else "start"
-    if run([binary, "service", action]).returncode:
-        print("Espanso could not start. Allow Espanso in macOS Accessibility, then rerun setup.")
-        return 3
+    # Espanso 2.4.1's service start fails with launchctl exit 3 on macOS 27.
+    # Enable and bootstrap the registered user agent through the modern API.
+    service = f"gui/{os.getuid()}/com.federicoterzi.espanso"
+    domain = f"gui/{os.getuid()}"
+    agent = Path.home() / "Library/LaunchAgents/com.federicoterzi.espanso.plist"
+    if run(["/bin/launchctl", "enable", service]).returncode:
+        raise ValueError("Could not enable Espanso login service")
     status = run([binary, "service", "status"])
     if status.returncode or "not running" in status.stdout.lower():
-        print("Espanso is not running. Finish its first-launch permissions and rerun setup.")
-        return 3
+        loaded = run(["/bin/launchctl", "print", service]).returncode == 0
+        arguments = ["kickstart", "-k", service] if loaded else ["bootstrap", domain, str(agent)]
+        if run(["/bin/launchctl", *arguments]).returncode:
+            raise ValueError("launchctl could not start Espanso; inspect its Login Items entry")
+        for _ in range(20):
+            status = run([binary, "service", "status"])
+            if status.returncode == 0 and "not running" not in status.stdout.lower():
+                break
+            time.sleep(0.25)
+        else:
+            print("Espanso is not running. Finish its first-launch Accessibility approval and rerun setup.")
+            return 3
     print("Espanso service is running. Accessibility approval must be completed on this Mac.")
     print("Verify ;lgm in both a normal input and xterm, including cursor position and repeated expansions.")
     return 0

@@ -12,6 +12,10 @@ python3 ~/dotfiles/scripts/macos-espanso.py
 初回はEspanso自身へのmacOSアクセシビリティ許可が必要。
 スクリプトはOS権限を自動承認しない。システム設定のプライバシーとセキュリティから
 Espansoを許可し、同じコマンドを再実行する。
+案内のEnableで一覧に表示されない場合、Device Control and Data Accessの「＋」から
+`/Applications/Espanso.app` を追加してオンにする。
+macOS 27ではEspanso 2.4.1の `service start` が失敗したため、
+スクリプトは登録済みLaunchAgentを `launchctl enable/bootstrap` で起動する。
 Raycastの自動展開停止には実行元ターミナルのAccessibilityとSystem EventsのAutomationも必要。
 未対応のRaycast UIや権限不足で停止を確認できなければ、Espansoは開始せず終了コード3を返す。
 
