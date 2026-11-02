@@ -28,6 +28,8 @@ Raycastの自動展開停止には実行元ターミナルのAccessibilityとSys
   `WebAutomaticTextReplacementEnabled`、Chrome独自の `WebAutomaticTextReplacementEnabled` をオフにする。
   `;lgm` でも語尾の `lgm` が標準辞書と競合する可能性があるため、展開元はEspansoへ一本化する。
   元の設定値（未設定を含む）はstate配下の `native-text-replacement-preferences.json` に保存する。
+  macOS 27では設定値をオフに保存してもAppKitのグローバル状態がオンを返すため、
+  全アプリでの停止が保証されたとは扱わない。Chromeには独自の停止設定も保存する。
   起動済みアプリで置換が続く場合はアプリを再起動する。個別アプリで明示的にオンにした文字置換は
   そのアプリの編集 → 置換 → テキスト置換でもオフにする。
 - 実行したMacのテキスト置換から `;lgm`・`;gm`・`;elegm` などを生成する。

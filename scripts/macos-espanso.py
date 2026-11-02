@@ -105,7 +105,7 @@ def disable_system_replacements():
             checked = run(["/usr/bin/defaults", "read", domain, key])
             if checked.returncode or checked.stdout.strip() != "0":
                 raise ValueError("Native text replacement preference did not stay disabled")
-    print("macOS and Chrome native text replacement preferences are off; dictionary data retained.")
+    print("macOS and Chrome text replacement preferences saved as off; dictionary data retained.")
 
 
 def main():
