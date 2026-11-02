@@ -316,6 +316,8 @@ cask "loom"
 cask "monitorcontrol"
 # Launcher and keyword-based text expansion
 cask "raycast"
+# Text expansion managed from dotfiles
+cask "espanso"
 # Team communication and collaboration software
 cask "slack"
 # CLI to create, run, and deploy Slack apps

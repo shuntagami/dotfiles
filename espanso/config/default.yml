@@ -1,0 +1,7 @@
+# Use one paste operation in native fields and browser terminals.
+backend: clipboard
+preserve_clipboard: true
+# Keep Option+Space (iTerm2), Ctrl+Space (Aqua), Cmd+Space (Raycast) available.
+search_shortcut: off
+search_trigger: off
+toggle_key: OFF

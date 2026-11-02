@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+"""Generate private Espanso matches from this Mac and install tracked configuration."""
+import argparse
+from datetime import datetime
+import json
+import os
+from pathlib import Path
+import plistlib
+import shutil
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+CONFIG = Path.home() / "Library/Application Support/espanso"
+STATE = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "dotfiles/espanso"
+
+
+def convert(items, prefix):
+    if not isinstance(prefix, str) or not prefix or any(c.isspace() for c in prefix):
+        raise ValueError("keywordPrefix must be a nonempty string without whitespace")
+    replacements, conflicts = {}, set()
+    for item in items:
+        key, text = item.get("replace"), item.get("with")
+        if item.get("on", True) in (False, 0):
+            continue
+        if not isinstance(key, str) or not key or not isinstance(text, str) or not text:
+            continue
+        if key in replacements and replacements[key] != text:
+            conflicts.add(key)
+        replacements[key] = text
+    matches = []
+    for key, text in sorted(replacements.items()):
+        if key in conflicts:
+            continue
+        if prefix + key in replacements:
+            raise ValueError("A generated trigger conflicts with a native replacement")
+        # Avoid interpreting native literal text as an Espanso variable/cursor command.
+        if "{{" in text or "}}" in text or "$|$" in text:
+            raise ValueError("A replacement contains Espanso syntax; convert it manually")
+        if any(c.isspace() or ord(c) < 32 for c in key):
+            raise ValueError("A dictionary trigger contains whitespace or control characters")
+        matches.append({"trigger": prefix + key, "replace": text})
+    return matches, len(conflicts)
+
+
+def private_write(target, content):
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(dir=target.parent, prefix=".dotfiles-", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as stream:
+            stream.write(content)
+        os.replace(temporary, target)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
+def backup(target):
+    if not target.exists() and not target.is_symlink():
+        return
+    STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
+    destination = STATE / (target.name + "." + datetime.now().strftime("%Y%m%d%H%M%S%f") + ".backup")
+    private_write(destination, target.read_text())
+
+
+def install_config(source, target):
+    if target.is_symlink() and target.resolve() == source.resolve():
+        return
+    backup(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_name(target.name + ".dotfiles-link")
+    temporary.unlink(missing_ok=True)
+    temporary.symlink_to(source)
+    os.replace(temporary, target)
+
+
+def run(arguments, *, timeout=30):
+    try:
+        return subprocess.run(arguments, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise ValueError("Setup command timed out; retry setup") from None
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--prepare-only", action="store_true", help="write configuration without starting apps")
+    args = parser.parse_args()
+    if sys.platform != "darwin":
+        print("Espanso setup is only supported on macOS.")
+        return 0
+    result = run(["/usr/bin/defaults", "export", "-g", "-"])
+    if result.returncode:
+        raise ValueError("Could not read this Mac's text replacements")
+    items = plistlib.loads(result.stdout.encode()).get("NSUserDictionaryReplacementItems", [])
+    prefix = json.loads((ROOT / "espanso/settings.json").read_text())["keywordPrefix"]
+    matches, conflicts = convert(items, prefix)
+    print(f"Espanso: {len(matches)} matches; {conflicts} conflicting native keywords excluded.")
+    if args.dry_run:
+        return 0
+    if not matches:
+        print("No matches generated; existing configuration was left untouched.")
+        return 3
+    # JSON is valid YAML, and avoids hand-escaping private replacement strings.
+    payload = json.dumps({"matches": matches}, ensure_ascii=False, indent=2) + "\n"
+    target = CONFIG / "match/dotfiles-macos.yml"
+    if not target.exists() or target.read_text() != payload:
+        backup(target)
+        private_write(target, payload)
+    else:
+        target.chmod(0o600)
+    install_config(ROOT / "espanso/config/default.yml", CONFIG / "config/default.yml")
+    print("Espanso configuration prepared (private matches stay on this Mac).")
+    if args.prepare_only:
+        return 0
+    binary = shutil.which("espanso")
+    if not binary:
+        print("Install Espanso with brew install --cask espanso, then rerun setup.")
+        return 3
+    if any(p.exists() for p in [Path("/Applications/Raycast.app"), Path.home() / "Applications/Raycast.app"]):
+        result = run(["/usr/bin/osascript", str(ROOT / "scripts/macos-raycast-disable-snippets.applescript")], timeout=90)
+        if result.returncode:
+            print("Raycast expansion could not be verified off; Espanso was not started.")
+            print("Disable Raycast Settings > Snippets > Enable Snippet Expansion and rerun.")
+            print("If macOS requests terminal Accessibility / System Events permission, approve it locally.")
+            return 3
+        print("Raycast snippet expansion is off.")
+    # Parse configuration before registering or starting the background service.
+    result = run([binary, "match", "list"])
+    if result.returncode:
+        raise ValueError("Espanso rejected the configuration; run espanso log locally to inspect")
+    if run([binary, "service", "check"]).returncode:
+        if run([binary, "service", "register"]).returncode:
+            raise ValueError("Could not register Espanso login service")
+    status = run([binary, "service", "status"])
+    action = "restart" if status.returncode == 0 and "not running" not in status.stdout.lower() else "start"
+    if run([binary, "service", action]).returncode:
+        print("Espanso could not start. Allow Espanso in macOS Accessibility, then rerun setup.")
+        return 3
+    status = run([binary, "service", "status"])
+    if status.returncode or "not running" in status.stdout.lower():
+        print("Espanso is not running. Finish its first-launch permissions and rerun setup.")
+        return 3
+    print("Espanso service is running. Accessibility approval must be completed on this Mac.")
+    print("Verify ;lgm in both a normal input and xterm, including cursor position and repeated expansions.")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except (ValueError, OSError, KeyError) as error:
+        print(f"Espanso setup: {error}", file=sys.stderr)
+        sys.exit(1)
