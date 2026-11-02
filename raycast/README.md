@@ -2,48 +2,93 @@
 
 Macのテキスト置換にある短縮語をRaycastに移し、ブラウザのターミナルでも使う。
 アプリは `misc/Brewfile`、目標の設定値は `settings.json` で管理する。
-`settings.json` は手順の正本であり、Raycastが直接読み込む設定ファイルではない。
+`settings.json` をセットアップスクリプトが読み、Raycastの画面へ適用する。
+Raycast本体が直接読み込む設定ファイルではない。
 ただし `snippets.keywordPrefix` は移行スクリプトが読み、生成する短縮語の先頭に付ける。
 現在は `;`。Mac標準の `lgm`・`gm`・`elegm` は、Raycastでは `;lgm`・`;gm`・`;elegm` になる。
 Mac標準の登録を残して、実験的な上書き機能を使わずにxtermで展開するための設定。
 
 Raycastの呼び出しはCommand+Spaceにする。
 Settings → GeneralのReplace Spotlightを使い、SpotlightのCommand+Spaceを解除して置き換える。
-`settings.json` の `replaceSpotlight` はこの目標設定の記録であり、JSONだけでは自動適用されない。
+`settings.json` の `replaceSpotlight` を有効にすると、スクリプトがReplace Spotlightを操作する。
 Aqua VoiceはControl+Spaceを使う。
 iTerm2のHotkey Windowは元のOption+Spaceを使う。
 こちらの保存先は `misc/com.googlecode.iterm2.plist` のDefaultプロファイル。
 `deploy.sh` がiTerm2のカスタム設定フォルダを設定する。起動済みのiTerm2への反映は
 iTerm2を終了して起動し直した後に確認する。
 
+## 自動セットアップ
+
+開発途中。Mac miniでは基本設定とスニペット設定まで確認済みだが、
+Quicklinks編集時のキーボードフォーカスで停止する。MacBookでの一通りの動作確認は未完了。
+現時点では `deploy.sh` だけでセットアップが完了することを保証しない。
+
+```sh
+zsh ~/dotfiles/scripts/deploy.sh
+# Raycastだけ設定するとき
+python3 ~/dotfiles/scripts/macos-raycast-setup.py
+```
+
+実行したMac自身の辞書からスニペットを生成し、インポートの確定、呼び出しキー、
+自動展開の各スイッチ、QuicklinksのURL・起動先・エイリアス・既存タブ優先を自動設定する。
+RaycastのDBは直接書き換えない。実行中はRaycastの設定画面を操作するので、
+Raycastへの別の入力は完了まで待つ。
+
+初回にmacOSが求める権限承認だけはユーザーが行う。
+実行元ターミナルのAccessibility／System EventsのAutomationと、Raycast自身のAccessibilityが対象。
+スクリプトは許可ボタンを自動承認せず、未完了を終了コード3で知らせる。
+Raycastの権限待ちでも、進められるインポートやリンク設定は先に済ませる。
+許可後に同じコマンドを再実行すると、Raycastを起動し直して続行する。
+利用規約への同意・ログインが必要な初回画面も、自動で同意・入力しない。
+
+Raycast v2の英語UIとmacOS標準のosascript／swiftcを使う。追加の外部ライブラリは不要。
+設定項目が見つからない、保存成功を確認できないなどの場合は完了扱いにしない。
+途中で自動展開設定に失敗した場合は、自動展開をオフに戻して入力への干渉を避ける。
+macOSのSpotlightキーを一時的に有効化してから公式のReplace Spotlightを操作し、
+失敗時は以前のSpotlight設定へ戻す。
+
+確認できたインポートのハッシュと適用済み設定を
+`~/.local/state/dotfiles/raycast/automated-setup.json` に保存する（実データは入れない）。
+辞書・設定・スクリプト・Raycastのバージョンが同じ次回以降は画面操作を省略する。
+アプリ画面で手動変更した後に設定を戻す場合は、次を使う。
+
+```sh
+python3 ~/dotfiles/scripts/macos-raycast-setup.py --force
+```
+
+スニペットのインポートは追加のみ。確認記録にある短縮語の内容が変わった場合や、
+未確認の既存キーワードが衝突してスキップされた場合は、成功とせず確認を求める。
+既存の該当スニペットを更新・確認後、下記の手動確認用 `--confirm-setup` を実行してから再適用する。
+辞書からの削除をRaycast側に自動反映することはしない。
+
 ## よく開くページ（Quicklinks）
 
 `quicklinks.json` にWebリンクを保存する。RaycastのImport QuicklinksからこのJSONを
 読み込むと、`mt`（MulmoTerminal）、`slack`、`discord` の短い名前で検索して開ける。
 SlackとDiscordのOpen WithはGoogle Chrome。`mt` は既定のブラウザを使う。
-インポート後、Settings → Quicklinksで各項目の
-Aliasにも名前と同じ文字（`mt`・`slack`・`discord`）を入力する。
-エイリアスはJSONインポートでは復元されない。同名のSlack/Discordアプリより
-Webリンクを先頭に出すため、各Macで設定する。
+自動セットアップは、各項目のAliasにも名前と同じ文字
+（`mt`・`slack`・`discord`）を設定する。
+エイリアスは単体のJSONインポートには含まれないが、自動セットアップが名前と同じ値を設定する。
+同名のSlack/DiscordアプリよりWebリンクを先頭に出すための設定。
 `mt` は実行したMacのlocalhost:34567を開く。
-`MULMOTERMINAL_PORT` で別ポートを使うMacでは、Raycastの `mt` を編集し、
-URLを `http://localhost:<ポート番号>/terminals` に変更する。
+`MULMOTERMINAL_PORT` で別ポートを使うMacでは、`quicklinks.json` の `mt` の
+URLを `http://localhost:<ポート番号>/terminals` に変更して再適用する。
 JSONのURLは固定値なので、環境変数の変更だけでは自動追従しない。
 MulmoTerminalのサーバーはそのMacで起動しておく。
-`quicklinks-settings.json` に合わせ、Settings → QuicklinksのPrefer Existing Tabsをオンにする。
-`mt` のOpen Withは明示的なアプリ指定ではなく、Defaultと表示される既定ブラウザの項目を選ぶ。
+`quicklinks-settings.json` に合わせ、Prefer Existing Tabsをオンにする。
+`mt` のOpen Withには、Defaultと表示される既定ブラウザの項目を設定する。
 この経路で既存タブの再利用を有効にする。Mac miniでは既定ブラウザがChromeであることを確認済み。
 別のMacでもChromeの既存タブへ移動する場合は、Chromeを既定ブラウザにしておく。
 同じURLのタブがあればそこへ移動し、なければ新しく開く。
-これらの画面設定はJSONを置くだけでは自動適用されない。
-既存リンクのURL変更はインポートでは上書きされないため、Raycastの編集画面でも更新する。
+これらの画面設定も自動セットアップが適用する。
+既存リンクのURLはインポートでは上書きされないため、編集画面を操作して更新する。
 
-## 導入・復元
+## 手動で確認するとき
 
 ```sh
 brew install --cask raycast
 python3 ~/dotfiles/scripts/macos-raycast.py --deploy
-# 同じ処理は scripts/deploy.sh からも実行される
+# 自動セットアップが未対応のUIなどで、データだけ準備する場合
 ```
 
 `--deploy` は、そのMacの有効なテキスト置換を毎回読み取り、
@@ -127,8 +172,9 @@ python3 ~/dotfiles/scripts/macos-raycast.py
 ## 管理範囲
 
 Raycast v2の設定はアプリ内のDBに保存されるため、DBを直接書き換えたりリンクしない。
-画面で設定を適用し、復元時も `settings.json` に合わせる。
-公式の起動URLはSnippetsのインポートに使えるが、展開設定を直接適用する公式CLIは確認できていない。
+自動セットアップが画面を操作して `settings.json` の値を適用する。
+公式の起動URLはSnippetsのインポートに使えるが、展開設定を直接適用する公式CLIは確認できていないため、
+画面操作は同梱のAppleScriptと小さなネイティブ入力ヘルパーで行う。
 アカウント情報、履歴、メールアドレスなどを含む実データはGitに入れない。
 全設定のバックアップが必要なら公式のExport Settings & Dataを使う。
 暗号化された `.rayconfig` はGit対象外。パスフレーズは別途安全に保管する。

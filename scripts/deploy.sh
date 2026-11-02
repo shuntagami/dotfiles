@@ -154,9 +154,9 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   source "${HOME}/dotfiles/scripts/app-settings-status.sh"
   dotfiles_apply_app_settings bash "${HOME}/dotfiles/scripts/macos-aqua-voice.sh"
   dotfiles_apply_app_settings bash "${HOME}/dotfiles/scripts/macos-clipy.sh"
-  # Convert THIS Mac's text replacements and request Raycast's native import.
-  # Exit 3 means the first-run confirmation/settings still need user action.
-  dotfiles_apply_app_settings python3 "${HOME}/dotfiles/scripts/macos-raycast.py" --deploy
+  # Apply Raycast's tracked settings and import THIS Mac's dictionary through UI.
+  # Exit 3 leaves permission/unsupported-UI failures visibly incomplete.
+  dotfiles_apply_app_settings python3 "${HOME}/dotfiles/scripts/macos-raycast-setup.py"
 
   # Apply the registered Mac mini connection's display policy without interrupting sessions.
   if command -v node >/dev/null 2>&1; then

@@ -189,9 +189,10 @@ Clipyも指定した設定キーだけ更新します。変更前の管理対象
 ### Raycastの定型文入力
 
 Raycastは `misc/Brewfile` で導入します。設定方針は `raycast/settings.json`。
-`deploy.sh` は実行したMacのテキスト置換からSnippetsを生成し、初回・変更時にインポート画面を開きます。
+`deploy.sh` は実行したMacのテキスト置換からSnippetsを生成し、Raycastの画面設定・
+インポート確認・Quicklinks・エイリアスまでスクリプトで適用します。
 実データはGit対象外の `raycast/snippets.local.json` に保存します。
-初回の確認・権限・展開設定は [raycast/README.md](raycast/README.md) を参照してください。
+初回のOS権限と自動セットアップの条件は [raycast/README.md](raycast/README.md) を参照してください。
 
 ### 標準アプリ・スクリーンショット
 

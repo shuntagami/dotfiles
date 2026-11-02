@@ -6,7 +6,7 @@ dotfiles_apply_app_settings() {
   else
     local app_settings_result=$?
     if [[ "${app_settings_result}" -eq 3 ]]; then
-      echo "Warning: app launch/restart required; continuing dotfiles deployment."
+      echo "Warning: app setup needs user action (permission, confirmation or restart); continuing deployment."
       return 0
     fi
     return "${app_settings_result}"
