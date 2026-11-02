@@ -40,9 +40,9 @@ Mac mini（メイン）と MacBook Pro（外出・補助）で **Claude Code / C
 ### 1. 基本セットアップ
 
 ```bash
-bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts/install-dotfiles.sh)"
-cd ~/dotfiles
-brew bundle --file misc/Brewfile
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && eval "$(/opt/homebrew/bin/brew shellenv)"
+brew install gh && gh auth login   # GitHub.com・HTTPS を選び、Git の認証にも使う（Yes）
+gh repo clone shuntagami/dotfiles ~/dotfiles && ~/dotfiles/scripts/setup.sh
 ```
 
 これで Tailscale (`tailscale-app` cask) と Syncthing (`syncthing` formula) が入る。
