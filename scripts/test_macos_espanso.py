@@ -23,6 +23,16 @@ class EspansoTests(unittest.TestCase):
         self.assertEqual(matches, [{'trigger': ';gm', 'replace': 'one@example.com'}])
         self.assertEqual(conflicts, 1)
 
+    def test_empty_prefix_keeps_native_names_with_left_word_boundaries(self):
+        matches, conflicts = setup.convert([
+            {'replace': 'gm', 'with': 'a@example.com'},
+            {'replace': 'lgm', 'with': 'b@example.com'},
+            {'replace': 'elegm', 'with': 'c@example.com'},
+        ], '')
+        self.assertEqual(conflicts, 0)
+        self.assertEqual({m['trigger'] for m in matches}, {'gm', 'lgm', 'elegm'})
+        self.assertTrue(all(m.get('left_word') is True for m in matches))
+
     def test_special_text_survives_serialization(self):
         text = '日本語 "quoted"\\path\nnext\tline'
         matches, _ = setup.convert([{'replace': 'test', 'with': text}], ';')
