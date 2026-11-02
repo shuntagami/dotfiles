@@ -1,5 +1,7 @@
 import importlib.util
 import json
+import plistlib
+from types import SimpleNamespace
 from pathlib import Path
 import tempfile
 import unittest
@@ -34,6 +36,36 @@ class EspansoTests(unittest.TestCase):
         for text in ['{{date}}', '$|$cursor']:
             with self.assertRaises(ValueError):
                 setup.convert([{'replace': 'gm', 'with': text}], ';')
+
+    def test_uncreated_chrome_domain_is_backed_up_as_unset(self):
+        calls = []
+        def fake_run(args, **kwargs):
+            calls.append(args)
+            if args[1] == 'domains':
+                return SimpleNamespace(returncode=0, stdout='com.apple.TextEdit')
+            if args[1] == 'export':
+                self.assertEqual(args[2], 'NSGlobalDomain')
+                return SimpleNamespace(returncode=0, stdout=plistlib.dumps({}).decode())
+            return SimpleNamespace(returncode=0, stdout='0')
+        with tempfile.TemporaryDirectory() as folder, patch.object(setup, 'STATE', Path(folder)), patch.object(setup, 'run', fake_run):
+            setup.disable_system_replacements()
+            saved = json.loads((Path(folder) / 'native-text-replacement-preferences.json').read_text())
+        self.assertIsNone(saved['com.google.Chrome']['WebAutomaticTextReplacementEnabled'])
+        self.assertTrue(any(args[1:3] == ['write', 'com.google.Chrome'] for args in calls))
+
+    def test_existing_domain_read_error_is_not_treated_as_missing(self):
+        calls = []
+        def fake_run(args, **kwargs):
+            calls.append(args)
+            if args[1] == 'domains':
+                return SimpleNamespace(returncode=0, stdout='com.google.Chrome')
+            if args[2] == 'NSGlobalDomain':
+                return SimpleNamespace(returncode=0, stdout=plistlib.dumps({}).decode())
+            return SimpleNamespace(returncode=1, stdout='')
+        with tempfile.TemporaryDirectory() as folder, patch.object(setup, 'STATE', Path(folder)), patch.object(setup, 'run', fake_run):
+            with self.assertRaises(ValueError):
+                setup.disable_system_replacements()
+        self.assertFalse(any(args[1] == 'write' for args in calls))
 
     def test_private_replacement_never_becomes_world_readable(self):
         with tempfile.TemporaryDirectory() as folder:

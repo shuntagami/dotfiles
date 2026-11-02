@@ -55,6 +55,36 @@ espanso service stop
 espanso service unregister
 ```
 
+## 標準置換へ戻す場合
+
+セットアップが途中で失敗しても、保存済みの標準置換停止設定は維持する。
+自動で元へ戻してEspansoと再び競合させず、原因を解消して再実行する。
+Espansoを使わず標準置換へ戻す場合は、先にEspansoを停止し、次の手順で
+初回保存時の設定だけを復元する。辞書や無関係な設定は変更しない。
+その後 `settings.json` の `disableSystemTextReplacement` をfalseへ変更する。
+起動済みアプリには再起動が必要な場合がある。
+
+```sh
+espanso service stop
+python3 - <<'PY_RESTORE'
+import json, os, plistlib, subprocess
+from pathlib import Path
+state = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state")))
+backup = json.loads((state / "dotfiles/espanso/native-text-replacement-preferences.json").read_text())
+for domain, saved in backup.items():
+    current = plistlib.loads(subprocess.check_output(["defaults", "export", domain, "-"]))
+    for key, value in saved.items():
+        if value is None:
+            current.pop(key, None)
+        else:
+            current[key] = value
+    subprocess.run(["defaults", "import", domain, "-"], input=plistlib.dumps(current), check=True)
+    checked = plistlib.loads(subprocess.check_output(["defaults", "export", domain, "-"]))
+    assert all(checked.get(key) == value for key, value in saved.items())
+print("標準置換の保存前の設定を復元しました。")
+PY_RESTORE
+```
+
 ## 動作確認
 
 初回の導入・生成が成功しても、入力の安定性は別途確認する。

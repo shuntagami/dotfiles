@@ -88,12 +88,19 @@ def disable_system_replacements():
         "NSGlobalDomain": ["NSAutomaticTextReplacementEnabled", "WebAutomaticTextReplacementEnabled"],
         "com.google.Chrome": ["WebAutomaticTextReplacementEnabled"],
     }
+    domains = run(["/usr/bin/defaults", "domains"])
+    if domains.returncode:
+        raise ValueError("Could not list preference domains")
+    existing_domains = {item.strip() for item in domains.stdout.strip().split(",")}
     previous = {}
     for domain, keys in managed.items():
-        exported = run(["/usr/bin/defaults", "export", domain, "-"])
-        if exported.returncode:
-            raise ValueError("Could not read native text replacement preferences")
-        preferences = plistlib.loads(exported.stdout.encode())
+        if domain != "NSGlobalDomain" and domain not in existing_domains:
+            preferences = {}
+        else:
+            exported = run(["/usr/bin/defaults", "export", domain, "-"])
+            if exported.returncode:
+                raise ValueError("Could not read native text replacement preferences")
+            preferences = plistlib.loads(exported.stdout.encode())
         previous[domain] = {key: preferences.get(key) for key in keys}
     original = STATE / "native-text-replacement-preferences.json"
     if not original.exists():
