@@ -23,7 +23,7 @@ Raycastが残っているMacではHomebrew経由でアンインストールす�
 
 - `config/default.yml`: 挿入方式はinject（キー入力）。貼り付け方式は通常のWeb入力で不安定だったため使わない。検索キーとダブルタップの切り替えキーは無効。
   Option+Space（iTerm2）、Control+Space（Aqua Voice）、Command+Space（Spotlight）と競合させない。
-- `settings.json`: 短縮語の接頭辞（現在は空文字、追加なし）とMac標準の自動置換停止を管理する。
+- `settings.json`: 短縮語の接頭辞（現在は `;`）とMac標準の自動置換停止を管理する。
   `disableSystemTextReplacement: true` でmacOSの `NSAutomaticTextReplacementEnabled` と
   `WebAutomaticTextReplacementEnabled`、Chrome独自の `WebAutomaticTextReplacementEnabled` をオフにする。
   `;lgm` でも語尾の `lgm` が標準辞書と競合する可能性があるため、展開元はEspansoへ一本化する。
@@ -32,9 +32,7 @@ Raycastが残っているMacではHomebrew経由でアンインストールす�
   全アプリでの停止が保証されたとは扱わない。Chromeには独自の停止設定も保存する。
   起動済みアプリで置換が続く場合はアプリを再起動する。個別アプリで明示的にオンにした文字置換は
   そのアプリの編集 → 置換 → テキスト置換でもオフにする。
-- 実行したMacのテキスト置換から `lgm`・`gm`・`elegm` など同じ短縮語を生成する。
-  接頭辞なしの場合は `left_word: true` を付け、単語の先頭からだけ認識する。
-  `lgm` の中の `gm` や文章の途中で誤展開させず、入力が揃った時点で展開する。
+- 実行したMacのテキスト置換から `;lgm`・`;gm`・`;elegm` などを生成する。
   元の `lgm` はMac標準辞書に生成元として残す。Mac標準側では自動展開しない。Espansoではスペース不要。
 - 生成先は `~/Library/Application Support/espanso/match/dotfiles-macos.yml`（権限600）。
   本文をGitへ入れない。MacBookでもそのMacの辞書から生成する。
@@ -90,7 +88,7 @@ PY_RESTORE
 ## 動作確認
 
 初回の導入・生成が成功しても、入力の安定性は別途確認する。
-通常の入力欄（ChatGPTなど）とxtermで `lgm` を複数回手打ちし、
+通常の入力欄（ChatGPTなど）とxtermで `;lgm` を複数回手打ちし、
 1回だけ展開され、カーソルが末尾に残ることを確認する。入力は送信しない。
 日本語IMEとAqua Voiceを使う普段の条件でも確認する。
 
