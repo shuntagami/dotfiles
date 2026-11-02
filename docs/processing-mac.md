@@ -16,7 +16,14 @@ app と marunage は Cloudflare Access のログインを通ります。Tunnel�
 
 - **ユーザー名を旧Macと同じにする**（`shun.tagami`）。launch-video-gen のデータには `/Users/shun.tagami/AIEditor-service/...` の絶対パスが DB と JSON に数千件入っていて、書き換える仕組みがありません。
 - macOS 27 以上にする。launch-video-gen の音素合わせのランタイムが 27 向けにビルドされています。
-- Mac の名前（`scutil --get LocalHostName`）を旧Macと違う名前にする。
+- Mac の名前を `Shun-Tagami-Mac-Studio` にする。**Tailscale にログインする前に**行います（Tailscale の名前 `shun-tagami-mac-studio` はここから付きます）。`scripts/macos.sh` はデスクトップの Mac を機種名で名付けるので、それを実行しても同じ名前になります。手で付けるなら次のとおりです。
+
+  ```bash
+  sudo scutil --set ComputerName Shun-Tagami-Mac-Studio
+  sudo scutil --set LocalHostName Shun-Tagami-Mac-Studio
+  ```
+
+  旧Mac（`Shun-Tagami-Mac-mini`）と同じ名前だと、`check` が止めます。
 - [README](../README.md) の手順で dotfiles を入れる。文字起こし・launch-video-gen・marunage-studio に要る道具は Brewfile と `install-packages.sh` で入ります（Claude Code のコマンド版を含む）。
 - 次のログインを済ませる。
 
@@ -43,8 +50,8 @@ app と marunage は Cloudflare Access のログインを通ります。Tunnel�
 新しいMacの `misc/processing-mac.conf` を次のようにします。
 
 ```bash
-PROCESSING_MAC=<新しいMacの LocalHostName>
-PREVIOUS_PROCESSING_MAC=shun-tagami-mac-mini   # 旧Macへの SSH 先
+PROCESSING_MAC=Shun-Tagami-Mac-Studio
+PREVIOUS_PROCESSING_MAC=shun-tagami-mac-mini   # 旧Macへの SSH 先（Tailscale の名前）
 ```
 
 ### 3. 事前に確かめる・写しておく
@@ -61,13 +68,23 @@ PREVIOUS_PROCESSING_MAC=shun-tagami-mac-mini   # 旧Macへの SSH 先
 - marunage-studio の人ごとの worktree（`~/ele-workspace/launch-consulting-studio-worktrees/`）の作業を、すべて commit・push する。旧Macにしか無い作業があると、切り替えは止まります。
 - app と marunage が少しの間止まることを、使っている人に伝える。
 
+### 切り替えの間の旧Mac
+
+旧Macは、電源とネットワークがつながっていればよく、モニターは要りません。サービスはログイン中のユーザーで動いていて、新しいMacが SSH で止めたり写したりします。気をつけるのは次の3つです。
+
+- **再起動しない・電源を抜かない。** FileVault が有効なので、再起動すると起動時のロック解除の画面で止まり、誰かがログインするまでサービスも SSH も動きません。モニターとキーボードをつながないとログインできません。
+- **ログインしたままにする**（今の状態のまま）。ログアウトすると常駐が止まります。
+- 戻すときのコマンドは、旧Macの画面（Jump Desktop か画面共有。モニターが無くても使える）からターミナルで実行します。
+
+Thunderbolt ケーブルでつなぐ場合は、2台を近くに置きます。
+
 ### 4. 切り替える
 
 新しいMacで `deploy.sh`（または `~/dotfiles/scripts/processing-mac.sh deploy`）を実行します。このMacが処理用Macで、まだサービスが無いので、次の順に進みます。
 
 1. **check**：ログイン・SSH・ユーザー名・空き容量などを確かめる。
 2. **prepare**：旧Macを動かしたまま写す。
-   - 社内リポジトリ（marunage の Studio 用の clone は full clone）
+   - 社内リポジトリ（marunage-studio が編集に使う launch-consulting の clone は full clone）
    - launch-video-gen の `.env`・Python 環境・Qwen のモデル・データ・Tunnel の認証ファイルと設定
    - marunage-studio の env（最初の版のビルドまで行う）
 3. **旧Macが空いているか**を確かめる。marunage の worktree に未 push の作業があれば止まります。launch-video-gen の処理と marunage のチャットは、終わるまで最大10分待ちます。
@@ -97,6 +114,15 @@ PREVIOUS_PROCESSING_MAC=shun-tagami-mac-mini   # 旧Macへの SSH 先
   - **app**：ログインして案件一覧が出る。既存の動画のプレビューが再生できる。書き出しの画面で BGM・効果音を選べる。小さな素材でカットを1回試す。
   - **marunage**：ログインし、チャットを1ターン動かす。「main に push」が通る。
   - **Slack**：文字起こしくんに短い動画の URL を送る。
+
+## 切り替えた後に、名前を Mac Studio へ向け直す
+
+サービス以外で Mac mini の名前を使っているところです。Mac Studio を普段使いし始めたら直します。
+
+- **SSH・画面共有：** `ssh studio` と `vnc-studio` は足してあります。旧Macを手放したら、`misc/ssh/config` の `macmini` と `zsh/mac.zsh` の `vnc-macmini` を消します。
+- **Jump Desktop の画面設定：** MacBook の Jump Desktop に Studio の接続（表示名 `Shun-Tagami-Mac-Studio`）を作ってから、`misc/jump-desktop/display.json` の `displayName` を `Shun-Tagami-Mac-Studio` にします。接続が無いうちは、deploy.sh はこの設定を飛ばすだけです。
+- **agent-browser：** `codex/AGENTS.md` と `docs/agent-browser.md` の `AGENT_BROWSER_HOST=shun-tagami-mac-mini` を `shun-tagami-mac-studio` にします。
+- **Studio 側の遠隔操作の準備**（Jump Desktop Connect、Tailscale、画面共有）は [remote-macmini.md](remote-macmini.md) の Mac mini 側の手順と同じです。
 
 ## 戻す
 
