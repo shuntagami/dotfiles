@@ -19,6 +19,9 @@ fi
 export PROCESSING_MAC_LOGS_READ_FROM
 
 mkdir -p "$PROCESSING_MAC_LOGS_HOME/data"
+# 動いている版の印。logs.sh の logs_version と同じ作り方で、deploy がこれと写しを比べて起動し直すかを決める。
+(cd "$PROCESSING_MAC_LOGS_DIR" && find . -type f -print0 | sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -d' ' -f1) \
+  >"$PROCESSING_MAC_LOGS_HOME/running-version"
 # 設定の ${…} を展開するには、今の Vector（0.61）では明示の許可が要る。展開するのは上の4つと HOME だけ
 # （秘密の値は環境変数に入れない。鍵はファイルで渡す）。
 # LaunchAgent の PATH（/opt/homebrew/bin・/usr/local/bin）から探す。

@@ -20,6 +20,9 @@ logs_installed() { agent_loaded "$LOGS_LABEL"; }
 
 logs_running() { launchctl print "$GUI/$LOGS_LABEL" 2>/dev/null | grep -q '^[[:space:]]state = running$'; }
 
+# フォルダの中身から作る版の印。run-vector.sh も起動時に同じ作り方で running-version に書く。
+logs_version() { (cd "$1" && find . -type f -print0 | sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -d' ' -f1); }
+
 logs_status() {
   if logs_running; then
     note "● $(logs_name): このMacから送っている"
@@ -67,7 +70,7 @@ EOF
 
 logs_check() {
   gcloud secrets versions describe latest --secret="$LOGS_KEY_SECRET" --project="$LOGS_PROJECT" >/dev/null 2>&1 || {
-    note "✗ ログ用の鍵（Secret Manager の $LOGS_KEY_SECRET）を読めない → gcloud auth login。鍵が無ければ ele-inc/elevenlabs-transcribe-bot の docs/MAC_SERVICE.md「ログと停止通知」で登録する"
+    note "✗ ログ用の鍵（Secret Manager の ${LOGS_KEY_SECRET}）を読めない → gcloud auth login。鍵が無ければ ele-inc/elevenlabs-transcribe-bot の docs/MAC_SERVICE.md「ログと停止通知」で登録する"
     return 1
   }
 }
@@ -83,13 +86,12 @@ logs_prepare() {
 }
 
 # 何度実行してもよい。Vector・鍵・logs/ の写し・LaunchAgent のうち、無いものや変わったものだけを用意し、
-# 写しが変わったときは Vector を起動し直す。
+# 動いている版が写しと違えば Vector を起動し直す（途中で失敗しても、次の実行で揃う）。
 logs_install() {
-  local plist="$AGENTS_DIR/$LOGS_LABEL.plist" new copied=0
+  local plist="$AGENTS_DIR/$LOGS_LABEL.plist" new
   logs_prepare || return 1
   if ! diff -rq "$LIB/logs" "$LOGS_APP" >/dev/null 2>&1; then
     run "mkdir -p '$LOGS_APP' && rsync -a --delete '$LIB/logs/' '$LOGS_APP/'" || return 1
-    copied=1
   fi
   new="$(logs_plist)"
   if [ "$(cat "$plist" 2>/dev/null)" != "$new" ] || ! logs_installed; then
@@ -100,8 +102,8 @@ logs_install() {
     printf '%s\n' "$new" >"$plist" || return 1
     launchctl bootout "$GUI/$LOGS_LABEL" 2>/dev/null || true
     launchctl bootstrap "$GUI" "$plist" || return 1
-  elif [ $copied = 1 ]; then
-    note "\$ launchctl kickstart -k $GUI/$LOGS_LABEL（写しが変わったので起動し直す）"
+  elif [ "$(cat "$LOGS_HOME/running-version" 2>/dev/null)" != "$(logs_version "$LOGS_APP" 2>/dev/null)" ]; then
+    note "\$ launchctl kickstart -k ${GUI}/${LOGS_LABEL}（動いている版が写しと違うので起動し直す）"
     [ "$DRY_RUN" = 1 ] && return 0
     LOGS_STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     launchctl kickstart -k "$GUI/$LOGS_LABEL" || return 1
