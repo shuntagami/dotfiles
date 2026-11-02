@@ -119,10 +119,13 @@ logs_stop_old() {
   on_old <<EOF
 U=gui/\$(id -u)
 launchctl bootout \$U/$LOGS_LABEL 2>/dev/null || true
-if launchctl print \$U/$LOGS_LABEL >/dev/null 2>&1; then
-  echo "旧Macのログ送信が止まりません" >&2
-  exit 1
-fi
+# 止めた直後はまだ登録が見えることがあるので、少し待ってから決める。
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  launchctl print \$U/$LOGS_LABEL >/dev/null 2>&1 || exit 0
+  sleep 1
+done
+echo "旧Macのログ送信が止まりません" >&2
+exit 1
 EOF
 }
 
