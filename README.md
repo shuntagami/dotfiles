@@ -265,11 +265,13 @@ Gitの独自フックや設定キーは追加せず、既存のpull・push・同
 
 標準の読み込み先：[Codexの共通指示](https://developers.openai.com/cookbook/examples/gpt-5/codex_prompting_guide#using-agentsmd)、[Claude Codeのユーザールール](https://code.claude.com/docs/en/memory#user-level-rules)。
 
-### アプリ設計の原則
+### エージェント共通のスキルと設計原則
 
-AI を組み込んだアプリを設計するときの判断基準を [claude/skills/design-principles/](claude/skills/design-principles/) に置いています。
+Claude Code・Codex のどちらからも使うスキルは [agents/skills/](agents/skills/) に置きます。`deploy.sh` が `~/.claude/skills/` と `~/.codex/skills/` の両方にリンクします。片方だけで使うものは、これまでどおり `claude/skills/`・`codex/skills/` に置きます。
+
+最初の 1 つが、AI を組み込んだアプリを設計するときの判断基準 [agents/skills/design-principles/](agents/skills/design-principles/) です。
 入口の `SKILL.md` から、画面（配置・強調・操作の置き場所）、骨組み（どこに形を持たせ、どこを AI に任せるか）、記録とナレッジ（資料・目次・覚え書きの持ち方）の 3 本に分かれ、今の判断に合うものだけを読みます。
-Claude Code では `deploy.sh` が `~/.claude/skills/` にリンクし、`/design-principles` で呼ぶか、設計の相談で自動的に読まれます。ほかの AI に渡すときは `SKILL.md` のパスを渡します。
+Claude Code では `/design-principles` で呼ぶか、設計の相談で自動的に読まれます。ほかの AI に渡すときは `SKILL.md` のパスを渡します。
 
 ### インストール中のパスワード入力
 
