@@ -84,6 +84,19 @@ for skill_dir in "${HOME}"/dotfiles/claude/skills/*(/N); do
   ln -sfn "${skill_dir}" ~/.claude/skills/"${skill_dir:t}"
 done
 
+# Shared skills (agents/skills): the same SKILL.md serves Claude Code and Codex,
+# so link each one into both. Agent-specific skills stay in claude/ and codex/.
+for skill_dir in "${HOME}"/dotfiles/agents/skills/*(/N); do
+  for skills_home in ~/.claude/skills ~/.codex/skills; do
+    skill_target="${skills_home}/${skill_dir:t}"
+    if [[ -e "${skill_target}" && ! -L "${skill_target}" ]]; then
+      echo "Skipping shared skill ${skill_dir:t}: ${skill_target} exists and is not a symlink."
+      continue
+    fi
+    ln -sfn "${skill_dir}" "${skill_target}"
+  done
+done
+
 # Cursor: let MulmoTerminal own its hooks and notification sounds.
 python3 ~/dotfiles/scripts/remove-cursor-notify.py
 
