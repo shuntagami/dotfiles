@@ -103,6 +103,14 @@ def link(target, source):
 
 
 def install(name, home, root=ROOT, claude_config_dir=None):
+    if name == 'karabiner':
+        source = root / 'karabiner'
+        if not (source / 'karabiner.json').is_file():
+            raise FileNotFoundError(source / 'karabiner.json')
+        # Karabiner may create this directory before the first deploy. Preserve
+        # it before linking; ln -sfn alone would create a nested link inside it.
+        link(home / '.config/karabiner', source)
+        return source
     if name == 'agent-instructions':
         # 本文はGit管理下に置き、標準の共通指示の置き場所にはリンクだけを作る。
         instructions = [
@@ -137,7 +145,7 @@ def install(name, home, root=ROOT, claude_config_dir=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('config', choices=[*CONFIGS, 'iterm2', 'agent-instructions'])
+    parser.add_argument('config', choices=[*CONFIGS, 'iterm2', 'agent-instructions', 'karabiner'])
     parser.add_argument('--claude-config-dir', type=Path,
                         help='別のCLAUDE_CONFIG_DIRにも共通ルールを配置する（agent-instructionsのみ）')
     args = parser.parse_args()
