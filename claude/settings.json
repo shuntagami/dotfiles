@@ -8,7 +8,7 @@
       "Bash(strings ~/Library/Developer/Xcode/DerivedData/MonitorControl-*/Build/Products/Debug/MonitorControl.app/Contents/Resources/Base.lproj/Main.storyboardc/*.nib)",
       "mcp__Neon__list_projects"
     ],
-    "defaultMode": "bypassPermissions"
+    "defaultMode": "auto"
   },
   "model": "opus",
   "hooks": {
@@ -141,6 +141,7 @@
     "mode": "hold"
   },
   "skipDangerousModePermissionPrompt": true,
+  "theme": "dark",
   "agentPushNotifEnabled": true,
   "autoMode": {
     "allow": [
