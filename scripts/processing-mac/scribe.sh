@@ -31,14 +31,20 @@ scribe_stop_old() {
 U=gui/$(id -u)
 launchctl bootout $U/com.ele-inc.scribe-bot.tunnel 2>/dev/null || true
 for i in $(seq 1 90); do
+  # A previous attempt may already have stopped the bot. No HTTP response is
+  # expected once launchd has removed it.
+  launchctl print $U/com.ele-inc.scribe-bot.slack >/dev/null 2>&1 || break
   curl -s -m 5 http://127.0.0.1:8091/status | grep -q '"active":0' && break
   sleep 10
 done
 for a in slack update; do launchctl bootout $U/com.ele-inc.scribe-bot.$a 2>/dev/null || true; done
-if launchctl print $U/com.ele-inc.scribe-bot.slack >/dev/null 2>&1; then
-  echo "旧Macの文字起こしが止まりません" >&2
-  exit 1
-fi
+# bootout can return before launchd finishes deregistering the job.
+for i in $(seq 1 60); do
+  launchctl print $U/com.ele-inc.scribe-bot.slack >/dev/null 2>&1 || exit 0
+  sleep 1
+done
+echo "旧Macの文字起こしが止まりません" >&2
+exit 1
 EOF
 }
 

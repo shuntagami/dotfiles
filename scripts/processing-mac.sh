@@ -140,7 +140,7 @@ on_switch_error() {
   printf '\n[processing-mac] 途中で止まりました。旧Macで止めたもの: %s\n' "${stopped[*]}" >&2
   printf '    旧Macに戻すには、旧Macのターミナルで次を実行する:\n' >&2
   for name in "${stopped[@]}"; do
-    printf '      for f in ~/Library/LaunchAgents/com.ele-inc.%s.*.plist; do launchctl bootstrap gui/$(id -u) "$f"; done\n' "$name" >&2
+    printf '      for f in ~/Library/LaunchAgents/com.ele-inc.%s.*.plist; do launchctl enable gui/$(id -u)/"$(basename "$f" .plist)"; launchctl bootstrap gui/$(id -u) "$f"; done\n' "$name" >&2
   done
 }
 

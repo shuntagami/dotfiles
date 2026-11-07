@@ -62,15 +62,19 @@ marunage_stop_old() {
   on_old <<'EOF'
 U=gui/$(id -u)
 for a in update runtime web; do launchctl bootout $U/com.ele-inc.marunage-studio.$a 2>/dev/null || true; done
-for i in $(seq 1 30); do
-  curl -s -m 2 -o /dev/null http://127.0.0.1:3100/ || curl -s -m 2 -o /dev/null http://127.0.0.1:8080/health || break
-  sleep 2
+for i in $(seq 1 60); do
+  # The ports may close before launchd removes the jobs (or vice versa).
+  if ! launchctl print $U/com.ele-inc.marunage-studio.web >/dev/null 2>&1 &&
+    ! launchctl print $U/com.ele-inc.marunage-studio.runtime >/dev/null 2>&1 &&
+    ! launchctl print $U/com.ele-inc.marunage-studio.update >/dev/null 2>&1 &&
+    ! curl -s -m 2 -o /dev/null http://127.0.0.1:3100/ &&
+    ! curl -s -m 2 -o /dev/null http://127.0.0.1:8080/health; then
+    exit 0
+  fi
+  sleep 1
 done
-if launchctl print $U/com.ele-inc.marunage-studio.web >/dev/null 2>&1 ||
-  curl -s -m 2 -o /dev/null http://127.0.0.1:3100/ || curl -s -m 2 -o /dev/null http://127.0.0.1:8080/health; then
-  echo "旧Macの marunage-studio が止まりません" >&2
-  exit 1
-fi
+echo "旧Macの marunage-studio が止まりません" >&2
+exit 1
 EOF
 }
 
