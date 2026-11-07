@@ -48,13 +48,10 @@ ask_old() {
 pull() {
   local src="$1" dest="$2"
   shift 2
-  local rsync=rsync progress=()
-  # Homebrew's rsync can show overall progress; macOS's openrsync can only show it per file.
-  if [ -x /opt/homebrew/bin/rsync ]; then
-    rsync=/opt/homebrew/bin/rsync
-    progress=(--info=progress2)
-  fi
-  run "$rsync -a --partial ${progress[*]-} $* -e 'ssh ${SSH_OPTS[*]}' '$FROM:$src' '$dest'"
+  # Both ends must retain sub-second mtimes: saved render manifests compare them
+  # at millisecond precision. The macOS bundled sender can truncate them to seconds.
+  local rsync=/opt/homebrew/bin/rsync
+  run "$rsync -a --partial --modify-window=-1 --rsync-path=/opt/homebrew/bin/rsync --info=progress2 $* -e 'ssh ${SSH_OPTS[*]}' '$FROM:$src' '$dest'"
 }
 
 agent_loaded() { launchctl print "$GUI/$1" >/dev/null 2>&1; }

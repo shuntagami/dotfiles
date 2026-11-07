@@ -96,6 +96,14 @@ check() {
     note "✗ macOS 27 以上が要る（launch-video-gen の音素合わせのランタイムが 27 向けにビルドされている）"
     ok=1
   }
+  [ -x /opt/homebrew/bin/rsync ] || {
+    note "✗ Homebrew 版 rsync が無い → このMacで brew install rsync"
+    ok=1
+  }
+  ask_old 'test -x /opt/homebrew/bin/rsync' || {
+    note "✗ 旧Macに Homebrew 版 rsync が無い → 旧Macで brew install rsync（更新時刻の小数部を保持するため）"
+    ok=1
+  }
   gh auth status >/dev/null 2>&1 || {
     note "✗ GitHub にログインしていない → gh auth login（HTTPS、Git の認証にも使う）"
     ok=1
