@@ -8,22 +8,23 @@ tap "oven-sh/bun", trusted: true
 tap "sanemat/font", trusted: true
 tap "supabase/tap", trusted: true
 tap "thom4parisot/brew", "https://github.com/thom4parisot/homebrew-brew.git", trusted: true
+tap "vectordotdev/brew"
 # Codec library for encoding and decoding AV1 video streams
 brew "aom"
 # C parser in Python
 brew "pycparser"
 # Powerful, lightweight programming language
 brew "lua"
-# Cryptography and SSL/TLS Toolkit
-brew "openssl@3", link: true
 # General-purpose data compression with high compression ratio
 brew "xz"
 # Zstandard is a real-time compression algorithm
 brew "zstd"
-# Interpreted, interactive, object-oriented programming language
-brew "python@3.14"
 # ASP system to ground and solve logic programs
 brew "clingo"
+# Cryptography and SSL/TLS Toolkit
+brew "openssl@3", link: true
+# Interpreted, interactive, object-oriented programming language
+brew "python@3.14"
 # Package dependency solver
 brew "aspcud"
 # Official Amazon AWS command-line interface
@@ -224,6 +225,8 @@ brew "syncthing", restart_service: :changed
 brew "tesseract-lang"
 # Terminal multiplexer
 brew "tmux"
+# Extremely fast Python package installer and resolver, written in Rust
+brew "uv"
 # Vi 'workalike' with many additional features
 brew "vim"
 # Executes a program periodically, showing output fullscreen
@@ -256,6 +259,8 @@ brew "oncletom/cpdf/cpdf"
 brew "oven-sh/bun/bun", trusted: true
 # Supabase CLI
 brew "supabase/tap/supabase", trusted: true
+# A High-Performance Log, Metrics, and Events Router
+brew "vectordotdev/brew/vector", trusted: true
 # View, print, and comment on PDF documents
 cask "adobe-acrobat-reader"
 # Agent orchestration platform
@@ -284,6 +289,8 @@ cask "discord"
 cask "docker-desktop"
 # Client for the Dropbox cloud storage service
 cask "dropbox"
+# Cross-platform Text Expander written in Rust
+cask "espanso"
 # Collaborative team software
 cask "figma@beta"
 # GIT client
@@ -298,8 +305,6 @@ cask "google-chrome"
 cask "gyazo"
 # Desktop automation application
 cask "hammerspoon"
-# Screenshot capture and annotation (license is configured locally)
-cask "cleanshot"
 # Free and open-source media player
 cask "iina"
 # Terminal emulator as alternative to Apple's Terminal app
@@ -314,8 +319,6 @@ cask "karabiner-elements"
 cask "loom"
 # Tool to control external monitor brightness & volume
 cask "monitorcontrol"
-# Text expansion managed from dotfiles
-cask "espanso"
 # Team communication and collaboration software
 cask "slack"
 # CLI to create, run, and deploy Slack apps
@@ -351,6 +354,7 @@ npm "@antfu/ni"
 npm "@electron-forge/cli"
 npm "@google/gemini-cli"
 npm "@openai/codex"
+npm "@shuntagami/markitdown-node"
 npm "corepack"
 npm "eslint"
 npm "md-to-pdf"
