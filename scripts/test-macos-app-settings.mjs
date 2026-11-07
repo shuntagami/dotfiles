@@ -176,14 +176,14 @@ test('missing Aqua settings requests first launch without reporting a write fail
 
 function screenshotScenario(options, callback) {
   return isolated(home => {
-    const shot = options.changeShortcut ? {} : { capture: true };
+    const shot = options.initialPrefs ?? (options.changeShortcut ? {} : { capture: true });
     const system = { AppleSymbolicHotKeys: { '28': { enabled: !options.alreadyDisabled, value: { parameters: [51, 20, 1179648], type: 'standard' } } } };
     let activations = 0;
     const configDir = path.join(home, 'config');
     fs.mkdirSync(configDir);
     fs.writeFileSync(path.join(configDir, 'default-apps.json'), JSON.stringify({
       fileAssociations: [], screenshots: {
-        bundleId: 'pl.maketheweb.cleanshotx', shortcuts: { capture: { carbonModifiers: 768, carbonKey: 20 } },
+        bundleId: 'pl.maketheweb.cleanshotx', shortcuts: options.shortcuts ?? { capture: { carbonModifiers: 768, carbonKey: 20 } },
         disabledSystemShortcuts: ['28'],
       },
     }));
@@ -197,7 +197,7 @@ function screenshotScenario(options, callback) {
           if (options.writeFails) return { status: 1 };
           if (options.silentWriteFailure) return { status: 0 };
           if (args[1] === 'com.apple.symbolichotkeys') system.AppleSymbolicHotKeys[args[4]] = parsePlist(args[5]);
-          else shot[args[2]] = Buffer.from(args[4], 'hex');
+          else shot[args[2]] = args[3] === '-bool' ? args[4] === 'true' : Buffer.from(args[4], 'hex');
         }
         return { status: 0, stdout: '', stderr: '' };
       },
@@ -210,6 +210,24 @@ test('saved CleanShot shortcut returns app-action status after verification', ()
   assert.equal(manageDefaultApps('apply', ctx), NEEDS_APP_ACTION);
   assert.equal(manageDefaultApps('check', ctx), 0);
 }));
+
+test('CleanShot legacy shortcut flags use native booleans and preserve the explicit copy binding', () => {
+  const copy = { carbonModifiers: 768, carbonKey: 21 };
+  for (const flag of [true, false]) {
+    screenshotScenario({ alreadyDisabled: true,
+      initialPrefs: { LAVAtakeArea: flag ? copy : true, LAVAtakeAreaCopy: copy, unrelated: 42 },
+      shortcuts: { LAVAtakeArea: flag, LAVAtakeAreaCopy: copy },
+    }, ctx => {
+      assert.equal(manageDefaultApps('apply', ctx), NEEDS_APP_ACTION);
+      const stored = ctx.preferences('pl.maketheweb.cleanshotx');
+      assert.equal(stored.LAVAtakeArea, flag);
+      assert.deepEqual(stored.LAVAtakeAreaCopy, copy);
+      assert.equal(stored.unrelated, 42);
+      assert.equal(manageDefaultApps('check', ctx), 0);
+      assert.equal(manageDefaultApps('apply', ctx), 0);
+    });
+  }
+});
 
 test('CleanShot write failure is not masked by a restart requirement', () => screenshotScenario({ changeShortcut: true, alreadyDisabled: true, writeFails: true }, ctx => {
   assert.equal(manageDefaultApps('apply', ctx), 1);
