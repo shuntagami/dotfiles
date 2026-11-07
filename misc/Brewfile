@@ -21,10 +21,6 @@ brew "xz"
 brew "zstd"
 # ASP system to ground and solve logic programs
 brew "clingo"
-# Cryptography and SSL/TLS Toolkit
-brew "openssl@3", link: true
-# Interpreted, interactive, object-oriented programming language
-brew "python@3.14"
 # Package dependency solver
 brew "aspcud"
 # Official Amazon AWS command-line interface
@@ -45,8 +41,6 @@ brew "coreutils"
 brew "gnutls"
 # GNU Emacs text editor
 brew "emacs"
-# Validating, recursive, caching DNS resolver
-brew "unbound"
 # Emacs dependency management
 brew "cask"
 # YAML Parser
@@ -183,6 +177,8 @@ brew "netlify-cli"
 brew "nghttp2"
 # High performance message passing library
 brew "open-mpi"
+# Cryptography and SSL/TLS Toolkit
+brew "openssl@3", link: true
 # PAM module for reattaching to the user's GUI (Aqua) session
 brew "pam-reattach"
 # Simplistic interactive filtering tool
@@ -205,12 +201,16 @@ brew "pure"
 brew "pygobject3"
 # Interpreted, interactive, object-oriented programming language
 brew "python@3.13"
+# Interpreted, interactive, object-oriented programming language
+brew "python@3.14"
 # Tools for and transforming and inspecting PDF files
 brew "qpdf"
 # Alternative to backtracking PCRE-style regular expression engines
 brew "re2"
 # Search tool like grep and The Silver Searcher
 brew "ripgrep"
+# Utility that provides fast incremental file transfer
+brew "rsync"
 # Powerful, clean, object-oriented scripting language
 brew "ruby"
 # Powerful, clean, object-oriented scripting language
@@ -225,6 +225,8 @@ brew "syncthing", restart_service: :changed
 brew "tesseract-lang"
 # Terminal multiplexer
 brew "tmux"
+# Validating, recursive, caching DNS resolver
+brew "unbound"
 # Extremely fast Python package installer and resolver, written in Rust
 brew "uv"
 # Vi 'workalike' with many additional features
@@ -252,7 +254,7 @@ brew "ele-inc/tap/scribe", trusted: true
 # Terraform
 brew "hashicorp/tap/terraform", trusted: true
 # Evans: more expressive universal gRPC client
-brew "ktr0731/evans/evans"
+brew "ktr0731/evans/evans", trusted: true
 # Coherent PDF Command-line Tools to modify PDF files
 brew "oncletom/cpdf/cpdf"
 # Incredibly fast JavaScript runtime, bundler, transpiler and package manager - all in one.
@@ -275,6 +277,8 @@ cask "chatgpt"
 cask "chrome-remote-desktop-host"
 # Anthropic's official Claude AI desktop app
 cask "claude"
+# Screen capturing tool
+cask "cleanshot"
 # Clipboard extension app
 cask "clipy"
 # OpenAI's Codex desktop app for managing coding agents
@@ -317,6 +321,8 @@ cask "karabiner-elements"
 cask "loom"
 # Tool to control external monitor brightness & volume
 cask "monitorcontrol"
+# Command-line utility to interact with Sentry
+cask "sentry-cli"
 # Team communication and collaboration software
 cask "slack"
 # CLI to create, run, and deploy Slack apps
@@ -338,6 +344,7 @@ vscode "ele-inc.marunage-feedback"
 vscode "esbenp.prettier-vscode"
 vscode "formulahendry.auto-close-tag"
 vscode "formulahendry.auto-complete-tag"
+vscode "formulahendry.auto-rename-tag"
 vscode "gera2ld.markmap-vscode"
 vscode "openai.chatgpt"
 vscode "openai.codex-audio"
@@ -361,6 +368,7 @@ npm "neonctl"
 npm "npm-check-updates"
 npm "playwright"
 npm "prettier"
+npm "sentry"
 npm "ts-node"
 npm "typescript"
 npm "typesync"
