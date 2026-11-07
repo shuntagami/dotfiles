@@ -15,6 +15,7 @@ export function manageDefaultApps(mode, ctx) {
   const apply = mode === 'apply';
   const changes = [];
   let failed = false;
+  let needsAppAction = false;
   let backupDirectory;
   const saveBackup = () => {
     if (backupDirectory) return;
@@ -34,7 +35,12 @@ export function manageDefaultApps(mode, ctx) {
   const plans = [];
   for (const association of config.fileAssociations) {
     const bundle = association.bundleIds.find(id => apps.has(id.toLowerCase()));
-    if (!bundle) { ctx.log(`Missing app: ${association.name}`); failed = true; continue; }
+    if (!bundle) {
+      ctx.log(`Missing app: ${association.name}; install it and rerun deploy.`);
+      if (apply) needsAppAction = true;
+      else failed = true;
+      continue;
+    }
     for (const extension of association.extensions) {
       const current = ctx.handler(extension);
       plans.push({ bundle, extension, current });
@@ -54,14 +60,20 @@ export function manageDefaultApps(mode, ctx) {
     }
     const result = ctx.run(duti, ['-s', bundle, `.${extension}`, 'all']);
     const actual = ctx.handler(extension);
-    if (result.status !== 0 || actual.toLowerCase() !== bundle.toLowerCase()) {
+    if (result.status !== 0) {
       ctx.log(`Failed .${extension}: ${(result.stderr ?? '').trim()} actual=${actual || 'unknown'}`);
       failed = true;
+    } else if (actual.toLowerCase() !== bundle.toLowerCase()) {
+      ctx.log(`Pending .${extension}: actual=${actual || 'unknown'}. In Finder, select a .${extension} file, open Get Info > Open with, choose ${apps.get(bundle.toLowerCase())}, then Change All. Rerun --check to verify.`);
+      needsAppAction = true;
     }
   }
   const screenshot = config.screenshots;
   const domain = screenshot.bundleId;
-  if (!apps.has(domain.toLowerCase())) { ctx.log('Missing CleanShot X: screenshot settings skipped.'); return 1; }
+  if (!apps.has(domain.toLowerCase())) {
+    ctx.log('Missing CleanShot X: screenshot settings skipped; native screenshot shortcuts retained.');
+    return failed ? 1 : apply ? NEEDS_APP_ACTION : 1;
+  }
   const prefs = ctx.preferences(domain);
   let reloadNeeded = false;
   for (const [key, expected] of Object.entries(screenshot.shortcuts)) {
@@ -75,6 +87,14 @@ export function manageDefaultApps(mode, ctx) {
       const data = Buffer.from(JSON.stringify(expected)).toString('hex');
       const result = ctx.run('/usr/bin/defaults', ['write', domain, key, '-data', data]);
       failed ||= result.status !== 0;
+      if (result.status === 0) {
+        let stored = ctx.preferences(domain)[key];
+        if (Buffer.isBuffer(stored)) stored = JSON.parse(stored.toString('utf8'));
+        if (stored !== true && !isDeepStrictEqual(stored, expected)) {
+          ctx.log(`Failed to verify CleanShot ${key}.`);
+          failed = true;
+        }
+      }
       reloadNeeded = true;
     } else failed ||= mode === 'check';
   }
@@ -102,8 +122,7 @@ export function manageDefaultApps(mode, ctx) {
   }
   if (reloadNeeded) ctx.log('Restart CleanShot X to activate the changed shortcuts. Existing captures were not interrupted.');
   if (apply && !failed) {
-    if (manageDefaultApps('check', ctx) !== 0) return 1;
-    return reloadNeeded ? NEEDS_APP_ACTION : 0;
+    return needsAppAction || reloadNeeded ? NEEDS_APP_ACTION : 0;
   }
   return Number(failed);
 }
