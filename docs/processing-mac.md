@@ -50,6 +50,7 @@ app と marunage は Cloudflare Access のログインを通ります。Tunnel�
   ```
 
 - Tailscale アプリにログインする。
+- **両方のMacで Homebrew 版 rsync を用意する**（`brew install rsync`）。標準の送信側では更新時刻のミリ秒部分が失われ、内容が同じ書き出しでも「保存時から変更されています」と判定されるためです。移行スクリプトは両端の `/opt/homebrew/bin/rsync` を使い、更新時刻の小数部も照合します。
 - 旧Macへパスワードなしで SSH できるようにする。旧Macで「システム設定 → 一般 → 共有 → リモートログイン」を有効にし、新しいMacで次を実行します（パスワードを聞かれるのはここだけ）。
 
   ```bash

@@ -129,7 +129,7 @@ lvg_sync_final() {
   pull AIEditor-service/app/.env "$LVG_APP/.env"
   if [ "$DRY_RUN" != 1 ]; then
     local left
-    left="$(rsync -an --delete -i -e "ssh ${SSH_OPTS[*]}" "$FROM:AIEditor-service/home/" "$LVG_ROOT/home/" | wc -l | tr -d ' ')"
+    left="$(/opt/homebrew/bin/rsync -an --modify-window=-1 --rsync-path=/opt/homebrew/bin/rsync --delete -i -e "ssh ${SSH_OPTS[*]}" "$FROM:AIEditor-service/home/" "$LVG_ROOT/home/" | wc -l | tr -d ' ')"
     [ "$left" = 0 ] || fail "launch-video-gen のデータが旧Macと一致しません（差分 $left 件）。もう一度 switch を実行してください"
   fi
 }
