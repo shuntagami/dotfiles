@@ -273,7 +273,7 @@ _sync_global_npm_packages_to_brewfile() {
   fi
 
   if [[ "$npm_packages_loaded" == false && -n "$fallback_file" && -s "$fallback_file" ]]; then
-    if ! cp "$fallback_file" "$npm_packages_file"; then
+    if ! command cp -f "$fallback_file" "$npm_packages_file"; then
       rm -f "$npm_packages_file" "$tmp_brewfile"
       return 1
     fi
@@ -289,7 +289,7 @@ _sync_global_npm_packages_to_brewfile() {
       return 1
     fi
   fi
-  if ! mv "$tmp_brewfile" "$brewfile"; then
+  if ! command mv -f "$tmp_brewfile" "$brewfile"; then
     rm -f "$npm_packages_file" "$tmp_brewfile"
     return 1
   fi
@@ -324,7 +324,7 @@ _dump_system_packages_to_brewfile() {
     return 1
   fi
 
-  if ! chmod 644 "$dumped_brewfile" || ! mv "$dumped_brewfile" "$brewfile"; then
+  if ! chmod 644 "$dumped_brewfile" || ! command mv -f "$dumped_brewfile" "$brewfile"; then
     echo "Failed to replace the Brewfile; keeping the existing Brewfile." >&2
     rm -f "$dumped_brewfile"
     return 1
@@ -335,7 +335,7 @@ update-brew-env() {
   MODE=$1 # 引数: from-brewfile or from-system
   local brewfile=$HOME/dotfiles/misc/Brewfile
 
-  export HOMEBREW_CASK_OPTS="--no-quarantine"
+  export HOMEBREW_CASK_OPTS="--no-quarantine" NONINTERACTIVE=1 HOMEBREW_NO_ASK=1
   cd ~/dotfiles/misc
   brew update
 
