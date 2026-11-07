@@ -99,7 +99,7 @@ Thunderbolt ケーブルでつなぐ場合は、2台を近くに置きます。
 1. **check**：ログイン・SSH・ユーザー名・空き容量などを確かめる。
 2. **prepare**：旧Macを動かしたまま写す。
    - 社内リポジトリ（marunage-studio が編集に使う launch-consulting の clone は full clone）
-   - launch-video-gen の `.env`・Python 環境・Qwen のモデル・データ・Tunnel の認証ファイルと設定
+   - launch-video-gen の `.env`・Python 環境・ローカルモデルのキャッシュ（Qwen・wav2vec2 など。Hugging Face の共有 `hub/blobs` も含む）・データ・Tunnel の認証ファイルと設定
    - marunage-studio の env（最初の版のビルドまで行う）
 3. **旧Macが空いているか**を確かめる。marunage の worktree に未 push の作業があれば止まります。launch-video-gen の処理と marunage のチャットは、終わるまで最大10分待ちます。
 4. **確認**：「旧Macのサービスを止めて切り替えます。続けますか？」に `y` と答える。
