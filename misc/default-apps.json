@@ -65,6 +65,7 @@
   "screenshots": {
     "bundleId": "pl.maketheweb.cleanshotx",
     "shortcuts": {
+      "LAVAtakeArea": true,
       "LAVAtakeFullscreen": {
         "carbonModifiers": 768,
         "carbonKey": 20

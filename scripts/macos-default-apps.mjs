@@ -80,17 +80,19 @@ export function manageDefaultApps(mode, ctx) {
     let actual = prefs[key];
     if (Buffer.isBuffer(actual)) actual = JSON.parse(actual.toString('utf8'));
     // CleanShot also stores true for its built-in default binding.
-    if (actual === true || isDeepStrictEqual(actual, expected)) { ctx.log(`OK CleanShot ${key}`); continue; }
+    if ((typeof expected !== 'boolean' && actual === true) || isDeepStrictEqual(actual, expected)) { ctx.log(`OK CleanShot ${key}`); continue; }
     ctx.log(`${apply ? 'Set' : mode === 'check' ? 'Mismatch' : 'Would set'} CleanShot ${key}`);
     if (apply) {
       saveBackup();
-      const data = Buffer.from(JSON.stringify(expected)).toString('hex');
-      const result = ctx.run('/usr/bin/defaults', ['write', domain, key, '-data', data]);
+      const value = typeof expected === 'boolean'
+        ? ['-bool', String(expected)]
+        : ['-data', Buffer.from(JSON.stringify(expected)).toString('hex')];
+      const result = ctx.run('/usr/bin/defaults', ['write', domain, key, ...value]);
       failed ||= result.status !== 0;
       if (result.status === 0) {
         let stored = ctx.preferences(domain)[key];
         if (Buffer.isBuffer(stored)) stored = JSON.parse(stored.toString('utf8'));
-        if (stored !== true && !isDeepStrictEqual(stored, expected)) {
+        if (!(typeof expected !== 'boolean' && stored === true) && !isDeepStrictEqual(stored, expected)) {
           ctx.log(`Failed to verify CleanShot ${key}.`);
           failed = true;
         }
