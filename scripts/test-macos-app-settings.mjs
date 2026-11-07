@@ -48,7 +48,7 @@ test('Aqua check does not write settings or create backups', () => isolated(home
   assert.equal(fs.existsSync(ctx.stateRoot), false);
 }));
 
-function associationScenario(mode, accept) {
+function associationScenario(mode, accept, options = {}) {
   return isolated(home => {
     const directory = path.join(home, 'config');
     fs.mkdirSync(directory);
@@ -61,10 +61,15 @@ function associationScenario(mode, accept) {
     const ctx = createContext({
       home, configDir: directory, stateRoot: path.join(home, 'state'), log() {},
       command: () => 'duti', preferences: () => ({}), handler: () => current,
-      applications: () => new Map([['com.adobe.reader', '/fake/Reader.app'], ['pl.maketheweb.cleanshotx', '/fake/CleanShot X.app']]),
+      applications: () => new Map([
+        ...options.missingReader ? [] : [['com.adobe.reader', '/fake/Reader.app']],
+        ...options.missingCleanShot ? [] : [['pl.maketheweb.cleanshotx', '/fake/CleanShot X.app']],
+      ]),
       run(file, args) {
+        if (file.endsWith('/lsregister') && options.registrationFails) return { status: 1, stderr: 'registration failed' };
         if (file === 'duti' && args[0] === '-s') {
           writes.push(args);
+          if (options.setterFails) return { status: 1, stderr: 'write failed' };
           if (accept) current = args[1].toLowerCase();
         }
         return { status: 0, stdout: '', stderr: '' };
@@ -75,11 +80,30 @@ function associationScenario(mode, accept) {
   });
 }
 
-test('successful setter without actual association change fails', () => {
+test('successful setter without actual association change requests manual action', () => {
   const { result, writes, backedUp } = associationScenario('apply', false);
-  assert.equal(result, 1);
+  assert.equal(result, NEEDS_APP_ACTION);
   assert.equal(writes.length, 1);
   assert.equal(backedUp, true);
+});
+
+test('check still reports an unchanged association as a mismatch', () => {
+  assert.equal(associationScenario('check', false).result, 1);
+});
+
+test('missing apps request installation during apply and fail strict check', () => {
+  for (const options of [{ missingReader: true }, { missingCleanShot: true }]) {
+    assert.equal(associationScenario('apply', true, options).result, NEEDS_APP_ACTION);
+    assert.equal(associationScenario('check', true, options).result, 1);
+  }
+});
+
+test('registration and setter failures remain fatal even with a missing screenshot app', () => {
+  for (const options of [{ setterFails: true }, { registrationFails: true }]) {
+    for (const missingCleanShot of [true, false]) {
+      assert.equal(associationScenario('apply', false, { ...options, missingCleanShot }).result, 1);
+    }
+  }
 });
 
 test('Reader fallback accepts case-insensitive bundle ID', () => {
@@ -171,6 +195,7 @@ function screenshotScenario(options, callback) {
         if (file.endsWith('/activateSettings')) { activations++; return { status: options.activationFails ? 1 : 0 }; }
         if (file === '/usr/bin/defaults' && args[0] === 'write') {
           if (options.writeFails) return { status: 1 };
+          if (options.silentWriteFailure) return { status: 0 };
           if (args[1] === 'com.apple.symbolichotkeys') system.AppleSymbolicHotKeys[args[4]] = parsePlist(args[5]);
           else shot[args[2]] = Buffer.from(args[4], 'hex');
         }
@@ -187,6 +212,10 @@ test('saved CleanShot shortcut returns app-action status after verification', ()
 }));
 
 test('CleanShot write failure is not masked by a restart requirement', () => screenshotScenario({ changeShortcut: true, alreadyDisabled: true, writeFails: true }, ctx => {
+  assert.equal(manageDefaultApps('apply', ctx), 1);
+}));
+
+test('CleanShot successful write without a preference change fails verification', () => screenshotScenario({ changeShortcut: true, alreadyDisabled: true, silentWriteFailure: true }, ctx => {
   assert.equal(manageDefaultApps('apply', ctx), 1);
 }));
 
