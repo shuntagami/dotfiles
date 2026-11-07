@@ -152,7 +152,7 @@ Thunderbolt ケーブルでつなぐ場合は、2台を近くに置きます。
      done
      ```
 
-  2. 旧Macで、`~/scribe-bot-retired/`・`~/launch-video-gen-retired/`・`~/marunage-studio-retired/`・`~/processing-mac-retired/` の plist を `~/Library/LaunchAgents/` へ戻し、それぞれ `launchctl bootstrap gui/$(id -u) <plist>` で起動する。
+  2. 旧Macで、`~/scribe-bot-retired/`・`~/launch-video-gen-retired/`・`~/marunage-studio-retired/`・`~/processing-mac-retired/` の plist を `~/Library/LaunchAgents/` へ戻す。それぞれ `launchctl enable gui/$(id -u)/<Label>` で無効化を解除してから、`launchctl bootstrap gui/$(id -u) <plist>` で起動する。
 
   切り替えた後に新しいMacで作ったジョブや素材は、新しいMacに残ります。
 

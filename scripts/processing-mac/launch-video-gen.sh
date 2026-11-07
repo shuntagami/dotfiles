@@ -107,11 +107,17 @@ if [ -z "$drained" ]; then
 fi
 launchctl bootout $U/com.ele-inc.launch-video-gen.web 2>/dev/null || true
 # Two copies running would run the same jobs twice. Stop here unless the old one is really down.
-for i in $(seq 1 30); do curl -s -m 2 -o /dev/null http://127.0.0.1:8440/ || break; sleep 2; done
-if launchctl print $U/com.ele-inc.launch-video-gen.web >/dev/null 2>&1 || curl -s -m 2 -o /dev/null http://127.0.0.1:8440/; then
-  echo "旧Macの launch-video-gen が止まりません" >&2
-  exit 1
-fi
+for i in $(seq 1 60); do
+  if ! launchctl print $U/com.ele-inc.launch-video-gen.web >/dev/null 2>&1 &&
+    ! launchctl print $U/com.ele-inc.launch-video-gen.update >/dev/null 2>&1 &&
+    ! curl -s -m 2 -o /dev/null http://127.0.0.1:8440/ &&
+    ! curl -s -m 2 -o /dev/null http://127.0.0.1:8441/; then
+    exit 0
+  fi
+  sleep 1
+done
+echo "旧Macの launch-video-gen が止まりません" >&2
+exit 1
 EOF
 }
 
