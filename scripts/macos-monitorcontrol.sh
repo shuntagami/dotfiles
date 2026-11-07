@@ -46,7 +46,8 @@ if [[ ! -f "${SUPPORT_DIR}/monitorcontrol-before.plist" ]]; then
     mv "${BUILD_DIR}/monitorcontrol-before.plist" "${SUPPORT_DIR}/monitorcontrol-before.plist"
   else
     read_result=$?
-    if [[ "$(<"${BUILD_DIR}/domain-error")" == *"Domain ${DOMAIN} does not exist"* ]]; then
+    if [[ "$(<"${BUILD_DIR}/domain-error")" == *"Domain ${DOMAIN} does not exist"* ||
+          "$(<"${BUILD_DIR}/domain-error")" == *"Domain '${DOMAIN}' not found."* ]]; then
       echo "MonitorControl has no saved preferences yet; skipping backup."
     else
       cat "${BUILD_DIR}/domain-error" >&2

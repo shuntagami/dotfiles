@@ -42,6 +42,7 @@ app と marunage は Cloudflare Access のログインを通ります。Tunnel�
 
   ```bash
   gh auth login             # HTTPS、Git の認証にも使う
+  gh auth setup-git         # Git の認証に gh を使う設定を明示的に反映
   gcloud auth login         # automatic-recording-of-minutes の Secret Manager を読めるアカウント
   cloudflared tunnel login  # ブラウザで ele-studio.app を選ぶ
   codex login               # launch-video-gen のレイアウト作成
