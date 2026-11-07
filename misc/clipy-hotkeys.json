@@ -1,0 +1,7 @@
+{
+  "hotkeys": {
+    "kCPYHotKeyHistoryKeyCombo": {"key": "v", "modifiers": 2304},
+    "kCPYHotKeySnippetKeyCombo": {"key": "b", "modifiers": 768}
+  },
+  "maxHistorySize": 50
+}

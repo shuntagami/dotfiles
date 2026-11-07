@@ -2,21 +2,17 @@
 
 音量はMac標準の音量アップ／ダウン・ミュートキーで操作する。セットアップ時にMonitorControlの `keyboardVolume=0`（標準メディアキー）を設定する。`1` はカスタムショートカット専用で、標準の音量キーは反応しなくなる。
 
-## AudioPriorityBarとの併用
+## 音声の出力先
 
-出力・入力デバイスの自動切り替えは [AudioPriorityBar](https://github.com/tobi/AudioPriorityBar) が担当する。Homebrewのcaskがないため、`scripts/install-audioprioritybar.sh`（`install-packages.sh` から実行）がバージョンとSHA-256を固定したリリース版を `/Applications` に入れる。リリース版はad-hoc署名で公証されていない。ログイン項目もこのスクリプトが登録する（`setup.sh` は `macos.sh` を実行しないため）。
-
-役割は次のように分ける。
+出力・入力デバイスはmacOSのサウンド設定で選ぶ。Jump Desktop接続中のMac miniは、通常音・通知音とも `Jump Desktop Audio` を使う。AudioPriorityBarはこの切り替えをモニター出力へ戻して音声転送を妨げたため、導入対象から外した。
 
 | 操作 | 担当 |
 | --- | --- |
-| どのデバイスから音を出すか・どのマイクを使うか | AudioPriorityBar（優先順位による自動切り替え） |
+| 出力先・マイクの選択 | macOS（リモート接続中の出力先はJump Desktop） |
 | 外部モニター（DDC）の音量 | MonitorControl（音量キー） |
 | スピーカー・ヘッドホンの音量 | macOS（音量キー） |
 
-MonitorControlは `multiKeyboardVolume=2`（オーディオデバイス名で一致）にする。既定の出力デバイス名がモニター名と一致するときだけ音量キーを奪い、AudioPriorityBarがスピーカーやヘッドホンに切り替えると音量キーをmacOSへ返す。`1`（すべての画面）のままだと、ソフトウェア音量を持たない出力（一部の仮想デバイスなど）を選んだときにモニターの音量が変わってしまう。モニター名と出力デバイス名が異なる場合は、MonitorControlのディスプレイ設定でオーディオデバイス名を上書きする。
-
-AudioPriorityBarの音量スライダーとスクロールはCoreAudioのソフトウェア音量を操作するため、DisplayPort/HDMI出力のモニターでは効かない。モニターの音量は音量キーかMonitorControlのメニューで調整する。優先順位はデバイスUIDごとにAudioPriorityBarの設定（UserDefaults）へ保存され、dotfilesでは管理しない。
+MonitorControlは `multiKeyboardVolume=2`（オーディオデバイス名で一致）にする。既定の出力デバイス名がモニター名と一致するときだけ音量キーでモニターを操作し、それ以外ではmacOSへ返す。モニター名と出力デバイス名が異なる場合は、MonitorControlのディスプレイ設定でオーディオデバイス名を上書きする。
 
 `zsh scripts/deploy.sh` で、ほかのdotfilesと一緒に設定・更新する。`scripts/setup.sh` もdeploy経由で適用する。単独で更新する場合は `bash scripts/macos-monitorcontrol.sh` を実行する。`scripts/macos.sh` からは重複実行しない。MonitorControlとXcode Command Line Toolsが必要で、MonitorControl未導入のMacではスキップする。
 

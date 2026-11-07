@@ -9,12 +9,14 @@
 ![VSCode](https://img.shields.io/badge/VS_Code-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white)
 ![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
 
-### 新しいMacを手に入れた。<br>コマンド1つで、全部入ってる。
+### 新しいMacを手に入れた。<br>コマンド3行で、全部入ってる。
 
 <br>
 
 ```bash
-bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts/install-dotfiles.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && eval "$(/opt/homebrew/bin/brew shellenv)"
+brew install gh && gh auth login && gh auth setup-git   # GitHub.com・HTTPS を選び、Git の認証にも使う（Yes）
+gh repo clone shuntagami/dotfiles ~/dotfiles && ~/dotfiles/scripts/setup.sh
 ```
 
 </div>
@@ -135,14 +137,17 @@ Claude Desktop、Cursor、MCPサーバー設定を含む、**最新のAIツー�
 | 🍎 macOS  | XCode Command Line Tools（`xcode-select --install`で取得） |
 | 🐧 Ubuntu | 20.04以上                                                  |
 
-### セットアップ（2ステップで完了）
+### セットアップ
+
+このリポジトリは非公開なので、先に GitHub CLI でログインしてから取得します（Ubuntu では Homebrew の行の代わりに `sudo apt install gh` で入れる）。
 
 ```bash
-# 1. dotfilesをダウンロード
-bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts/install-dotfiles.sh)"
+# 1. Homebrew と GitHub CLI を入れてログインする
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && eval "$(/opt/homebrew/bin/brew shellenv)"
+brew install gh && gh auth login && gh auth setup-git   # GitHub.com・HTTPS を選び、Git の認証にも使う（Yes）
 
-# 2. セットアップを実行（パッケージ、シンボリックリンク、macOS設定、エディタ設定 ── 全部まとめて）
-~/dotfiles/scripts/setup.sh
+# 2. dotfilesを取得してセットアップを実行（パッケージ、シンボリックリンク、macOS設定、エディタ設定 ── 全部まとめて）
+gh repo clone shuntagami/dotfiles ~/dotfiles && ~/dotfiles/scripts/setup.sh
 ```
 
 > [!TIP]
@@ -160,14 +165,135 @@ bash -c "$(curl -fsSL raw.githubusercontent.com/shuntagami/dotfiles/main/scripts
 ~/dotfiles/scripts/deploy.sh            # dotfilesのリンク作成・アプリ設定の反映（MonitorControlなど）
 ~/dotfiles/scripts/macos.sh             # macOSシステム設定の適用
 ~/dotfiles/scripts/macos-notifications.sh  # 通知設定（deploy.shに含まれる。Chromeのサイト許可・アプリごとの通知）
+bash ~/dotfiles/scripts/macos-default-apps.sh  # 標準アプリ・CleanShot設定（deploy.shに含まれる）
 ~/dotfiles/vscode/setup.sh              # VSCode/Cursorのセットアップ
 ```
 
 </details>
 
+### Aqua Voice・Clipyのショートカット
+
+アプリごとの設定は `misc/aqua-voice-hotkeys.json` と `misc/clipy-hotkeys.json` に置き、
+`deploy.sh`から専用スクリプトで反映します。`macos.sh`を実行する必要はありません。
+実装はNode.jsの標準ライブラリとmacOS標準コマンドを使い、npmパッケージの追加は不要です。
+Aqua VoiceはFn（入力）、Control+Space（ロック）、Command+Control+V（直前の文字起こしを貼付）、
+Escape（キャンセル）。ClipyはCommand+Option+V（履歴）、Command+Shift+B（スニペット）、履歴数50です。
+
+```bash
+~/dotfiles/scripts/macos-aqua-voice.sh --check
+~/dotfiles/scripts/macos-clipy.sh --check
+# --dry-runで変更予定、オプションなしで適用
+```
+
+Aqua Voiceは管理するアクションだけ更新し、そのほかのショートカットや設定を保持します。
+Clipyも指定した設定キーだけ更新します。変更前の管理対象キーは
+`~/.local/state/dotfiles/app-hotkeys/`に保存します。変更した場合、アプリの再起動後に有効になります。
+アプリが未インストールならスキップします。Aqua Voiceの設定ファイルがまだない場合は、
+一度アプリを起動してから再実行してください（適用時は終了コード3で報告し、deployは警告を出して続行）。
+
+### 定型文入力（Espanso）
+
+Espansoは `misc/Brewfile` で導入します。`deploy.sh` は実行したMacのテキスト置換から
+`;lgm` などの短縮語を生成し、設定・ログイン時の起動を適用します。
+Raycastはアンインストールし、Command+SpaceはSpotlightへ戻します。初回のOS権限と試し方は [espanso/README.md](espanso/README.md) を参照してください。
+
+### 標準アプリ・スクリーンショット
+
+`misc/default-apps.json` で標準アプリとCleanShotの撮影ショートカットを管理します。
+動画・音声はIINA、画像はCleanShot X、PDFはAcrobat Pro（なければReader）、HTMLはChromeです。
+現在のインストール状況からアプリを選び、`deploy.sh`で毎回適用・確認します。
+必要なアプリがない場合は報告します。自動インストールはしません。
+適用時は手動作業が残っていることを終了コード3で知らせ、deployは続行します。
+CleanShot未導入時はmacOS標準の撮影ショートカットを維持します。
+
+```bash
+~/dotfiles/scripts/macos-default-apps.sh --dry-run  # 変更予定
+~/dotfiles/scripts/macos-default-apps.sh            # 適用して確認
+~/dotfiles/scripts/macos-default-apps.sh --check    # 現状確認。不一致なら終了コード1
+```
+
+sudo不要で、実行したMacのログインユーザーに適用します。
+変更前の関連付けと管理対象のショートカットは `~/.local/state/dotfiles/default-apps/` に保存します。
+CleanShotのライセンス・ログイン情報は取り込みません。
+撮影はCmd+Shift+3（全画面）、4（範囲をコピー）、5（All-in-One）を設定し、
+同じキーを使うmacOS標準のスクリーンショット操作を無効にします。
+通常の範囲撮影の保存値も動作中のMacと同じ `LAVAtakeArea=true` に揃え、
+Cmd+Shift+4の明示的な割り当てが「範囲撮影」と「範囲をコピー」に重複する状態を解消します。
+すでに有効なCleanShot設定は維持します。ショートカットを書き換えた場合は、撮影中の作業を
+中断せず、CleanShotの再起動が必要なことを表示して終了コード3を返します。
+deployは終了コード3だけを警告として扱って続行し、実際の設定失敗は終了コード1で停止します。
+関連付けの変更コマンドが成功しても反映されない場合も、手動設定待ち（終了コード3）として表示します。
+Finderで対象のファイルを選び「情報を見る → このアプリケーションで開く」でアプリを選択し、
+「すべてを変更」を押してから `--check` で確認してください。`--check` は未導入・不一致を終了コード1で報告します。
+macOS標準の撮影ショートカットを書き換えた場合は、保存状態を確認して即時再読み込みします。
+
+別のアプリに関連付けが変わった場合は再実行して戻せます。
+ブラウザ内の再生・PDF表示、FinderのQuick Look、ファイル個別の関連付けは対象外です。
+既存のChromeのWeb・メールリンク設定は維持します。OSの標準ブラウザ変更には
+Chrome自身かシステム設定での操作が必要です（`deploy.sh`のコメント参照）。
+旧 `macos-media-defaults.sh` コマンドも同じ設定を適用します。
+
+### 別のユーザーのMacで使う場合
+
+シェルのパスは `$HOME` を使います。Codex・Claude Code・Claude Desktop・iTerm2の設定は、
+`deploy.sh` が実行ユーザーのホームディレクトリに合わせて配置します。
+既存の `/Users/shun.tagami/…` と `/Users/shuntagami/…` は設定内のテンプレートとして扱い、
+別ユーザーでは `~/.local/share/dotfiles/generated/` に解決済みの設定を作成します。
+既存の設定ファイルは置き換え前にバックアップします。
+田上のアカウントでは、AI設定をアプリからリポジトリへ保存する既存のリンクを維持します。
+
+MCPの `servers.json` では `${HOME}` を使えます。`sync-mcp.mjs` が各クライアントへの反映時に解決します。
+パスの置き換えはログイン情報やAPIキーを移しません。必要なアプリ・プロジェクトの配置と認証は各Macで行ってください。
+SSHの接続先、ブラウザ自動操作の接続先・Chromeアカウント、ショートカットなどは共通設定のままです。
+
+### 処理用Mac（社内サービスを常駐させるMac）
+
+文字起こし・launch-video-gen・marunage-studio を動かすMacは `misc/processing-mac.conf` に書きます。新しいMacへ移すときは、新しいMacで `deploy.sh` を実行すると、旧Macからデータを写し、確認のうえで切り替えます。手順は [docs/processing-mac.md](docs/processing-mac.md) を参照してください。
+
+### 全リポジトリ共通のGit作業方針
+
+エージェントが別のフォルダからPRを作り、元のフォルダに編集を残すと、マージ後のpullや自動同期が止まることがあります。
+また、アプリが表示する場所とエージェントの編集先が分かれると、変更が画面に出ません。
+普段どおり、今の作業場所でブランチを使ってPRを作り、GitHubでマージ・リモートブランチ削除後にローカルへ取り込む運用を基本にします。
+こうした後片付けや確認を利用者に残さないための、全リポジトリ共通の方針です。追加worktreeや編集途中の移動は例外として別に扱います。
+本文と具体例は [docs/git-workflow.md](docs/git-workflow.md) で管理します。
+Codexは `~/.codex/AGENTS.md`、Claude Codeは `~/.claude/rules/git-workflow.md` から参照します。
+`deploy.sh` がリンクを配置します。指示のリンクだけ更新する場合は次を実行します。
+
+```sh
+python3 ~/dotfiles/scripts/install-user-configs.py agent-instructions
+```
+
+実ファイルがすでにある場合は退避し、他のルールは変更しません。ホーム側に独立した本文は作りません。
+Studioの標準プロファイル `~/.marunage-studio-claude` がある場合は、deploy時にそこにも同じルールをリンクします。
+別の `CLAUDE_CONFIG_DIR` を使う場合は、上のコマンドに `--claude-config-dir <実際の設定ディレクトリ>` を付けます。
+Gitの独自フックや設定キーは追加せず、既存のpull・push・同期の設定も変更しません。
+共通指示はエージェントへの作業方針であり、Git操作を強制的に禁止する仕組みではありません。
+
+標準の読み込み先：[Codexの共通指示](https://developers.openai.com/cookbook/examples/gpt-5/codex_prompting_guide#using-agentsmd)、[Claude Codeのユーザールール](https://code.claude.com/docs/en/memory#user-level-rules)。
+
+### エージェント共通のスキルと設計原則
+
+Claude Code・Codex のどちらからも使うスキルは [agents/skills/](agents/skills/) に置きます。`deploy.sh` が `~/.claude/skills/` と `~/.codex/skills/` の両方にリンクします。片方だけで使うものは、これまでどおり `claude/skills/`・`codex/skills/` に置きます。
+
+最初の 1 つが、AI を組み込んだアプリを設計するときの判断基準 [agents/skills/design-principles/](agents/skills/design-principles/) です。
+入口の `SKILL.md` から、画面（配置・強調・操作の置き場所）、骨組み（どこに形を持たせ、どこを AI に任せるか）、記録とナレッジ（資料・目次・覚え書きの持ち方）の 3 本に分かれ、今の判断に合うものだけを読みます。
+Claude Code では `/design-principles` で呼ぶか、設計の相談で自動的に読まれます。ほかの AI に渡すときは `SKILL.md` のパスを渡します。
+
+### インストール中のパスワード入力
+
+`setup.sh` と `install-packages.sh` は、最初に管理者認証を行い、実行中は通常の `sudo` の認証キャッシュを維持します。
+Homebrewには、このコマンド内ですでに `sudo` の認証を確認したことを伝え、重複するキャッシュのリセットを避けます。
+認証を維持する処理は、成功・失敗のどちらでもスクリプト終了時に停止します。
+macOSのアプリごとの許可画面や独自のインストーラーによる認証は別なので、必要に応じて操作してください。
+
 ---
 
 ## 🗂️ 管理している主なツール・設定
+
+Markdownの改行は `format-markdown draft.md` でAIに任せられます。
+指定ファイルを更新し、`--output formatted.md` を付ければ別ファイルへ保存します。
+[使い方と準備](docs/format-markdown.md)を参照してください。
 
 | カテゴリ           | ツール                                                                                                                                                                 |
 | :----------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

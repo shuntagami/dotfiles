@@ -20,7 +20,17 @@ const antigravityMarkers = [
 ];
 const antigravityIdeConfigPath = path.join(geminiHome, "antigravity", "mcp_config.json");
 
-const source = JSON.parse(fs.readFileSync(sourcePath, "utf8"));
+// Resolve template paths before passing them to clients. JSON command fields
+// are executable paths, so the clients cannot expand shell variables for us.
+function resolveHome(value) {
+  if (typeof value === "string") return value.replaceAll("${HOME}", home);
+  if (Array.isArray(value)) return value.map(resolveHome);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, resolveHome(item)]));
+  }
+  return value;
+}
+const source = resolveHome(JSON.parse(fs.readFileSync(sourcePath, "utf8")));
 const servers = source.mcpServers ?? {};
 const enabledServers = Object.fromEntries(
   Object.entries(servers).filter(([, config]) => config.enabled !== false),

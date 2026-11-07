@@ -36,7 +36,6 @@ require('keyboard.control-escape')
 require('keyboard.delete-words')
 require('keyboard.markdown')
 require('keyboard.panes')
-require('keyboard.remote-input-source')
 require('keyboard.windows')
 
 hs.notify.new({title='Hammerspoon', informativeText='Ready to rock 🤘'}):send()

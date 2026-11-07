@@ -8,29 +8,106 @@
       "Bash(strings ~/Library/Developer/Xcode/DerivedData/MonitorControl-*/Build/Products/Debug/MonitorControl.app/Contents/Resources/Base.lproj/Main.storyboardc/*.nib)",
       "mcp__Neon__list_projects"
     ],
-    "defaultMode": "bypassPermissions"
+    "defaultMode": "auto"
   },
-  "model": "opus[1m]",
+  "model": "opus",
   "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/shun.tagami/.config/iterm2/cc-status"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/shun.tagami/.config/iterm2/cc-status"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/shun.tagami/.config/iterm2/cc-status"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/shun.tagami/.config/iterm2/cc-status"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/shun.tagami/.config/iterm2/cc-status"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/shun.tagami/.config/iterm2/cc-status"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /Users/shun.tagami/dotfiles/scripts/agent-notify.py claude",
-            "async": true
+            "command": "/Users/shun.tagami/.config/iterm2/cc-status"
           }
         ]
       }
     ],
-    "Notification": [
+    "StopFailure": [
       {
-        "matcher": "permission_prompt|elicitation_dialog|elicitation_url_dialog",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /Users/shun.tagami/dotfiles/scripts/agent-notify.py claude",
-            "async": true
+            "command": "/Users/shun.tagami/.config/iterm2/cc-status"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/shun.tagami/.config/iterm2/cc-status"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/shun.tagami/.config/iterm2/cc-status"
           }
         ]
       }
@@ -41,20 +118,20 @@
     "command": "/Users/shun.tagami/dotfiles/claude/statusline.sh"
   },
   "enabledPlugins": {
-    "vercel@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true,
     "slack@claude-plugins-official": true,
-    "frontend-design@claude-plugins-official": true
+    "vercel@claude-plugins-official": true
   },
   "effortLevel": "medium",
   "modelSettings": {
-    "claude-opus-5": {
-      "effortLevel": "high"
-    },
     "claude-fable-5-1": {
       "effortLevel": "xhigh"
     },
+    "claude-opus-5": {
+      "effortLevel": "high"
+    },
     "claude-opus-5-5": {
-      "effortLevel": "xhigh"
+      "effortLevel": "high"
     }
   },
   "autoCompactWindow": 800000,
@@ -64,6 +141,7 @@
     "mode": "hold"
   },
   "skipDangerousModePermissionPrompt": true,
+  "theme": "dark",
   "agentPushNotifEnabled": true,
   "autoMode": {
     "allow": [

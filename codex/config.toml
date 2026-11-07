@@ -1,7 +1,6 @@
 model = "gpt-6-astra"
-model_reasoning_effort = "xhigh"
+model_reasoning_effort = "high"
 model_context_window = 1050000
-model_auto_compact_token_limit = 1000000
 service_tier = "default"
 
 approval_policy = "never"
@@ -111,6 +110,30 @@ trust_level = "trusted"
 [projects."/Users/shun.tagami/Documents/Codex/2026-09-22/plugin-computer-use-openai-bundled-play"]
 trust_level = "trusted"
 
+[projects."/Users/shun.tagami/ele-workspace"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/ele-workspace/voice-funnel"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/ele-workspace/egt"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/ele-workspace/marunage-studio"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/ele-workspace/youtube-content-gen"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/ele-workspace/launch-consulting"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/ele-workspace/elevenlabs-transcribe-bot"]
+trust_level = "trusted"
+
+[projects."/Users/shun.tagami/ele-workspace/launch-video-gen"]
+trust_level = "trusted"
+
 [tui]
 resume_cwd = "current"
 status_line = ["model-with-reasoning", "current-dir", "context-used", "weekly-limit"]
@@ -120,6 +143,7 @@ screen_reader_detection_done = true
 "gpt-5.5" = 4
 "gpt-5.6-sol" = 4
 gpt-6-astra = 4
+"gpt-6.1-sol" = 4
 
 [features]
 goals = true
@@ -166,8 +190,15 @@ enabled = true
 [plugins."visualize@openai-bundled"]
 enabled = true
 
+[plugins."code-review@openai-bundled"]
+enabled = true
+
 [mcp_servers.playwright]
 command = "/Users/shun.tagami/dotfiles/bin/playwright-mcp"
+args = ["--account", "shun.tagami@ele-inc.com"]
+
+[mcp_servers.playwright.env]
+AGENT_BROWSER_HOST = "shun-tagami-mbp"
 
 [mcp_servers.playwright.tools.browser_click]
 approval_mode = "auto"
@@ -176,6 +207,22 @@ approval_mode = "auto"
 approval_mode = "auto"
 
 [mcp_servers.playwright.tools.browser_run_code_unsafe]
+approval_mode = "auto"
+
+[mcp_servers.playwright-info]
+command = "/Users/shun.tagami/dotfiles/bin/playwright-mcp"
+args = ["--account", "info@ele-inc.com"]
+
+[mcp_servers.playwright-info.env]
+AGENT_BROWSER_HOST = "shun-tagami-mbp"
+
+[mcp_servers.playwright-info.tools.browser_click]
+approval_mode = "auto"
+
+[mcp_servers.playwright-info.tools.browser_navigate]
+approval_mode = "auto"
+
+[mcp_servers.playwright-info.tools.browser_run_code_unsafe]
 approval_mode = "auto"
 
 [mcp_servers.supabase]
@@ -192,16 +239,16 @@ NODE_REPL_NODE_MODULE_DIRS = "/Applications/ChatGPT.app/Contents/Resources/cua_n
 NODE_REPL_NODE_PATH = "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node"
 NODE_REPL_TRUSTED_CODE_PATHS = "/Users/shun.tagami/.codex:/Applications/ChatGPT.app/Contents/Resources/cua_node/lib/node_modules"
 CODEX_HOME = "/Users/shun.tagami/.codex"
-BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
+BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab,mcpapps"
 BROWSER_USE_TINYSKY_ENABLED = "1"
 NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = ""
 NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = ""
 NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE = ""
 BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
-BROWSER_USE_CODEX_APP_VERSION = "26.915.31945"
-NODE_REPL_TRUSTED_SERVICES = '{"browser":"/Users/shun.tagami/.codex/plugins/cache/openai-bundled/browser/26.915.31945/scripts/browser-service.mjs","sky":"@oai/sky/service"}'
+BROWSER_USE_CODEX_APP_VERSION = "26.1007.30912"
+NODE_REPL_TRUSTED_SERVICES = '{"browser":"/Users/shun.tagami/.codex/plugins/cache/openai-bundled/browser/26.1007.30912/scripts/browser-service.mjs","sky":"@oai/sky/service"}'
 SKY_CUA_SERVICE_PATH = "/Users/shun.tagami/.codex/computer-use/Codex Computer Use.app"
-CODEX_CLI_PATH = "/Applications/ChatGPT.app/Contents/Resources/codex"
+CODEX_CLI_PATH = "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
 
 [mcp_servers.openaiDeveloperDocs]
 url = "https://developers.openai.com/mcp"
@@ -212,13 +259,13 @@ args = ["mcp"]
 cwd = "."
 enabled = false
 
-[marketplaces.openai-bundled]
-source_type = "local"
-source = "/Users/shun.tagami/.codex/.tmp/bundled-marketplaces/openai-bundled"
-
 [marketplaces.openai-primary-runtime]
 source_type = "local"
 source = "/Users/shun.tagami/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
+
+[marketplaces.openai-bundled]
+source_type = "local"
+source = "/Users/shun.tagami/.codex/.tmp/bundled-marketplaces/openai-bundled"
 
 [desktop]
 conversationDetailMode = "STEPS_PROSE"
@@ -229,9 +276,16 @@ preventSleepWhileRunning = true
 show-context-window-usage = true
 followUpQueueMode = "queue"
 dock-icon-preference = "app-default"
+toys-confetti-enabled = true
+toys-audio-visualizer-enabled = true
 
 [desktop.open-in-target-preferences]
 global = "cursor"
 
 [shell_environment_policy.set]
 NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "9230e2bd8b24b7ac7a0ba6774c64bf0d78ecdabbdd91d0ed627b02a587bae2df"
+
+[hooks.state]
+
+[hooks.state."/<session-flags>/config.toml:permission_request:0:0"]
+trusted_hash = "sha256:5ffe74aecfff9f687226ef7fb9ba0c2c704b35f476175e8c10300883aaa5973f"

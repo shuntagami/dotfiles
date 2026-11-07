@@ -7,6 +7,7 @@ alias d="cd ~/dotfiles"
 alias dls="cd ~/Downloads"
 alias dt="cd ~/Desktop"
 alias p="cd ~/projects"
+alias ele="cd ~/ele-workspace"
 alias db="cd ~/projects/launch-consulting/apps/web"
 alias g="git"
 alias icloud="cd ~/Library/Mobile\ Documents/com~apple~CloudDocs"
@@ -25,6 +26,46 @@ colors
 alias airport='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport'
 
 alias chrome="open -a Google\ Chrome"
+
+# Convert beside the original, keeping its basename (JPEG by default).
+heic2img() {
+  emulate -L zsh
+  if (( $# < 1 )); then
+    print -u2 '使い方: heic2img <画像.heic>... [jpeg|png]'
+    return 2
+  fi
+
+  local -a inputs=("$@")
+  local format=jpeg extension=jpg
+  if (( $# > 1 )); then
+    case "${(L)inputs[-1]}" in
+      jpg|jpeg) inputs[-1]=() ;;
+      png) format=png; extension=png; inputs[-1]=() ;;
+    esac
+  fi
+
+  local file input output
+  local result=0
+  for file in "${inputs[@]}"; do
+    input="${file:a}"
+    if [[ ! -f "$input" ]]; then
+      print -u2 -- "ファイルが見つかりません: $file"
+      result=1
+      continue
+    fi
+
+    output="${input:r}.${extension}"
+    if [[ -e "$output" || -L "$output" ]]; then
+      print -u2 -- "出力先がすでに存在します: $output"
+      result=1
+      continue
+    fi
+
+    command sips -s format "$format" "$input" --out "$output" || result=1
+  done
+  return "$result"
+}
+alias heic2jpg='heic2img'
 
 # Recursively delete `.DS_Store` files
 alias rm-ds-store="find . -name '.DS_Store' -type f -delete"
@@ -232,7 +273,7 @@ _sync_global_npm_packages_to_brewfile() {
   fi
 
   if [[ "$npm_packages_loaded" == false && -n "$fallback_file" && -s "$fallback_file" ]]; then
-    if ! cp "$fallback_file" "$npm_packages_file"; then
+    if ! command cp -f "$fallback_file" "$npm_packages_file"; then
       rm -f "$npm_packages_file" "$tmp_brewfile"
       return 1
     fi
@@ -248,7 +289,7 @@ _sync_global_npm_packages_to_brewfile() {
       return 1
     fi
   fi
-  if ! mv "$tmp_brewfile" "$brewfile"; then
+  if ! command mv -f "$tmp_brewfile" "$brewfile"; then
     rm -f "$npm_packages_file" "$tmp_brewfile"
     return 1
   fi
@@ -283,7 +324,7 @@ _dump_system_packages_to_brewfile() {
     return 1
   fi
 
-  if ! chmod 644 "$dumped_brewfile" || ! mv "$dumped_brewfile" "$brewfile"; then
+  if ! chmod 644 "$dumped_brewfile" || ! command mv -f "$dumped_brewfile" "$brewfile"; then
     echo "Failed to replace the Brewfile; keeping the existing Brewfile." >&2
     rm -f "$dumped_brewfile"
     return 1
@@ -294,7 +335,7 @@ update-brew-env() {
   MODE=$1 # 引数: from-brewfile or from-system
   local brewfile=$HOME/dotfiles/misc/Brewfile
 
-  export HOMEBREW_CASK_OPTS="--no-quarantine"
+  export HOMEBREW_CASK_OPTS="--no-quarantine" NONINTERACTIVE=1 HOMEBREW_NO_ASK=1
   cd ~/dotfiles/misc
   brew update
 
@@ -344,6 +385,8 @@ alias trims='perl -i -CSAD -pe '\''s/[\h\p{Z}\x{00A0}\x{2000}-\x{200B}\x{202F}\x
 # Keep Apple's Screen Sharing as a fallback. MagicDNS avoids coupling the
 # shortcut to a particular Tailscale IP address.
 alias vnc-macmini='open vnc://shun-tagami-mac-mini'
+alias vnc-studio='open vnc://shun-tagami-mac-studio'
 alias jump-macmini='open -a "Jump Desktop"'
 alias jump-display-apply='node ~/dotfiles/scripts/jump-desktop-display.mjs'
 alias jump-display-check='node ~/dotfiles/scripts/jump-desktop-display.mjs --check'
+alias jump-display-fix='node ~/dotfiles/scripts/jump-desktop-display.mjs --fix'

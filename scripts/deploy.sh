@@ -46,12 +46,15 @@ ln -sf ~/dotfiles/.zshenv ~/.zshenv
 ln -sf ~/dotfiles/.zshrc ~/.zshrc
 mkdir -p ~/.docker
 ln -sf ~/dotfiles/misc/docker-config.json ~/.docker/config.json
-# Codex: config.toml includes standard Codex settings such as installed plugins.
-mkdir -p ~/.codex
-if [[ -e ~/.codex/config.toml && ! -L ~/.codex/config.toml ]]; then
-  mv ~/.codex/config.toml ~/.codex/config.toml.bak.$(date +%Y%m%d%H%M%S)
+# Resolve app settings to this user's home (JSON/TOML do not expand $HOME).
+python3 ~/dotfiles/scripts/install-user-configs.py codex
+
+# 全リポジトリ共通の指示。本文はdotfiles、ホーム側は標準の場所へのリンク。
+python3 ~/dotfiles/scripts/install-user-configs.py agent-instructions
+# Studioが独立したClaude設定を使っている場合も、同じGit管理下の本文を参照する。
+if [[ -d ~/.marunage-studio-claude ]]; then
+  python3 ~/dotfiles/scripts/install-user-configs.py agent-instructions --claude-config-dir ~/.marunage-studio-claude
 fi
-ln -sf ~/dotfiles/codex/config.toml ~/.codex/config.toml
 
 # Codex skills: symlink each repository-managed skill directory.
 mkdir -p ~/.codex/skills
@@ -64,12 +67,15 @@ for skill_dir in "${HOME}"/dotfiles/codex/skills/*(/N); do
   ln -sfn "${skill_dir}" "${skill_target}"
 done
 
-# Claude Code: settings.json includes standard Claude Code settings such as enabled plugins.
-mkdir -p ~/.claude
-if [[ -e ~/.claude/settings.json && ! -L ~/.claude/settings.json ]]; then
-  mv ~/.claude/settings.json ~/.claude/settings.json.bak.$(date +%Y%m%d%H%M%S)
+# Claude Code: resolve hook commands as well as paths in settings.
+python3 ~/dotfiles/scripts/install-user-configs.py claude
+
+# Claude Code keybindings: Hammerspoon owns Ctrl+S globally, so chords ending in
+# ctrl+s never arrive; keybindings.json adds alternatives that avoid it.
+if [[ -e ~/.claude/keybindings.json && ! -L ~/.claude/keybindings.json ]]; then
+  mv ~/.claude/keybindings.json ~/.claude/keybindings.json.bak.$(date +%Y%m%d%H%M%S)
 fi
-ln -sf ~/dotfiles/claude/settings.json ~/.claude/settings.json
+ln -sf ~/dotfiles/claude/keybindings.json ~/.claude/keybindings.json
 
 # Claude Code skills: symlink each skill directory. RIFE binary for vfr-sync-rife
 # is not in git; fetch it once with claude/skills/vfr-sync-rife/scripts/install_rife.sh
@@ -78,16 +84,29 @@ for skill_dir in "${HOME}"/dotfiles/claude/skills/*(/N); do
   ln -sfn "${skill_dir}" ~/.claude/skills/"${skill_dir:t}"
 done
 
-# Cursor: merge our sound hook without overwriting hooks registered by other apps.
-python3 ~/dotfiles/scripts/install-cursor-notify.py
+# Shared skills (agents/skills): the same SKILL.md serves Claude Code and Codex,
+# so link each one into both. Agent-specific skills stay in claude/ and codex/.
+for skill_dir in "${HOME}"/dotfiles/agents/skills/*(/N); do
+  for skills_home in ~/.claude/skills ~/.codex/skills; do
+    skill_target="${skills_home}/${skill_dir:t}"
+    if [[ -e "${skill_target}" && ! -L "${skill_target}" ]]; then
+      echo "Skipping shared skill ${skill_dir:t}: ${skill_target} exists and is not a symlink."
+      continue
+    fi
+    ln -sfn "${skill_dir}" "${skill_target}"
+  done
+done
+
+# Cursor: let MulmoTerminal own its hooks and notification sounds.
+python3 ~/dotfiles/scripts/remove-cursor-notify.py
 
 # MulmoTerminal: config.json is written by the app itself (write-temp-then-rename), so a
-# symlink here would get replaced by a real file the moment it saves. Seed it only when
-# missing — on an already-configured machine this must never overwrite live settings that
-# have not been copied back with save-mulmoterminal-config.sh.
-if [[ ! -f ~/.mulmoterminal/config.json ]]; then
-  ~/dotfiles/scripts/install-mulmoterminal-config.sh
-fi
+# symlink here would get replaced by a real file the moment it saves. Merge instead: seed a
+# missing config, otherwise set only the shared keys that differ from dotfiles, leaving this
+# machine's own keys alone. Settings changed here and not yet saved back with
+# save-mulmoterminal-config.sh ARE overwritten for the shared keys — save them first.
+~/dotfiles/scripts/install-mulmoterminal-config.sh
+python3 ~/dotfiles/scripts/apply-mulmoterminal-background.py
 
 # Screenpipe: manage only prompt/config files that are safe to keep in dotfiles.
 # Databases, recordings, logs, outputs, and connection secrets stay under ~/.screenpipe.
@@ -144,6 +163,13 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   # The installer skips machines where MonitorControl is not installed.
   bash "${HOME}/dotfiles/scripts/macos-monitorcontrol.sh"
 
+  # App shortcuts live separately from optional system-wide macOS settings.
+  source "${HOME}/dotfiles/scripts/app-settings-status.sh"
+  dotfiles_apply_app_settings bash "${HOME}/dotfiles/scripts/macos-aqua-voice.sh"
+  dotfiles_apply_app_settings bash "${HOME}/dotfiles/scripts/macos-clipy.sh"
+  # Espanso owns text expansion; retire Raycast and restore Spotlight.
+  dotfiles_apply_app_settings python3 "${HOME}/dotfiles/scripts/macos-espanso.py"
+
   # Apply the registered Mac mini connection's display policy without interrupting sessions.
   if command -v node >/dev/null 2>&1; then
     node "${HOME}/dotfiles/scripts/jump-desktop-display.mjs" --deploy
@@ -153,6 +179,9 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   # apps show anything. Idempotent and non-interactive -- it only opens the
   # configuration profile when that profile is missing or has changed.
   bash "${HOME}/dotfiles/scripts/macos-notifications.sh"
+
+  # Keep file associations and CleanShot screenshot shortcuts in sync.
+  dotfiles_apply_app_settings bash "${HOME}/dotfiles/scripts/macos-default-apps.sh"
 
   # No URL router here any more, and no default-browser step either.
   #
@@ -173,8 +202,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   if [[ "${DOTFILES_PROFILE:-full}" != "minimal" ]]; then
     ln -sfn ~/dotfiles/hammerspoon ~/.hammerspoon
   fi
-  mkdir -p ~/Library/Application\ Support/Claude
-  ln -sf ~/dotfiles/misc/claude_desktop_config.json ~/Library/Application\ Support/Claude/claude_desktop_config.json
+  python3 ~/dotfiles/scripts/install-user-configs.py claude-desktop
   mkdir -p ~/.config/memo
   ln -sf ~/dotfiles/misc/memo-config.toml ~/.config/memo/config.toml
   mkdir -p ~/Library/Application\ Support/ngrok
@@ -188,7 +216,10 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 
   # watch-downloads-copy: auto-copy plain text files from Downloads to clipboard
   chmod +x ~/dotfiles/bin/watch-downloads-copy
-  launchctl unload ~/Library/LaunchAgents/com.user.watch-downloads.plist 2>/dev/null
+  # The old agent is absent on a fresh Mac, or may already be unloaded.
+  if [[ -f ~/Library/LaunchAgents/com.user.watch-downloads.plist ]]; then
+    launchctl unload ~/Library/LaunchAgents/com.user.watch-downloads.plist 2>/dev/null || true
+  fi
   rm -f ~/Library/LaunchAgents/com.user.watch-downloads.plist
   mkdir -p ~/Library/Scripts/Folder\ Action\ Scripts
   osacompile -o ~/Library/Scripts/Folder\ Action\ Scripts/Copy\ Downloaded\ Text.scpt \
@@ -213,19 +244,28 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   '
 
   # iTerm2: load preferences from custom folder
-  defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$HOME/dotfiles/misc"
+  iterm_preferences=$(python3 ~/dotfiles/scripts/install-user-configs.py iterm2)
+  defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$iterm_preferences"
   defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
 
   # The location of the configuration file for karabiner-elements
   # https://karabiner-elements.pqrs.org/docs/manual/misc/configuration-file-path/
   if [[ "${DOTFILES_PROFILE:-full}" != "minimal" ]]; then
-    ln -sfn ~/dotfiles/karabiner ~/.config/karabiner
-    if launchctl print gui/$(id -u)/org.pqrs.service.agent.karabiner_console_user_server &>/dev/null; then
+    python3 ~/dotfiles/scripts/install-user-configs.py karabiner
+    if launchctl print gui/$(id -u)/org.pqrs.service.agent.Karabiner-Console-User-Server &>/dev/null; then
+      launchctl kickstart -k gui/$(id -u)/org.pqrs.service.agent.Karabiner-Console-User-Server
+    elif launchctl print gui/$(id -u)/org.pqrs.service.agent.karabiner_console_user_server &>/dev/null; then
       launchctl kickstart -k gui/$(id -u)/org.pqrs.service.agent.karabiner_console_user_server
     else
       open -a "Karabiner-Elements"
     fi
   fi
+
+  # Processing Mac (company services). Does nothing unless misc/processing-mac.conf names this
+  # Mac; then it takes over the services that are not running here yet from the previous Mac,
+  # after asking (docs/processing-mac.md). A failure here should not undo the rest of the deploy.
+  bash ~/dotfiles/scripts/processing-mac.sh deploy ||
+    echo "処理用Macの引き継ぎは終わっていません。docs/processing-mac.md を見て、scripts/processing-mac.sh deploy を実行し直してください。"
 fi
 
 # change shell

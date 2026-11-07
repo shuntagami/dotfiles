@@ -46,7 +46,8 @@ if [[ ! -f "${SUPPORT_DIR}/monitorcontrol-before.plist" ]]; then
     mv "${BUILD_DIR}/monitorcontrol-before.plist" "${SUPPORT_DIR}/monitorcontrol-before.plist"
   else
     read_result=$?
-    if [[ "$(<"${BUILD_DIR}/domain-error")" == *"Domain ${DOMAIN} does not exist"* ]]; then
+    if [[ "$(<"${BUILD_DIR}/domain-error")" == *"Domain ${DOMAIN} does not exist"* ||
+          "$(<"${BUILD_DIR}/domain-error")" == *"Domain '${DOMAIN}' not found."* ]]; then
       echo "MonitorControl has no saved preferences yet; skipping backup."
     else
       cat "${BUILD_DIR}/domain-error" >&2
@@ -72,7 +73,7 @@ if pgrep -x MonitorControl >/dev/null; then
 fi
 defaults write "${DOMAIN}" keyboardVolume -int 0
 # multiKeyboardVolume=2 (audio device name matching): volume keys drive a
-# monitor over DDC only while it is the default output. When AudioPriorityBar
+# monitor over DDC only while it is the default output. When the output
 # switches to speakers/headphones, the keys are released to macOS.
 defaults write "${DOMAIN}" multiKeyboardVolume -int 2
 

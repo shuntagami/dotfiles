@@ -59,7 +59,10 @@
   ],
   "providers": [],
   "soundFile": null,
-  "soundKinds": [],
+  "soundKinds": [
+    "finished",
+    "waiting"
+  ],
   "sounds": {
     "finished": "preset:coin",
     "waiting": "preset:meow"
@@ -69,6 +72,8 @@
   "repoDirs": {},
   "launchers": [],
   "customAgents": [],
+  "paletteAliases": {},
+  "paletteFavorites": [],
   "quickCommands": [],
   "userMcpServers": [],
   "headerStatusColors": {},
@@ -99,10 +104,11 @@
       "label": "エージェントを再起動",
       "run": "action",
       "icon": "restart_alt",
-      "action": "restart"
+      "action": "terminal-restart"
     }
   ],
   "chips": null,
+  "commands": [],
   "pushEnabled": true,
   "pushKinds": [
     "finished",
@@ -113,6 +119,7 @@
   "calendarSyncEnabled": true,
   "worklogIntervalHours": 6,
   "sessionIdleReapDays": 7,
+  "sessionReapIntervalHours": 0,
   "terminalSubmit": "cr",
   "keymap": {
     "terminal-new": "Alt+ArrowLeft",
@@ -120,7 +127,10 @@
     "zoom-toggle": "Alt+ArrowUp",
     "next-attention": "Alt+ArrowDown",
     "terminal-close": "Cmd+.",
-    "files-find": "Cmd+Shift+p"
+    "files-find": "Cmd+Shift+p",
+    "focus-mode": "Alt+Shift+ArrowUp",
+    "mark-unread": "Alt+Shift+ArrowDown",
+    "terminal-park": "Alt+Shift+ArrowLeft"
   },
   "copyOnSelect": true,
   "decisionDigest": true,
@@ -130,6 +140,9 @@
   "appendSystemPrompt": true,
   "autoDirIcon": true,
   "showLoadAverage": true,
+  "paletteSearchBox": true,
+  "remoteServer": false,
+  "playfulEffects": "random",
   "toolbarPins": [],
   "cockpitLines": {
     "summary": 2,

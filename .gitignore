@@ -25,3 +25,8 @@ claude/skills/vfr-sync-rife/bin/
 
 # Claude Code内部ディレクトリ（worktree管理など）
 .claude/worktrees/
+
+# Raycast: personal snippet contents and encrypted full exports stay local.
+raycast/*.local.json
+raycast/*.local.json.backup-*
+*.rayconfig

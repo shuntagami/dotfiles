@@ -8,20 +8,17 @@ tap "oven-sh/bun", trusted: true
 tap "sanemat/font", trusted: true
 tap "supabase/tap", trusted: true
 tap "thom4parisot/brew", "https://github.com/thom4parisot/homebrew-brew.git", trusted: true
+tap "vectordotdev/brew"
 # Codec library for encoding and decoding AV1 video streams
 brew "aom"
 # C parser in Python
 brew "pycparser"
 # Powerful, lightweight programming language
 brew "lua"
-# Cryptography and SSL/TLS Toolkit
-brew "openssl@3"
 # General-purpose data compression with high compression ratio
 brew "xz"
 # Zstandard is a real-time compression algorithm
 brew "zstd"
-# Interpreted, interactive, object-oriented programming language
-brew "python@3.14"
 # ASP system to ground and solve logic programs
 brew "clingo"
 # Package dependency solver
@@ -44,8 +41,6 @@ brew "coreutils"
 brew "gnutls"
 # GNU Emacs text editor
 brew "emacs"
-# Validating, recursive, caching DNS resolver
-brew "unbound"
 # Emacs dependency management
 brew "cask"
 # YAML Parser
@@ -54,6 +49,8 @@ brew "libyaml"
 brew "cfn-lint"
 # Statistics utility to count lines of code
 brew "cloc"
+# Cloudflare Tunnel client (formerly Argo Tunnel)
+brew "cloudflared"
 # Top-like interface for container metrics
 brew "ctop"
 # Get a file from an HTTP, HTTPS or FTP server
@@ -72,6 +69,20 @@ brew "duti"
 brew "exiftool"
 # Play, record, convert, and stream select audio and video codecs
 brew "ffmpeg"
+# OpenType text shaping engine
+brew "harfbuzz"
+# New file format for still image compression
+brew "jpeg-xl"
+# Library for JPEG-2000 image manipulation
+brew "openjpeg"
+# Image processing and image analysis library
+brew "leptonica"
+# Subtitle renderer for the ASS/SSA subtitle format
+brew "libass"
+# OCR (Optical Character Recognition) engine
+brew "tesseract"
+# Play, record, convert, and stream many audio and video codecs
+brew "ffmpeg-full"
 # Monitor a directory for changes and run a shell command
 brew "fswatch"
 # Command-line fuzzy finder written in Go
@@ -80,8 +91,6 @@ brew "fzf"
 brew "gawk"
 # GNU compiler collection
 brew "gcc"
-# New file format for still image compression
-brew "jpeg-xl"
 # Library for encoding and decoding .avif files
 brew "libavif"
 # Graphics library to dynamically manipulate images
@@ -90,14 +99,6 @@ brew "gd"
 brew "gdk-pixbuf"
 # GitHub command-line tool
 brew "gh"
-# OpenType text shaping engine
-brew "harfbuzz"
-# Library for JPEG-2000 image manipulation
-brew "openjpeg"
-# Image processing and image analysis library
-brew "leptonica"
-# OCR (Optical Character Recognition) engine
-brew "tesseract"
 # Interpreter for PostScript and PDF
 brew "ghostscript"
 # Distributed revision control system
@@ -138,8 +139,6 @@ brew "libheif"
 brew "imagemagick"
 # Lightweight and flexible command-line JSON processor
 brew "jq"
-# Subtitle renderer for the ASS/SSA subtitle format
-brew "libass"
 # Framework for scientific data networking
 brew "libdap"
 # Provides library functionality for FIDO U2F & FIDO 2.0, including USB
@@ -178,6 +177,8 @@ brew "netlify-cli"
 brew "nghttp2"
 # High performance message passing library
 brew "open-mpi"
+# Cryptography and SSL/TLS Toolkit
+brew "openssl@3", link: true
 # PAM module for reattaching to the user's GUI (Aqua) session
 brew "pam-reattach"
 # Simplistic interactive filtering tool
@@ -200,12 +201,16 @@ brew "pure"
 brew "pygobject3"
 # Interpreted, interactive, object-oriented programming language
 brew "python@3.13"
+# Interpreted, interactive, object-oriented programming language
+brew "python@3.14"
 # Tools for and transforming and inspecting PDF files
 brew "qpdf"
 # Alternative to backtracking PCRE-style regular expression engines
 brew "re2"
 # Search tool like grep and The Silver Searcher
 brew "ripgrep"
+# Utility that provides fast incremental file transfer
+brew "rsync"
 # Powerful, clean, object-oriented scripting language
 brew "ruby"
 # Powerful, clean, object-oriented scripting language
@@ -220,6 +225,10 @@ brew "syncthing", restart_service: :changed
 brew "tesseract-lang"
 # Terminal multiplexer
 brew "tmux"
+# Validating, recursive, caching DNS resolver
+brew "unbound"
+# Extremely fast Python package installer and resolver, written in Rust
+brew "uv"
 # Vi 'workalike' with many additional features
 brew "vim"
 # Executes a program periodically, showing output fullscreen
@@ -245,13 +254,15 @@ brew "ele-inc/tap/scribe", trusted: true
 # Terraform
 brew "hashicorp/tap/terraform", trusted: true
 # Evans: more expressive universal gRPC client
-brew "ktr0731/evans/evans"
+brew "ktr0731/evans/evans", trusted: true
 # Coherent PDF Command-line Tools to modify PDF files
 brew "oncletom/cpdf/cpdf"
 # Incredibly fast JavaScript runtime, bundler, transpiler and package manager - all in one.
-brew "oven-sh/bun/bun"
+brew "oven-sh/bun/bun", trusted: true
 # Supabase CLI
-brew "supabase/tap/supabase"
+brew "supabase/tap/supabase", trusted: true
+# A High-Performance Log, Metrics, and Events Router
+brew "vectordotdev/brew/vector", trusted: true
 # View, print, and comment on PDF documents
 cask "adobe-acrobat-reader"
 # Agent orchestration platform
@@ -264,10 +275,10 @@ cask "aws-vault-binary"
 cask "chatgpt"
 # Remotely access another computer through the Google Chrome browser
 cask "chrome-remote-desktop-host"
-# Automated testing of webapps for Google Chrome
-cask "chromedriver"
 # Anthropic's official Claude AI desktop app
 cask "claude"
+# Screen capturing tool
+cask "cleanshot"
 # Clipboard extension app
 cask "clipy"
 # OpenAI's Codex desktop app for managing coding agents
@@ -280,6 +291,8 @@ cask "discord"
 cask "docker-desktop"
 # Client for the Dropbox cloud storage service
 cask "dropbox"
+# Cross-platform Text Expander written in Rust
+cask "espanso"
 # Collaborative team software
 cask "figma@beta"
 # GIT client
@@ -294,6 +307,8 @@ cask "google-chrome"
 cask "gyazo"
 # Desktop automation application
 cask "hammerspoon"
+# Free and open-source media player
+cask "iina"
 # Terminal emulator as alternative to Apple's Terminal app
 cask "iterm2"
 # Remote desktop application
@@ -306,6 +321,8 @@ cask "karabiner-elements"
 cask "loom"
 # Tool to control external monitor brightness & volume
 cask "monitorcontrol"
+# Command-line utility to interact with Sentry
+cask "sentry-cli"
 # Team communication and collaboration software
 cask "slack"
 # CLI to create, run, and deploy Slack apps
@@ -327,6 +344,7 @@ vscode "ele-inc.marunage-feedback"
 vscode "esbenp.prettier-vscode"
 vscode "formulahendry.auto-close-tag"
 vscode "formulahendry.auto-complete-tag"
+vscode "formulahendry.auto-rename-tag"
 vscode "gera2ld.markmap-vscode"
 vscode "openai.chatgpt"
 vscode "openai.codex-audio"
@@ -341,6 +359,7 @@ npm "@antfu/ni"
 npm "@electron-forge/cli"
 npm "@google/gemini-cli"
 npm "@openai/codex"
+npm "@shuntagami/markitdown-node"
 npm "corepack"
 npm "eslint"
 npm "md-to-pdf"
@@ -349,6 +368,7 @@ npm "neonctl"
 npm "npm-check-updates"
 npm "playwright"
 npm "prettier"
+npm "sentry"
 npm "ts-node"
 npm "typescript"
 npm "typesync"

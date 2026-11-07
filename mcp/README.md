@@ -15,6 +15,10 @@ Run:
 `~/dotfiles/scripts/deploy.sh` also runs this sync automatically when Node.js
 is available.
 
+Use `${HOME}` in `servers.json` for paths beneath the current user's home.
+The sync resolves it in command paths, arguments, and environment values before
+writing client configs; clients receive actual paths rather than shell expressions.
+
 This syncs the canonical list to:
 
 - Cursor: `~/dotfiles/mcp/generated/cursor.mcp.json` and `~/.cursor/mcp.json`
