@@ -41,7 +41,7 @@ Mac mini（メイン）と MacBook Pro（外出・補助）で **Claude Code / C
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && eval "$(/opt/homebrew/bin/brew shellenv)"
-brew install gh && gh auth login   # GitHub.com・HTTPS を選び、Git の認証にも使う（Yes）
+brew install gh && gh auth login && gh auth setup-git   # GitHub.com・HTTPS を選び、Git の認証にも使う（Yes）
 gh repo clone shuntagami/dotfiles ~/dotfiles && ~/dotfiles/scripts/setup.sh
 ```
 

@@ -15,7 +15,7 @@
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && eval "$(/opt/homebrew/bin/brew shellenv)"
-brew install gh && gh auth login   # GitHub.com・HTTPS を選び、Git の認証にも使う（Yes）
+brew install gh && gh auth login && gh auth setup-git   # GitHub.com・HTTPS を選び、Git の認証にも使う（Yes）
 gh repo clone shuntagami/dotfiles ~/dotfiles && ~/dotfiles/scripts/setup.sh
 ```
 
@@ -144,7 +144,7 @@ Claude Desktop、Cursor、MCPサーバー設定を含む、**最新のAIツー�
 ```bash
 # 1. Homebrew と GitHub CLI を入れてログインする
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && eval "$(/opt/homebrew/bin/brew shellenv)"
-brew install gh && gh auth login   # GitHub.com・HTTPS を選び、Git の認証にも使う（Yes）
+brew install gh && gh auth login && gh auth setup-git   # GitHub.com・HTTPS を選び、Git の認証にも使う（Yes）
 
 # 2. dotfilesを取得してセットアップを実行（パッケージ、シンボリックリンク、macOS設定、エディタ設定 ── 全部まとめて）
 gh repo clone shuntagami/dotfiles ~/dotfiles && ~/dotfiles/scripts/setup.sh
