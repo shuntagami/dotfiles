@@ -18,6 +18,33 @@ spec.loader.exec_module(configs)
 
 
 class UserConfigPathsTest(unittest.TestCase):
+    def test_karabiner_replaces_app_created_directory_and_preserves_backup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory) / 'Studio'
+            target = home / '.config/karabiner'
+            target.mkdir(parents=True)
+            previous = '{"profiles": []}\n'
+            (target / 'karabiner.json').write_text(previous)
+            configs.install('karabiner', home)
+            self.assertTrue(target.is_symlink())
+            self.assertEqual(target.resolve(), ROOT / 'karabiner')
+            backups = list(target.parent.glob('karabiner.bak.*'))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual((backups[0] / 'karabiner.json').read_text(), previous)
+            configs.install('karabiner', home)
+            self.assertEqual(list(target.parent.glob('karabiner.bak.*')), backups)
+
+    def test_karabiner_creates_missing_parent_and_replaces_stale_link(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory) / 'Studio'
+            target = home / '.config/karabiner'
+            configs.install('karabiner', home)
+            self.assertEqual(target.resolve(), ROOT / 'karabiner')
+            target.unlink()
+            target.symlink_to(home / 'missing-old-config')
+            configs.install('karabiner', home)
+            self.assertEqual(target.resolve(), ROOT / 'karabiner')
+
     def test_agent_instructions_link_to_tracked_sources_and_preserve_existing_files(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory) / '別の利用者'
