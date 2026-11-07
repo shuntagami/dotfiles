@@ -7,7 +7,7 @@
 LVG_ROOT="$HOME/AIEditor-service"
 LVG_APP="$LVG_ROOT/app"
 LVG_REPO_URL="https://github.com/ele-inc/launch-video-gen.git"
-LVG_QWEN_MODEL=".cache/huggingface/hub/models--Qwen--Qwen3-ForcedAligner-0.6B"
+LVG_HF_CACHE=".cache/huggingface/hub"
 
 lvg_name() { echo "launch-video-gen"; }
 
@@ -56,14 +56,16 @@ lvg_prepare() {
   # corepack downloads pnpm on first use; do it here rather than inside a launchd job.
   run "cd '$LVG_APP' && pnpm --version && pnpm install --frozen-lockfile"
 
-  # Python environments, the Julius runtime and the Qwen model are large to rebuild; copy them.
+  # Python environments, Julius and the model cache are large to rebuild; copy them.
   # The phoneme runtime checks its dictionary by modification time, which rsync -a keeps.
   local runtime
   for runtime in phoneme-env qwen-boundary-env $(ask_old 'cd AIEditor-service && ls -d phoneme-runtime-julius-*'); do
     pull "AIEditor-service/$runtime" "$LVG_ROOT/"
   done
-  run "mkdir -p '$HOME/.cache/huggingface/hub'"
-  pull "$LVG_QWEN_MODEL" "$HOME/.cache/huggingface/hub/"
+  # Qwen and wav2vec2 are both required. Newer Hugging Face caches may link
+  # snapshots to shared hub/blobs, so copying individual model folders is not enough.
+  run "mkdir -p '$HOME/$LVG_HF_CACHE'"
+  pull "$LVG_HF_CACHE/" "$HOME/$LVG_HF_CACHE/" --exclude=.locks/ '--exclude=*.incomplete'
 
   # Jobs, sources and outputs. Not --delete yet: the old Mac is still writing.
   say "launch-video-gen のデータを写します（初回は約 470 GB）"
