@@ -162,7 +162,7 @@ gh repo clone shuntagami/dotfiles ~/dotfiles && ~/dotfiles/scripts/setup.sh
 
 ```bash
 ~/dotfiles/scripts/install-packages.sh  # パッケージのインストール（Homebrewなど）
-~/dotfiles/scripts/deploy.sh            # dotfilesのリンク作成・アプリ設定の反映（MonitorControlなど）
+~/dotfiles/scripts/deploy.sh            # dotfilesのリンク作成・アプリ設定の反映（BetterDisplayなど）
 ~/dotfiles/scripts/macos.sh             # macOSシステム設定の適用
 ~/dotfiles/scripts/macos-notifications.sh  # 通知設定（deploy.shに含まれる。Chromeのサイト許可・アプリごとの通知）
 bash ~/dotfiles/scripts/macos-default-apps.sh  # 標準アプリ・CleanShot設定（deploy.shに含まれる）

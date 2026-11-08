@@ -271,6 +271,8 @@ cask "antigravity"
 cask "aqua-voice"
 # Securely stores and accesses AWS credentials in a development environment
 cask "aws-vault-binary"
+# Display management: external monitor brightness & volume (DDC), virtual screens
+cask "betterdisplay"
 # OpenAI's official ChatGPT desktop app
 cask "chatgpt"
 # Remotely access another computer through the Google Chrome browser
@@ -319,8 +321,6 @@ cask "jump-desktop-connect"
 cask "karabiner-elements"
 # Screen and video recording software
 cask "loom"
-# Tool to control external monitor brightness & volume
-cask "monitorcontrol"
 # Command-line utility to interact with Sentry
 cask "sentry-cli"
 # Team communication and collaboration software

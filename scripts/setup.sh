@@ -36,7 +36,7 @@ dotfiles_start_sudo_session
 echo "==> Installing packages..."
 bash "${DOTFILES}/scripts/install-packages.sh"
 
-# Phase 2: Deploy dotfiles and app settings (including MonitorControl on macOS)
+# Phase 2: Deploy dotfiles and app settings (including BetterDisplay on macOS)
 echo "==> Deploying dotfiles..."
 zsh "${DOTFILES}/scripts/deploy.sh"
 
