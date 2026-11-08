@@ -249,7 +249,7 @@ brew "zsh-autosuggestions"
 brew "zsh-syntax-highlighting"
 # The best way of working with Protocol Buffers.
 brew "bufbuild/buf/buf", trusted: true
-# Transcribe audio/video files using ElevenLabs Scribe API
+# Transcribe audio/video using local models or ElevenLabs
 brew "ele-inc/tap/scribe", trusted: true
 # Terraform
 brew "hashicorp/tap/terraform", trusted: true
@@ -271,7 +271,7 @@ cask "antigravity"
 cask "aqua-voice"
 # Securely stores and accesses AWS credentials in a development environment
 cask "aws-vault-binary"
-# Display management: external monitor brightness & volume (DDC), virtual screens
+# Display management tool
 cask "betterdisplay"
 # OpenAI's official ChatGPT desktop app
 cask "chatgpt"
