@@ -1,0 +1,130 @@
+#!/bin/zsh
+# Display resolution helpers built on BetterDisplay (see docs/betterdisplay.md).
+
+set -euo pipefail
+
+readonly BD="/Applications/BetterDisplay.app/Contents/MacOS/BetterDisplay"
+readonly SHARE="Screen Share 16x9"
+readonly SHARE_RES="1920x1080"
+# The mirrored display and its mode before sharing. Connecting and
+# disconnecting a virtual screen makes macOS pick another mode for the
+# monitor, so `share off` restores the saved one.
+readonly STATE="${HOME}/Library/Application Support/dotfiles/res-share-target"
+
+usage() {
+  cat <<'EOF'
+Usage: res                  Show the main display's resolution and sharing state
+       res hidpi [on|off]   Sharper (HiDPI) rendering at the same size; default on
+       res share [on|off]   Share a 16:9 screen (1920x1080 HiDPI) mirrored to the
+                            main display, so viewers see it at a readable size
+EOF
+}
+
+bd() {
+  "${BD}" "$@"
+}
+
+# The CLI lists the display group too ("DELL U4025QW,Default Group").
+main_display() {
+  local value
+  value="$(bd get -displayWithMainStatus -identifier="$1")"
+  print -r -- "${value%%,*}"
+}
+
+# While connected the name matches both the virtual screen and its display ("on,on").
+sharing() {
+  [[ "$(bd get -name="${SHARE}" -connected 2>/dev/null)" == on* ]]
+}
+
+show_status() {
+  local tag
+  tag="$(main_display tagID)"
+  print -r -- "$(main_display name): $(bd get -tagID="${tag}" -resolution)" \
+    "HiDPI=$(bd get -tagID="${tag}" -hiDPI) $(bd get -tagID="${tag}" -refreshRate)"
+  if sharing; then print -r -- "share: on"; else print -r -- "share: off"; fi
+}
+
+set_hidpi() {
+  local value="${1:-on}" tag refresh
+  [[ "${value}" == (on|off) ]] || { usage >&2; exit 2; }
+  tag="$(main_display tagID)"
+  # Switching modes can otherwise fall back to a variable refresh range.
+  refresh="$(bd get -tagID="${tag}" -refreshRate)"
+  if [[ "$(bd get -tagID="${tag}" -hiDPI)" != "${value}" ]]; then
+    bd set -tagID="${tag}" -hiDPI="${value}" -refreshRate="${refresh}"
+  fi
+  show_status
+}
+
+share_on() {
+  local target mode
+  if sharing; then
+    print -r -- "Already sharing (${SHARE})."
+    return
+  fi
+  target="$(main_display tagID)"
+  mode="$(bd get -tagID="${target}" -displayModeNumber)"
+  mkdir -p "${STATE:h}"
+  print -r -- "${target} ${mode}" > "${STATE}"
+  if ! bd get -name="${SHARE}" -identifier=tagID >/dev/null 2>&1; then
+    bd create -type=VirtualScreen -virtualScreenName="${SHARE}" \
+      -aspectWidth=16 -aspectHeight=9 -virtualScreenHiDPI=on
+  fi
+  bd set -name="${SHARE}" -connected=on
+  # The screen keeps its mode between sessions; set it only when needed
+  # (the CLI reports "Failed." for a no-op change).
+  for _ in {1..20}; do
+    bd get -name="${SHARE}" -resolution >/dev/null 2>&1 && break
+    sleep 0.5
+  done
+  if [[ "$(bd get -name="${SHARE}" -resolution)" != "${SHARE_RES}" ||
+        "$(bd get -name="${SHARE}" -hiDPI)" != on ]]; then
+    bd set -name="${SHARE}" -resolution="${SHARE_RES}" -hiDPI=on
+  fi
+  bd set -name="${SHARE}" -mirror=on -targetTagID="${target}"
+  print -r -- "Sharing: share the whole screen \"${SHARE}\". Stop with: res share off"
+}
+
+share_off() {
+  local target="" mode=""
+  if [[ -f "${STATE}" ]]; then
+    read -r target mode < "${STATE}"
+    bd set -name="${SHARE}" -mirror=off -targetTagID="${target}" >/dev/null 2>&1 || true
+  fi
+  if sharing; then
+    bd set -name="${SHARE}" -connected=off
+  fi
+  if [[ -n "${mode}" ]]; then
+    # macOS settles the layout asynchronously; reapply until the mode sticks.
+    for _ in {1..10}; do
+      sleep 1
+      [[ "$(bd get -tagID="${target}" -displayModeNumber)" == "${mode}" ]] && break
+      bd set -tagID="${target}" -displayModeNumber="${mode}" >/dev/null 2>&1 || true
+    done
+  fi
+  rm -f "${STATE}"
+  show_status
+}
+
+if [[ ! -x "${BD}" ]]; then
+  print -r -- "BetterDisplay is not installed." >&2
+  exit 1
+fi
+if ! bd get -proAvailable >/dev/null 2>&1; then
+  print -r -- "BetterDisplay is not running." >&2
+  exit 1
+fi
+
+case "${1:-}" in
+  "") show_status ;;
+  hidpi) set_hidpi "${2:-on}" ;;
+  share)
+    case "${2:-on}" in
+      on) share_on ;;
+      off) share_off ;;
+      *) usage >&2; exit 2 ;;
+    esac
+    ;;
+  -h|--help|help) usage ;;
+  *) usage >&2; exit 2 ;;
+esac

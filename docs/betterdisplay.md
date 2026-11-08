@@ -82,24 +82,19 @@ rm "$HOME/Library/LaunchAgents/local.dotfiles.betterdisplay-mode.plist"
 
 停止しただけでは消灯を解除しない。BetterDisplayの内蔵画面スライダー、またはmacOSのディスプレイ設定から明るさを戻す。導入前のBetterDisplay設定は `~/Library/Application Support/dotfiles/betterdisplay-before.plist` に保存される。
 
-## 画面共有・収録用の16:9画面
+## 解像度と画面共有（`res` コマンド）
 
-40インチなどの横長モニターをそのまま共有すると、相手の画面では文字がかなり小さくなる。共有するときだけ、16:9の仮想ディスプレイを主画面にしてモニターをそのミラーにすると、MacBookで共有するのと同じ見え方（1920×1080相当）になる。モニターには中央の16:9部分だけが表示される。
+`bin/res` はBetterDisplayを使って、主画面の表示を切り替える。
 
 ```sh
-# 初回だけ: 16:9の仮想ディスプレイを作り、1920×1080 HiDPIにする（解像度は次回以降も保たれる）
-betterdisplaycli create -type=VirtualScreen -virtualScreenName="Screen Share 16x9" \
-  -aspectWidth=16 -aspectHeight=9 -virtualScreenHiDPI=on
-betterdisplaycli set -name="Screen Share 16x9" -connected=on
-betterdisplaycli set -name="Screen Share 16x9" -resolution=1920x1080 -hiDPI=on
-
-# 共有を始める: 仮想ディスプレイをつなぎ、モニターをそのミラーにする
-betterdisplaycli set -name="Screen Share 16x9" -connected=on
-betterdisplaycli set -name="Screen Share 16x9" -mirror=on -targetName="DELL U4025QW"
-
-# 共有を終える: ミラーを解除して仮想ディスプレイを切る
-betterdisplaycli set -name="Screen Share 16x9" -mirror=off -targetName="DELL U4025QW"
-betterdisplaycli set -name="Screen Share 16x9" -connected=off
+res                # 主画面の解像度・HiDPI・リフレッシュレートと、共有中かどうか
+res hidpi          # 同じ大きさのままHiDPI（高精細）で描画する。res hidpi off で戻す
+res share          # 画面共有・収録用の16:9画面に切り替える
+res share off      # 共有を終えて元の表示に戻す
 ```
 
-`-targetName` は使っているモニター名（`betterdisplaycli get -identifiers` の `name`）に合わせる。すでにその解像度になっている状態で `-resolution` を指定すると `Failed.` と表示されるが、変更が不要だっただけで問題はない。BetterDisplayのメニューからも同じ操作ができる。共有中は仮想ディスプレイ全体（メニューバーを含む）を「画面」として共有・収録する。
+`res hidpi` は表示の大きさ（UIの広さ）を変えずに、内部で倍の解像度で描画して縮小する。文字がくっきりする。切り替えでリフレッシュレートが可変（48-120Hzなど）に変わらないよう、今の値を引き継ぐ。
+
+`res share` の仕組みは次のとおり。40インチなどの横長モニターをそのまま共有すると、相手の画面では文字がかなり小さくなる。そこで、16:9の仮想ディスプレイ「Screen Share 16x9」（1920×1080相当、HiDPI）を主画面にし、モニターをそのミラーにする。こうすると、MacBookで共有するのと同じ見え方になる。モニターには中央の16:9部分だけが表示される。共有・収録では、この画面全体（メニューバーを含む）を「画面」として選ぶ。仮想ディスプレイがなければ初回に作る。
+
+仮想ディスプレイをつないだり切ったりすると、macOSがモニターの表示モードを別のもの（5120×2160など）に変えてしまう。そのため `res share` は共有前のモードを `~/Library/Application Support/dotfiles/res-share-target` に保存し、`res share off` で戻す。
