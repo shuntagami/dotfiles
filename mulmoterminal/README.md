@@ -49,4 +49,6 @@ python3 ~/dotfiles/scripts/sync-mulmoterminal-projects.py
 上書きせず停止する。登録一覧・配置順・アカウントは変更しない。
 変更を他のMacへ配る場合は 非公開リポジトリの `config/mulmoterminal-projects.json` を更新してcommit・pushし、
 取り込み先で上記コマンドを実行する。既存キーの変更は各Macで自動上書きしないため、
-意図した差分を確認して適用する。反映後はMulmoTerminalの画面を再読み込みする。
+意図した差分を確認して適用する。配布後は稼働中のMulmoTerminalへ同じ値の保存要求を送り、開いている画面にも
+再読込を通知する（設定値は変更しない）。サーバーが停止中・非対応、または
+通知時に既存ファイルの整形が変わる場合は `reload required` と表示するので、画面を再読み込みする。
