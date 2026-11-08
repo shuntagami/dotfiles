@@ -2,6 +2,9 @@
 """Restore Git-backed personal project defaults without editing tracked project files."""
 import argparse
 import json
+import os
+import urllib.error
+import urllib.request
 from pathlib import Path
 import subprocess
 
@@ -78,6 +81,35 @@ def apply(directory, profile, image, settings, dry_run=False):
     return {'directory': str(directory), 'add_keys': list(missing), 'background': copy_image}
 
 
+def notify_views(directory):
+    """A no-op Settings save publishes the directory refresh to open views."""
+    shared = directory / '.mulmoterminal.json'
+    local = directory / '.mulmoterminal.local.json'
+    shared_data, local_data = read(shared), read(local)
+    for key in ['headerColor', 'backgroundImage']:
+        source = local if key in local_data else shared
+        data = local_data if source == local else shared_data
+        if key not in data:
+            continue
+        # The Settings route serializes JSON. Do not reformat a user's file merely
+        # to notify their browser, especially when that file is tracked.
+        if source.read_text() != json.dumps(data, ensure_ascii=False, indent=2) + '\n':
+            continue
+        api = 'http://127.0.0.1:' + os.environ.get('MULMOTERMINAL_PORT', '34567')
+        request = urllib.request.Request(
+            api + '/api/dir-config', method='PUT',
+            data=json.dumps({'cwd': str(directory), 'set': {key: data[key]}}).encode(),
+            headers={'Content-Type': 'application/json'},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=5) as response:
+                json.load(response)
+            return 'notified'
+        except (OSError, ValueError) as error:
+            return 'reload required: ' + str(error)
+    return 'reload required: no safely rewritable setting'
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dry-run', action='store_true')
@@ -94,7 +126,10 @@ def main():
         if not path.is_dir():
             print(f'Skipped missing directory: {relative}')
             continue
-        print(json.dumps(apply(path, profile, image, settings, args.dry_run), ensure_ascii=False))
+        result = apply(path, profile, image, settings, args.dry_run)
+        if not args.dry_run:
+            result['views'] = notify_views(path)
+        print(json.dumps(result, ensure_ascii=False))
 
 
 if __name__ == '__main__':

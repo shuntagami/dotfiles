@@ -4,6 +4,8 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
+from io import BytesIO
 
 spec = importlib.util.spec_from_file_location('sync_projects', Path(__file__).with_name('sync-mulmoterminal-projects.py'))
 module = importlib.util.module_from_spec(spec)
@@ -64,6 +66,29 @@ class ProjectSyncTests(unittest.TestCase):
         self.apply(dry_run=True)
         self.assertFalse((self.repo / '.mulmoterminal.json').exists())
         self.assertFalse((self.repo / module.REL_IMAGE).exists())
+
+    def test_live_notification_sends_existing_value_without_changing_files(self):
+        self.apply()
+        file = self.repo / '.mulmoterminal.json'
+        before = file.read_bytes()
+        with patch.object(module.urllib.request, 'urlopen', return_value=BytesIO(b'{}')) as call:
+            self.assertEqual('notified', module.notify_views(self.repo))
+        request = call.call_args.args[0]
+        self.assertEqual('PUT', request.method)
+        self.assertEqual({'cwd': str(self.repo), 'set': {'headerColor': '#112233'}}, json.loads(request.data))
+        self.assertEqual(before, file.read_bytes())
+
+    def test_offline_notification_preserves_successful_install(self):
+        self.apply()
+        with patch.object(module.urllib.request, 'urlopen', side_effect=OSError('offline')):
+            self.assertIn('reload required', module.notify_views(self.repo))
+        self.assertTrue((self.repo / module.REL_IMAGE).exists())
+
+    def test_notification_does_not_reformat_existing_json(self):
+        (self.repo / '.mulmoterminal.local.json').write_text('{"headerColor":"#abcdef"}')
+        with patch.object(module.urllib.request, 'urlopen') as call:
+            self.assertIn('reload required', module.notify_views(self.repo))
+            call.assert_not_called()
 
 
 if __name__ == '__main__':
