@@ -358,25 +358,48 @@ case "--seed-ddc": exit(seedDDC() ? 0 : 1)
 case "--watch":
     var applied = ""
     var candidate = ""
+    // Failed attempts back off, so a BetterDisplay that will not quit is not
+    // asked to terminate (and waited on) every second.
+    let retryInterval: TimeInterval = 30
+    var applyAfter = Date.distantPast
+    var seedPending = false
+    var seedAfter = Date.distantPast
     // Polling also catches wake/unlock events missed by display callbacks.
     // Wait for two matching observations before reacting to a new layout.
     let timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
         let displays = screens()
         guard !displays.isEmpty, displays.contains(where: { CGDisplayIsAsleep($0.id) == 0 }) else { return }
         let observed = signature(displays)
-        if observed != candidate { candidate = observed; return }
+        if observed != candidate {
+            candidate = observed
+            applyAfter = .distantPast  // A new layout is worth an immediate attempt.
+            return
+        }
         if observed != applied {
-            if apply(displays) {
-                applied = observed
-                // A newly connected monitor starts from its real DDC levels.
-                if !seedDDC() { fputs("Could not seed every DDC value.\n", stderr) }
+            guard Date() >= applyAfter else { return }
+            guard apply(displays) else {
+                applyAfter = Date().addingTimeInterval(retryInterval)
+                return
             }
+            applied = observed
+            // A newly connected monitor starts from its real DDC levels.
+            seedPending = true
+            seedAfter = .distantPast
         } else if mode(displays) == "mirror" {
             // Keep ambient-light changes from lighting the laptop back up.
             for display in displays where display.builtIn {
                 if let value = brightness(display.id), value > 0.001 {
                     _ = setBrightness(display.id, 0)
                 }
+            }
+        }
+        // Retry seeding until it succeeds, even when the layout stays the same.
+        if seedPending && Date() >= seedAfter {
+            if seedDDC() {
+                seedPending = false
+            } else {
+                fputs("Could not seed every DDC value; retrying in \(Int(retryInterval))s.\n", stderr)
+                seedAfter = Date().addingTimeInterval(retryInterval)
             }
         }
     }

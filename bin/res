@@ -58,7 +58,19 @@ set_hidpi() {
 
 share_on() {
   local target mode
-  if sharing; then
+  if [[ -f "${STATE}" ]]; then
+    read -r target mode < "${STATE}"
+    if sharing; then
+      # Sharing, or a `share off` that could not disconnect: mirror again
+      # (a no-op when already mirrored) and keep the saved mode.
+      bd set -name="${SHARE}" -mirror=on -targetTagID="${target}" >/dev/null 2>&1 || true
+      print -r -- "Already sharing (${SHARE})."
+      return
+    fi
+    # An unfinished `share off` left the original mode saved. Restore it first,
+    # so the new share does not record the mode macOS switched to.
+    share_off >/dev/null
+  elif sharing; then
     print -r -- "Already sharing (${SHARE})."
     return
   fi
@@ -91,8 +103,10 @@ share_off() {
     read -r target mode < "${STATE}"
     bd set -name="${SHARE}" -mirror=off -targetTagID="${target}" >/dev/null 2>&1 || true
   fi
-  if sharing; then
-    bd set -name="${SHARE}" -connected=off
+  # On failure keep the state file, so `res share off` can retry the restore.
+  if sharing && ! bd set -name="${SHARE}" -connected=off; then
+    print -u2 -r -- "Could not disconnect ${SHARE}; run res share off again."
+    return 1
   fi
   if [[ -n "${mode}" ]]; then
     # macOS settles the layout asynchronously; reapply until the mode sticks.
@@ -101,6 +115,10 @@ share_off() {
       [[ "$(bd get -tagID="${target}" -displayModeNumber)" == "${mode}" ]] && break
       bd set -tagID="${target}" -displayModeNumber="${mode}" >/dev/null 2>&1 || true
     done
+    if [[ "$(bd get -tagID="${target}" -displayModeNumber)" != "${mode}" ]]; then
+      print -u2 -r -- "Could not restore display mode ${mode}; run res share off again."
+      return 1
+    fi
   fi
   rm -f "${STATE}"
   show_status

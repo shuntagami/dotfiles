@@ -82,25 +82,36 @@ fi
 launchctl bootout "gui/$(id -u)/${LABEL}" 2>/dev/null || true
 install -m 755 "${BUILD_DIR}/betterdisplay-mode" "${SUPPORT_DIR}/betterdisplay-mode"
 
-# Stop BetterDisplay so the keyboard settings below are read at its next launch.
-if pgrep -x BetterDisplay >/dev/null; then
-  betterdisplay_stop_requested=true
-  osascript -e 'tell application "BetterDisplay" to quit'
-  for _ in {1..40}; do
-    if ! pgrep -x BetterDisplay >/dev/null; then break; fi
-    sleep 0.1
-  done
-  if pgrep -x BetterDisplay >/dev/null; then
-    echo "BetterDisplay did not quit; settings were not overwritten." >&2
-    exit 1
-  fi
-fi
 # Brightness keys adjust every display with brightness control; the helper
-# keeps a mirrored laptop panel out of that set.
-defaults write "${DOMAIN}" videoKeyboardControl -string all
-# Volume keys drive a monitor over DDC only while it is the default output.
-# When the output switches to speakers/headphones, the keys go to macOS.
-defaults write "${DOMAIN}" audioKeyboardControl -string displayWithAudioDeviceNameMatch
+# keeps a mirrored laptop panel out of that set. Volume keys drive a monitor
+# over DDC only while it is the default output; otherwise they go to macOS.
+readonly VIDEO_KEYS="all"
+readonly AUDIO_KEYS="displayWithAudioDeviceNameMatch"
+keyboard_settings_current() {
+  [[ "$(defaults read "${DOMAIN}" videoKeyboardControl 2>/dev/null)" == "${VIDEO_KEYS}" &&
+     "$(defaults read "${DOMAIN}" audioKeyboardControl 2>/dev/null)" == "${AUDIO_KEYS}" ]]
+}
+
+# BetterDisplay reads these settings only at launch. Restart it only when they
+# change, because quitting it also drops virtual screens and their mirroring.
+if keyboard_settings_current; then
+  echo "BetterDisplay keyboard settings are already current; not restarting it."
+else
+  if pgrep -x BetterDisplay >/dev/null; then
+    betterdisplay_stop_requested=true
+    osascript -e 'tell application "BetterDisplay" to quit'
+    for _ in {1..40}; do
+      if ! pgrep -x BetterDisplay >/dev/null; then break; fi
+      sleep 0.1
+    done
+    if pgrep -x BetterDisplay >/dev/null; then
+      echo "BetterDisplay did not quit; settings were not overwritten." >&2
+      exit 1
+    fi
+  fi
+  defaults write "${DOMAIN}" videoKeyboardControl -string "${VIDEO_KEYS}"
+  defaults write "${DOMAIN}" audioKeyboardControl -string "${AUDIO_KEYS}"
+fi
 
 python3 - "${PLIST}" "${LABEL}" "${SUPPORT_DIR}" "${HOME}/Library/Logs/dotfiles" <<'PY'
 import plistlib

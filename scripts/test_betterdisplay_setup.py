@@ -29,6 +29,9 @@ if stage == "defaults read" and os.environ.get("FAIL_STAGE") == "missing domain 
     sys.exit(1)
 if stage == os.environ.get("FAIL_STAGE"):
     sys.exit(42)
+if stage == "defaults read" and os.environ.get("KEYS_CURRENT") and len(args) == 3:
+    print({"videoKeyboardControl": "all",
+           "audioKeyboardControl": "displayWithAudioDeviceNameMatch"}.get(args[2], ""))
 if name == "swiftc":
     binary = Path(args[args.index("-o") + 1])
     binary.write_text("#!/bin/sh\nexit 0\n")
@@ -52,7 +55,7 @@ elif name == "python3":
 class InstallerRecoveryTests(unittest.TestCase):
     """Exercise the real installer flow without touching apps, preferences, or launchd."""
 
-    def run_installer(self, failure, monitorcontrol_running=False):
+    def run_installer(self, failure, monitorcontrol_running=False, keys_current=False):
         """Stub external commands and redirect only the test copy's support paths."""
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -71,6 +74,7 @@ class InstallerRecoveryTests(unittest.TestCase):
             script = root / "setup.sh"
             script.write_text(source.replace("${HOME}", "${BETTERDISPLAY_TEST_ROOT}"))
             env = dict(os.environ, BETTERDISPLAY_TEST_ROOT=str(root), FAIL_STAGE=failure,
+                       KEYS_CURRENT="1" if keys_current else "",
                        PATH=str(fake_bin) + os.pathsep + os.environ["PATH"])
             result = subprocess.run(["/bin/bash", str(script)], env=env, capture_output=True, text=True)
             log = (root / "commands.log").read_text().splitlines()
@@ -102,6 +106,16 @@ class InstallerRecoveryTests(unittest.TestCase):
         self.assertNotIn("open -g -a BetterDisplay", log)
         self.assertIn("defaults write pro.betterdisplay.BetterDisplay videoKeyboardControl -string all", log)
         self.assertTrue(backup)
+
+    def test_current_settings_keep_app_running(self):
+        """A redeploy with unchanged keyboard settings must not quit BetterDisplay."""
+        for failure in ("", "defaults write"):
+            with self.subTest(failure=failure):
+                result, log, running, _ = self.run_installer(failure, keys_current=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertTrue(running["BetterDisplay"])
+                self.assertFalse(any("BetterDisplay" in line for line in log if line.startswith(("osascript ", "open "))))
+                self.assertFalse(any(line.startswith("defaults write pro.betterdisplay") for line in log))
 
     def test_retires_monitorcontrol(self):
         """The old helper is unloaded and MonitorControl stops owning the keys."""
