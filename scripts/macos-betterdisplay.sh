@@ -69,7 +69,13 @@ for key in builtInBlanked builtInBrightness mode; do
   if ! defaults read "${NEW_STATE}" "${key}" >/dev/null 2>&1 &&
      value="$(defaults read "${OLD_STATE}" "${key}" 2>/dev/null)"; then
     case "${key}" in
-      builtInBlanked) defaults write "${NEW_STATE}" "${key}" -bool "${value}" ;;
+      builtInBlanked)
+        # `defaults read` prints booleans as 1/0, but `-bool` only accepts true/false.
+        case "${value}" in
+          1|true|TRUE|yes|YES) value=true ;;
+          *) value=false ;;
+        esac
+        defaults write "${NEW_STATE}" "${key}" -bool "${value}" ;;
       builtInBrightness) defaults write "${NEW_STATE}" "${key}" -float "${value}" ;;
       *) defaults write "${NEW_STATE}" "${key}" -string "${value}" ;;
     esac
