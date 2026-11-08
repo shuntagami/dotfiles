@@ -29,6 +29,6 @@ AI に任せるアプリを作るときの判断基準。3 つのファイルに
 
 ## 出どころ
 
-- 画面: 中村さん（GitHub: NXSVN）との会話と ZERO の設計資料から 2026-09-27 に一般化。元の memo は `~/memo/_posts/2026-09-27-UI-UX-原理原則.md`。2026-11-08 に isamu「AI に画面を作らせると、ごちゃごちゃになる ── 非エンジニアのための UI 設計、9 つの章」 https://zenn.dev/singularity/articles/ui-design-basics から、言葉と振る舞いの一貫性・モード・画面の中の「戻る」・確認のボタンの言葉を足した
+- 画面: UI についての会話と ZERO の設計資料から 2026-09-27 に一般化。元の memo は `~/memo/_posts/2026-09-27-UI-UX-原理原則.md`。2026-11-08 に isamu「AI に画面を作らせると、ごちゃごちゃになる ── 非エンジニアのための UI 設計、9 つの章」 https://zenn.dev/singularity/articles/ui-design-basics から、言葉と振る舞いの一貫性・モード・画面の中の「戻る」・確認のボタンの言葉を足した
 - 骨組み: 中島聡「AI-Nativeビジネスアプリ・アーキテクチャ」（`~/memo/_posts/2026-05-19-AI-Nativeビジネスアプリ・アーキテクチャ.md`）、MulmoClaude の `MANIFEST.md` と `docs/papers/`（`~/projects/receptron/mulmoclaude`）、ZERO の LINE特典の作り直し（2026-10-31）。元の memo は `~/memo/_posts/2026-10-31-AIネイティブなアプリの設計原則.md`
 - 記録とナレッジ: Karpathy「LLM Knowledge Bases」 https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f 、MulmoClaude `docs/papers/workspace-is-the-agent.md`、ZERO のナレッジの決定（2026-10-29〜11-04）
