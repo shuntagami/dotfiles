@@ -1,17 +1,3 @@
-# 個人用の背景画像
-
-`background.json` で画像・不透明度・表示方法を管理する。現在は `backgrounds/dog.JPG` を不透明度15％、`cover`（セル全体に広げ、はみ出す部分は切り取り）で使う。
-
-```sh
-python3 ~/dotfiles/scripts/apply-mulmoterminal-background.py
-```
-
-deployでも実行する。各MacのMulmoTerminalに保存されたディレクトリと、現在のtmuxセルの作業ディレクトリへ適用する。存在しないディレクトリはスキップし、別の背景が設定済みなら維持する。
-
-画像を各ディレクトリの `.mulmoterminal-background/dog.JPG` にコピーし、`.mulmoterminal.local.json` の背景項目だけを更新する。個人用ファイルはGitのローカルexcludeへ登録する。ただし、既に追跡済みの設定ファイルは変更差分として残る。画像を差し替えた場合もこのスクリプトを再実行する。
-
-稼働中サーバーがあれば、設定が受理されたことと配信画像の一致を確認する。既存ブラウザに表示されない場合は再読み込みする。今後作るディレクトリやworktreeは、作成後に再実行する必要がある。アプリの全セル共通設定を追加するものではない。
-
 # 設定（config.json）を複数の Mac でそろえる
 
 `~/.mulmoterminal/config.json` はアプリ自身が「一時ファイルに書いて置き換える」形で保存するため、シンボリックリンクにできない（保存した瞬間にリンクが普通のファイルに戻る）。そのため `scripts/sync-mulmoterminal-config.py` で、丸ごとのコピーではなくキーごとにそろえる。
@@ -37,3 +23,30 @@ deployでも実行する。各MacのMulmoTerminalに保存されたディレク�
 | `worklogEnabled` | 作業ログの定期要約。トークンを使うので一台（Mac mini）だけで動かす |
 | `accounts`, `repoDirs` | この Mac のディスク上のパスを指す |
 | `prRepos`, `gitlabHosts` | 仕事のリポジトリ名・ホスト名。このリポジトリは公開なのでコミットしない。Mac 間では `/api/config` に直接 POST してそろえる |
+
+
+## プロジェクトの色と背景を別のMacへ引き継ぐ
+
+個人用のプロジェクト設定の正本は非公開の `ele-workspace` リポジトリの
+`config/mulmoterminal-projects.json`。背景画像はこのリポジトリの
+`backgrounds/dog.JPG`、濃さ・表示方法は `background.json`。設定・画像の両方をGitで管理する。
+このdotfilesは公開なので、非公開プロジェクト名をここへ保存しない。
+各アプリの共有リポジトリに個人用の画像を追加する必要はない。
+
+```sh
+python3 ~/dotfiles/scripts/sync-mulmoterminal-projects.py --dry-run
+python3 ~/dotfiles/scripts/sync-mulmoterminal-projects.py
+```
+
+`deploy.sh` からも既存の `apply-mulmoterminal-background.py` 経由で実行する。
+ホームからの相対パスで対象を指定し、存在しないプロジェクトはスキップする。
+各プロジェクトの既存設定を優先して不足キーだけ補い、設定・画像の配布先を
+そのチェックアウトの `.git/info/exclude` に追加する。既にGit管理されている
+設定ファイルは書き換えない。共有設定とローカル設定が両方Git管理され、
+追加が必要な場合は停止してプロジェクト側のPRで対応する。
+
+別の背景画像や明示的な背景無効化も保持する。画像の内容が正本と異なる場合は
+上書きせず停止する。登録一覧・配置順・アカウントは変更しない。
+変更を他のMacへ配る場合は 非公開リポジトリの `config/mulmoterminal-projects.json` を更新してcommit・pushし、
+取り込み先で上記コマンドを実行する。既存キーの変更は各Macで自動上書きしないため、
+意図した差分を確認して適用する。反映後はMulmoTerminalの画面を再読み込みする。
