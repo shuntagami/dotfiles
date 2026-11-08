@@ -5,10 +5,10 @@ on run argv
     set targetName to item 1 of argv
 
     tell application "System Events"
-        if not (exists process "Jump Desktop") then error "MacBookでJump Desktopを起動し、Mac miniに接続してから実行してください。"
+        if not (exists process "Jump Desktop") then error "MacBookでJump Desktopを起動し、接続してから実行してください。"
         tell process "Jump Desktop"
             set targets to windows whose name is targetName
-            if (count of targets) is not 1 then error "接続ウィンドウ「" & targetName & "」が1つ必要です。Mac miniに接続し、ダイアログを閉じてから実行してください。"
+            if (count of targets) is not 1 then error "接続ウィンドウ「" & targetName & "」が1つ必要です。接続し、ダイアログを閉じてから実行してください。"
             set targetWindow to item 1 of targets
             set wasFullscreen to value of attribute "AXFullScreen" of targetWindow
             if not (exists menu item "Single Virtual Display" of menu "Display" of menu bar 1) then error "Jump Desktop 10のDisplayメニューが必要です。"
