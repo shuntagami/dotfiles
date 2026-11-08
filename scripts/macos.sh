@@ -637,10 +637,10 @@ bash "${HOME}/dotfiles/scripts/macos-aqua-voice.sh"
 bash "${HOME}/dotfiles/scripts/macos-clipy.sh"
 
 ###############################################################################
-# MonitorControl                                                               #
+# BetterDisplay                                                                #
 ###############################################################################
 
-# App settings are applied by scripts/deploy.sh, including MonitorControl.
+# App settings are applied by scripts/deploy.sh, including BetterDisplay.
 
 ###############################################################################
 # Login items (auto-start on boot)                                            #
