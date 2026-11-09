@@ -295,8 +295,6 @@ cask "espanso"
 cask "fork"
 # Set of tools to manage resources and applications hosted on Google Cloud
 cask "gcloud-cli"
-# Free and open-source image editor
-cask "gimp"
 # Web browser
 cask "google-chrome"
 # Screenshot and screen recording tool
