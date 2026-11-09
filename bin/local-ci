@@ -1,0 +1,127 @@
+#!/usr/bin/env node
+// 手元で CI を回し、通ったら GitHub のそのコミットに `local-ci` の合格印（commit status）を付ける。
+//
+//   local-ci            今のコミットを検査し、合格印を付ける
+//   local-ci --force    合格の記録があっても検査し直す
+//
+// 何を検査するかはリポジトリごとの package.json の `ci:local` が決める。ここは
+// 「未コミットの変更がないこと」「並列で回してもぶつからない値を渡すこと」「合格印を付けること」だけを持つ。
+//
+// 検査に渡す環境変数:
+//   CI=1              Playwright などが既存の開発サーバーを使い回さないように
+//   PORT              空いているポート。同じ Mac で別のサーバーが 3000 番で動いていてもぶつからない
+//   LOCAL_CI_RUN_ID   実行ごとに違う英小文字・数字。テスト用 DB 名の末尾などに使う
+//
+// 合格の記録は <git の共通ディレクトリ>/local-ci/passed/<sha> に残す。push 前に回して合格したら、
+// push 後にもう一度 `local-ci` を実行すれば検査を回し直さずに合格印だけ付ける。
+import { spawn, spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:net';
+import { hostname } from 'node:os';
+import path from 'node:path';
+
+const CONTEXT = 'local-ci';
+const force = process.argv.includes('--force');
+
+const run = (cmd, args, opts = {}) => {
+  const r = spawnSync(cmd, args, { encoding: 'utf8', ...opts });
+  return { ok: r.status === 0, out: (r.stdout ?? '').trim(), err: (r.stderr ?? '').trim() };
+};
+const fail = (message) => {
+  console.error(`[local-ci] ${message}`);
+  process.exit(1);
+};
+
+const top = run('git', ['rev-parse', '--show-toplevel']);
+if (!top.ok) fail('Git リポジトリの中で実行してください。');
+const root = top.out;
+
+const pkgPath = path.join(root, 'package.json');
+const script = existsSync(pkgPath)
+  ? JSON.parse(readFileSync(pkgPath, 'utf8')).scripts?.['ci:local']
+  : undefined;
+if (!script) fail(`${root} の package.json に "ci:local" がありません。このリポジトリは手元 CI の対象外です。`);
+
+const dirty = run('git', ['status', '--porcelain', '--untracked-files=no'], { cwd: root });
+if (dirty.out) {
+  fail('commit していない変更があります。合格印はコミットに付けるので、commit してから実行してください。\n' + dirty.out);
+}
+
+const sha = run('git', ['rev-parse', 'HEAD'], { cwd: root }).out;
+const short = sha.slice(0, 7);
+const repo = run('gh', ['repo', 'view', '--json', 'nameWithOwner', '-q', '.nameWithOwner'], { cwd: root });
+if (!repo.ok) fail(`GitHub のリポジトリ名を取れませんでした（gh repo view）。\n${repo.err}`);
+
+const commonDir = path.resolve(root, run('git', ['rev-parse', '--git-common-dir'], { cwd: root }).out);
+const passedDir = path.join(commonDir, 'local-ci', 'passed');
+const passedFile = path.join(passedDir, sha);
+
+const onGitHub = () =>
+  run('gh', ['api', `repos/${repo.out}/commits/${sha}`, '--silent'], { cwd: root }).ok;
+
+const postStatus = (state, description) => {
+  const r = run(
+    'gh',
+    [
+      'api', '-X', 'POST', `repos/${repo.out}/statuses/${sha}`,
+      '-f', `state=${state}`,
+      '-f', `context=${CONTEXT}`,
+      '-f', `description=${description.slice(0, 140)}`,
+    ],
+    { cwd: root },
+  );
+  if (!r.ok) fail(`合格印を付けられませんでした（${repo.out}@${short}）。\n${r.err}`);
+};
+
+const freePort = () =>
+  new Promise((resolve, reject) => {
+    const server = createServer();
+    server.on('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const { port } = server.address();
+      server.close(() => resolve(port));
+    });
+  });
+
+const packageManager = existsSync(path.join(root, 'pnpm-lock.yaml'))
+  ? 'pnpm'
+  : existsSync(path.join(root, 'yarn.lock'))
+    ? 'yarn'
+    : 'npm';
+
+let passedDescription;
+if (!force && existsSync(passedFile)) {
+  passedDescription = readFileSync(passedFile, 'utf8').trim();
+  console.log(`[local-ci] ${short} は合格済みです（${passedDescription}）。検査は回し直しません。`);
+} else {
+  const runId = `${short}${process.pid.toString(36)}`.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const port = await freePort();
+  console.log(`[local-ci] ${repo.out}@${short} を検査します: ${packageManager} run ci:local（PORT=${port}, LOCAL_CI_RUN_ID=${runId}）`);
+  const started = Date.now();
+  const code = await new Promise((resolve) => {
+    const child = spawn(packageManager, ['run', 'ci:local'], {
+      cwd: root,
+      stdio: 'inherit',
+      env: { ...process.env, CI: '1', PORT: String(port), LOCAL_CI_RUN_ID: runId },
+    });
+    for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => child.kill(signal));
+    child.on('exit', (exitCode, signal) => resolve(signal ? 1 : (exitCode ?? 1)));
+  });
+  const seconds = Math.round((Date.now() - started) / 1000);
+  if (code !== 0) {
+    if (onGitHub()) postStatus('failure', `ci:local failed on ${hostname()} in ${seconds}s`);
+    fail(`ci:local が失敗しました（${seconds} 秒）。直して commit してから、もう一度 local-ci を実行してください。`);
+  }
+  passedDescription = `ci:local passed on ${hostname()} in ${seconds}s`;
+  mkdirSync(passedDir, { recursive: true });
+  writeFileSync(passedFile, `${passedDescription}\n`);
+}
+
+if (!onGitHub()) {
+  console.log(
+    `[local-ci] ${short} はまだ GitHub にありません。push してからもう一度 local-ci を実行すると、合格印だけ付けます。`,
+  );
+  process.exit(0);
+}
+postStatus('success', passedDescription);
+console.log(`[local-ci] ${repo.out}@${short} に合格印（${CONTEXT}）を付けました。`);
