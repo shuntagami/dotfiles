@@ -275,18 +275,12 @@ cask "aqua-voice"
 cask "aws-vault-binary"
 # Display management tool
 cask "betterdisplay"
-# OpenAI's official ChatGPT desktop app
-cask "chatgpt"
 # Remotely access another computer through the Google Chrome browser
 cask "chrome-remote-desktop-host"
-# Anthropic's official Claude AI desktop app
-cask "claude"
 # Screen capturing tool
 cask "cleanshot"
 # Clipboard extension app
 cask "clipy"
-# OpenAI's Codex desktop app for managing coding agents
-cask "codex-app"
 # Write, edit, and chat about your code with AI
 cask "cursor"
 # Voice and text chat software
