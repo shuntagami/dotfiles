@@ -291,8 +291,6 @@ cask "docker-desktop"
 cask "dropbox"
 # Cross-platform Text Expander written in Rust
 cask "espanso"
-# Collaborative team software
-cask "figma@beta"
 # GIT client
 cask "fork"
 # Set of tools to manage resources and applications hosted on Google Cloud
