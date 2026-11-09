@@ -267,6 +267,8 @@ brew "vectordotdev/brew/vector", trusted: true
 cask "adobe-acrobat-reader"
 # Agent orchestration platform
 cask "antigravity"
+# Terminal interface for Antigravity agents
+cask "antigravity-cli"
 # Speech-to-text system
 cask "aqua-voice"
 # Securely stores and accesses AWS credentials in a development environment
