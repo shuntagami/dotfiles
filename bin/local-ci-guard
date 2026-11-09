@@ -6,6 +6,9 @@
 // 止めるのは package.json に `ci:local` があるリポジトリだけ。判定できないとき（別リポジトリを
 // -R で指している、gh が失敗した など）は通す。最後の歯止めは GitHub 側の必須チェックが持つ。
 //
+// package.json に `localCi.paths`（Actions の on.push.paths と同じ書き方の一覧）があるリポジトリでは、
+// PR の変更がそのどれにも当たらないとき（資料だけの PR など）は合格印を求めない。
+//
 // 入力: 標準入力の JSON（tool_name, tool_input.command, cwd）
 // 止めるとき: 終了コード 2 と標準エラーの文（Claude Code・Codex ともにその文がエージェントに返る）
 import { spawnSync } from 'node:child_process';
@@ -46,18 +49,49 @@ const top = run('git', ['rev-parse', '--show-toplevel']);
 if (!top.ok) allow();
 const pkgPath = path.join(top.out, 'package.json');
 if (!existsSync(pkgPath)) allow();
+let pkg;
 try {
-  if (!JSON.parse(readFileSync(pkgPath, 'utf8')).scripts?.['ci:local']) allow();
+  pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
 } catch {
   allow();
+}
+if (!pkg.scripts?.['ci:local']) allow();
+
+/** `gh pr merge` の対象（番号・URL・branch）。無ければ今の branch の PR */
+const mergeTarget = () => {
+  const afterMerge = command.slice(command.search(/\bgh\s+pr\s+merge\b/)).split(/\s+/).slice(3);
+  return afterMerge.find((t) => t && !t.startsWith('-') && !/^(&&|;|\|\|?)$/.test(t));
+};
+
+/** PR で変わるファイル。取れなければ null（安全側 = 合格印を求める） */
+const changedFiles = () => {
+  if (action === 'merge') {
+    const target = mergeTarget();
+    const r = run('gh', ['pr', 'diff', ...(target ? [target] : []), '--name-only']);
+    return r.ok ? r.out.split('\n').filter(Boolean) : null;
+  }
+  // `gh pr create -B <base>` ならその branch、無ければ既定の branch と比べる
+  const baseFlag = command
+    .match(/\s(?:-B|--base)[\s=]+("[^"]+"|'[^']+'|[^\s;&|]+)/)?.[1]
+    ?.replace(/^["']|["']$/g, '');
+  const base = baseFlag ?? run('gh', ['repo', 'view', '--json', 'defaultBranchRef', '-q', '.defaultBranchRef.name']).out;
+  if (!base) return null;
+  const r = run('git', ['-c', 'core.quotePath=false', 'diff', '--name-only', `origin/${base}...HEAD`]);
+  return r.ok ? r.out.split('\n').filter(Boolean) : null;
+};
+
+const ciPaths = pkg.localCi?.paths;
+if (Array.isArray(ciPaths) && ciPaths.length > 0 && typeof path.matchesGlob === 'function') {
+  const changed = changedFiles();
+  const needsCi = (file) => ciPaths.some((pattern) => path.matchesGlob(file, pattern));
+  if (changed && !changed.some(needsCi)) allow();
 }
 
 let sha;
 if (action === 'create') {
   sha = run('git', ['rev-parse', 'HEAD']).out;
 } else {
-  const afterMerge = command.slice(command.search(/\bgh\s+pr\s+merge\b/)).split(/\s+/).slice(3);
-  const target = afterMerge.find((t) => t && !t.startsWith('-') && !/^(&&|;|\|\|?)$/.test(t));
+  const target = mergeTarget();
   const r = run('gh', ['pr', 'view', ...(target ? [target] : []), '--json', 'headRefOid', '-q', '.headRefOid']);
   if (!r.ok) allow();
   sha = r.out;
