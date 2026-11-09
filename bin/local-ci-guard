@@ -23,13 +23,15 @@ try {
 }
 if (input?.tool_name !== 'Bash') allow();
 const command = String(input.tool_input?.command ?? '');
-const action = command.match(/\bgh\s+pr\s+(create|merge)\b/)?.[1];
+// コマンドの先頭か && ; | ( の直後にある gh pr だけを見る（コミットメッセージや echo の中の文字列には反応しない）
+const GH_PR = /(?:^|[;&|(\n])\s*gh\s+pr\s+(create|merge)\b/;
+const action = command.match(GH_PR)?.[1];
 if (!action) allow();
 if (/\s(-R|--repo)[\s=]/.test(command)) allow();
 
 // `cd <dir> && gh pr ...` の形なら、その dir を見る
 let dir = input.cwd || process.cwd();
-const beforeGh = command.slice(0, command.search(/\bgh\s+pr\s+(create|merge)\b/));
+const beforeGh = command.slice(0, command.search(GH_PR));
 for (const m of beforeGh.matchAll(/(?:^|&&|;|\|\|)\s*cd\s+("[^"]+"|'[^']+'|[^\s;&|]+)/g)) {
   const target = m[1].replace(/^["']|["']$/g, '').replace(/^~(?=$|\/)/, homedir());
   dir = path.resolve(dir, target);
