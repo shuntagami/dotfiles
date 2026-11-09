@@ -1,0 +1,88 @@
+#!/usr/bin/env node
+// Claude Code / Codex の PreToolUse フック。
+// エージェントが `gh pr create` か `gh pr merge` を実行しようとしたとき、対象のコミットに
+// 手元 CI の合格印（commit status `local-ci` = success）があるかを GitHub で確かめ、なければ止める。
+//
+// 止めるのは package.json に `ci:local` があるリポジトリだけ。判定できないとき（別リポジトリを
+// -R で指している、gh が失敗した など）は通す。最後の歯止めは GitHub 側の必須チェックが持つ。
+//
+// 入力: 標準入力の JSON（tool_name, tool_input.command, cwd）
+// 止めるとき: 終了コード 2 と標準エラーの文（Claude Code・Codex ともにその文がエージェントに返る）
+import { spawnSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import path from 'node:path';
+
+const allow = () => process.exit(0);
+
+let input;
+try {
+  input = JSON.parse(readFileSync(0, 'utf8'));
+} catch {
+  allow();
+}
+if (input?.tool_name !== 'Bash') allow();
+const command = String(input.tool_input?.command ?? '');
+// コマンドの先頭か && ; | ( の直後にある gh pr だけを見る（コミットメッセージや echo の中の文字列には反応しない）
+const GH_PR = /(?:^|[;&|(\n])\s*gh\s+pr\s+(create|merge)\b/;
+const action = command.match(GH_PR)?.[1];
+if (!action) allow();
+if (/\s(-R|--repo)[\s=]/.test(command)) allow();
+
+// `cd <dir> && gh pr ...` の形なら、その dir を見る
+let dir = input.cwd || process.cwd();
+const beforeGh = command.slice(0, command.search(GH_PR));
+for (const m of beforeGh.matchAll(/(?:^|&&|;|\|\|)\s*cd\s+("[^"]+"|'[^']+'|[^\s;&|]+)/g)) {
+  const target = m[1].replace(/^["']|["']$/g, '').replace(/^~(?=$|\/)/, homedir());
+  dir = path.resolve(dir, target);
+}
+
+const run = (cmd, args) => {
+  const r = spawnSync(cmd, args, { cwd: dir, encoding: 'utf8', timeout: 20_000 });
+  return { ok: r.status === 0, out: (r.stdout ?? '').trim() };
+};
+
+const top = run('git', ['rev-parse', '--show-toplevel']);
+if (!top.ok) allow();
+const pkgPath = path.join(top.out, 'package.json');
+if (!existsSync(pkgPath)) allow();
+try {
+  if (!JSON.parse(readFileSync(pkgPath, 'utf8')).scripts?.['ci:local']) allow();
+} catch {
+  allow();
+}
+
+let sha;
+if (action === 'create') {
+  sha = run('git', ['rev-parse', 'HEAD']).out;
+} else {
+  const afterMerge = command.slice(command.search(/\bgh\s+pr\s+merge\b/)).split(/\s+/).slice(3);
+  const target = afterMerge.find((t) => t && !t.startsWith('-') && !/^(&&|;|\|\|?)$/.test(t));
+  const r = run('gh', ['pr', 'view', ...(target ? [target] : []), '--json', 'headRefOid', '-q', '.headRefOid']);
+  if (!r.ok) allow();
+  sha = r.out;
+}
+if (!sha) allow();
+
+const repo = run('gh', ['repo', 'view', '--json', 'nameWithOwner', '-q', '.nameWithOwner']);
+if (!repo.ok) allow();
+const status = run('gh', [
+  'api', `repos/${repo.out}/commits/${sha}/status`,
+  '--jq', `[.statuses[] | select(.context == "local-ci")][0].state // ""`,
+]);
+if (status.out === 'success') allow();
+
+const short = sha.slice(0, 7);
+const reason =
+  status.out === 'failure'
+    ? `このコミット（${short}）の手元 CI（local-ci）は失敗しています。`
+    : `このコミット（${short}）には手元 CI の合格印（local-ci）がありません。`;
+process.stderr.write(
+  `${reason}\n` +
+    `${top.out} で commit・push したうえで \`local-ci\` を実行してください（中で \`ci:local\` を回し、通ると GitHub のこのコミットに合格印を付けます）。` +
+    `合格印が付けば、この gh pr ${action} を実行できます。\n` +
+    (action === 'merge'
+      ? 'マージする PR の先頭コミットに合格印が要ります。手元のブランチを PR の先頭にそろえてから回してください。\n'
+      : ''),
+);
+process.exit(2);
