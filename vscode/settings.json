@@ -173,4 +173,6 @@
     "**/compose.*.yaml",
   ],
   "workbench.editor.enablePreview": false,
+  "cursor.composer.queueMessageDefaultBehavior": "steer",
+  "cursor.composer.queueManualSendBehavior2": "steer",
 }
