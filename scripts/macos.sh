@@ -320,6 +320,14 @@ defaults write com.apple.dock mouse-over-hilite-stack -bool true
 # Set the icon size of Dock items to 24 pixels
 defaults write com.apple.dock "tilesize" -int "24"
 
+# Dock position: right on a MacBook, left on desktop Macs
+# (IS_LAPTOP is detected in the "Energy saving" section)
+if $IS_LAPTOP; then
+	defaults write com.apple.dock orientation -string "right"
+else
+	defaults write com.apple.dock orientation -string "left"
+fi
+
 # Change minimize/maximize window effect
 defaults write com.apple.dock mineffect -string "scale"
 
