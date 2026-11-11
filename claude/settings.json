@@ -175,7 +175,7 @@
     "environment": [
       "### Org-wide",
       "**Organization**: ele-inc (GitHub org — origin remote github.com/ele-inc/marunage-studio)",
-      "**Cloud provider(s)**: Supabase (project vktggjrrpqoepgsziwsj.supabase.co), Vercel (hosting/deploy)",
+      "**Cloud provider(s)**: Supabase (the project backing this app), Vercel (hosting/deploy)",
       "**Repository visibility**: private (ele-inc/marunage-studio, confirmed via gh)",
       "**Internal sharing / snippet hosting**: None configured — treat public paste/gist services as outside the trust boundary",
       "**Secrets management**: Local `.env.local` (root, symlinked into apps/studio/.env.local) and `apps/dashboard/.env.local`, populated manually from owner via a secure channel — never committed (see .gitignore patterns and README setup steps)",
@@ -185,7 +185,7 @@
       "**Source control**: The trusted repo (ele-inc/marunage-studio) and its origin remote only",
       "**Trusted internal domains**: registry.tiptap.dev (Tiptap Pro npm registry, per README setup and package registry host scan)",
       "**Trusted cloud buckets**: None configured",
-      "**Key internal services**: api.supabase.com and vktggjrrpqoepgsziwsj.supabase.co (Supabase project backing this app, per hosts-contacted usage); api.vercel.com (Vercel deploy API, per hosts-contacted usage)",
+      "**Key internal services**: api.supabase.com and the app's <project>.supabase.co host (Supabase project backing this app, per hosts-contacted usage); api.vercel.com (Vercel deploy API, per hosts-contacted usage)",
       "**Internal package registry**: registry.tiptap.dev (Tiptap Pro tracked-changes package, token set via user-level npm config per README — not committed to .npmrc)",
       "**Sensitive data locations & audiences**: `.env.local`, `.env.local.zmuat-backup`, `.env.production.local`, `apps/dashboard/.env.local`, `apps/studio/.env.local.production` (local secrets, never commit); client deliverables and feedback under `/c/[clientSlug]` portal — share only with the specific client audience; `apps/dashboard/supabase/migrations/` and root `supabase/migrations/` (schema/data-shape history)",
       "**Data retention / declassification**: None configured",

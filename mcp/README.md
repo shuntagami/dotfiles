@@ -43,7 +43,9 @@ Secrets are not committed. Prefer each service's official OAuth connector or
 tool-specific local config over storing tokens for MCP servers in dotfiles.
 
 Supabase uses the local stdio MCP server with a long-lived PAT stored in a
-dedicated `Supabase MCP` item in macOS Keychain. Configure or rotate it with:
+dedicated `Supabase MCP` item in macOS Keychain. The project ref is kept in the
+same Keychain service (account `project-ref`) so it is not committed either.
+Configure or rotate either one with:
 
 ```sh
 ~/dotfiles/mcp/setup-supabase-mcp-auth.sh
