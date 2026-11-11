@@ -30,3 +30,8 @@ claude/skills/vfr-sync-rife/bin/
 raycast/*.local.json
 raycast/*.local.json.backup-*
 *.rayconfig
+
+# Scheduler state and run logs (machine-local)
+config/scheduler/
+misc/config/scheduler/
+misc/data/scheduler/
