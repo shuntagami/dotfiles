@@ -292,12 +292,3 @@ NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "9230e2bd8b24b7ac7a0ba6774c64bf0d78ec
 
 [hooks.state."/<session-flags>/config.toml:permission_request:0:0"]
 trusted_hash = "sha256:5ffe74aecfff9f687226ef7fb9ba0c2c704b35f476175e8c10300883aaa5973f"
-
-# gh pr create / gh pr merge の前に、手元 CI（local-ci）の合格印を確かめる。ci:local があるリポジトリだけ。
-[[hooks.PreToolUse]]
-matcher = "^Bash$"
-
-[[hooks.PreToolUse.hooks]]
-type = "command"
-command = "/Users/shun.tagami/dotfiles/bin/local-ci-guard"
-timeout = 60

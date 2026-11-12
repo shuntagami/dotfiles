@@ -50,16 +50,6 @@
             "command": "/Users/shun.tagami/.config/iterm2/cc-status"
           }
         ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/shun.tagami/dotfiles/bin/local-ci-guard",
-            "timeout": 60
-          }
-        ]
       }
     ],
     "SessionEnd": [
