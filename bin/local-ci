@@ -99,7 +99,15 @@ if (!force && existsSync(passedFile)) {
   console.log(`[local-ci] ${repo.out}@${short} を検査します: ${packageManager} run ci:local（PORT=${port}, LOCAL_CI_RUN_ID=${runId}）`);
   const started = Date.now();
   const code = await new Promise((resolve) => {
-    const child = spawn(packageManager, ['run', 'ci:local'], {
+    // ci:local は1本で全コアを使い切る（M5 の30コアで負荷平均が100超）。通常の優先度のままだと
+    // Aqua Voice や端末の入力まで順番待ちになるので、macOS ではバックグラウンド扱い（taskpolicy -b）で
+    // 回す。誰も他に使っていない間は普通の速さで進み、前面の操作があるときだけ譲る。
+    // taskpolicy は対象コマンドに置き換わる（exec）ので、pid も signal の渡り方も変わらない。
+    const [command, ...args] =
+      process.platform === 'darwin'
+        ? ['taskpolicy', '-b', packageManager, 'run', 'ci:local']
+        : [packageManager, 'run', 'ci:local'];
+    const child = spawn(command, args, {
       cwd: root,
       stdio: 'inherit',
       env: { ...process.env, CI: '1', PORT: String(port), LOCAL_CI_RUN_ID: runId },
