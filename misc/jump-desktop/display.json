@@ -1,5 +1,8 @@
 {
-  "displayName": "Shun-Tagami-Mac-mini",
+  "displayNames": [
+    "Shun-Tagami-Mac-Studio",
+    "Shun-Tagami-Mac-mini"
+  ],
   "settings": {
     "UseVirtualMonitors": true,
     "NumberOfVirtualMonitors": 1,

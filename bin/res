@@ -1,0 +1,265 @@
+#!/bin/zsh
+# Display resolution, mirroring and screen sharing, all through BetterDisplay
+# (see docs/betterdisplay.md). Acts on the main display.
+
+set -euo pipefail
+
+readonly BD="/Applications/BetterDisplay.app/Contents/MacOS/BetterDisplay"
+readonly PREFS="pro.betterdisplay.BetterDisplay"
+readonly SHARE="Screen Share 16x9"
+readonly SHARE_RES="1920x1080"
+# The mirrored display and its mode before sharing. Connecting and
+# disconnecting a virtual screen makes macOS pick another mode for the
+# monitor, so `share off` restores the saved one.
+readonly STATE="${HOME}/Library/Application Support/dotfiles/res-share-target"
+
+# Sizes ("looks like" resolution) for the monitors in use.
+typeset -rA PRESETS=(
+  40  3840x1620  # 40" 5120x2160
+  31  3360x1890  # 31.5" 4K
+  27  3008x1692  # 27" 5K
+  qhd 2560x1440
+  fhd 1920x1080
+)
+
+usage() {
+  cat <<'EOF'
+Usage: res                   Show each display's mode
+       res <size>            Set the main display's size: 40, 31, 27, qhd, fhd,
+                             WIDTHxHEIGHT, max (largest) or default (macOS default).
+                             HiDPI is preferred and the refresh rate is kept.
+       res hidpi [on|off]    Sharper (HiDPI) rendering at the same size; default on
+       res mirror [on|off]   Mirror the main display to the external monitor
+       res share [on|off]    Share a 16:9 screen (1920x1080 HiDPI) mirrored to the
+                             main display, so viewers see it at a readable size
+EOF
+}
+
+bd() {
+  "${BD}" "$@"
+}
+
+# The CLI lists the display group too ("2,-1001").
+main_tag() {
+  local value
+  value="$(bd get -displayWithMainStatus -identifier=tagID)"
+  print -r -- "${value%%,*}"
+}
+
+# Tags of connected displays: "physical" (monitors, laptop panel) or "all".
+display_tags() {
+  local tag
+  bd get -identifiers | sed '1s/^/[/; $s/$/]/' |
+    jq -r '.[] | select(.deviceType == "Display") | .tagID' |
+    while read -r tag; do
+      if [[ "$1" == all ]] || [[ "$(defaults read "${PREFS}" "systemVirtual@Display:${tag}" 2>/dev/null)" != 1 &&
+            "$(defaults read "${PREFS}" "thirdPartyVirtual@Display:${tag}" 2>/dev/null)" != 1 ]]; then
+        print -r -- "${tag}"
+      fi
+    done
+}
+
+# Prints the mode number to use. $2 is WIDTHxHEIGHT, "max" or "default";
+# $3 is on, off or prefer (HiDPI). Among matching modes it keeps the current
+# refresh rate, otherwise takes the highest one (a fixed rate over a variable
+# range with the same maximum); unsafe modes are skipped.
+pick_mode() {
+  bd get -tagID="$1" -displayModeList | awk -v size="$2" -v hidpi="$3" '
+    function rate(r) { sub(/Hz.*/, "", r); sub(/.*-/, "", r); return r + 0 }
+    / Unsafe/ { next }
+    {
+      n++; num[n] = $1; sz[n] = $3; hd[n] = ($4 == "HiDPI")
+      rt[n] = hd[n] ? $5 : $4
+      split($3, wh, "x"); area[n] = wh[1] * wh[2]
+      if (/ Current/) current = rt[n]
+      if (/ Default/) def = $3
+      if (area[n] > maxarea) { maxarea = area[n]; maxsize = $3 }
+    }
+    END {
+      if (size == "max") size = maxsize
+      if (size == "default") { size = def; if (hidpi == "prefer") hidpi = "on" }
+      for (i = 1; i <= n; i++) {
+        if (sz[i] != size || (hidpi == "on" && !hd[i]) || (hidpi == "off" && hd[i])) continue
+        score = (hd[i] ? 1000000 : 0) + (rt[i] == current ? 1000 : 0) + rate(rt[i]) * 2 + (rt[i] !~ /-/)
+        if (score > best) { best = score; pick = num[i] }
+      }
+      if (pick == "") exit 1
+      print pick
+    }'
+}
+
+current_mode() {
+  bd get -tagID="$1" -displayModeList | awk '/ Current/ { print $1; exit }'
+}
+
+set_mode() {
+  local tag="$1" size="$2" hidpi="$3" mode name
+  name="$(bd get -tagID="${tag}" -identifier=name)"
+  if ! mode="$(pick_mode "${tag}" "${size}" "${hidpi}")"; then
+    print -u2 -r -- "${name} has no ${size}$([[ "${hidpi}" == prefer ]] || print -n " HiDPI=${hidpi}") mode."
+    return 1
+  fi
+  # The CLI reports "Failed." for a no-op change.
+  if [[ "$(current_mode "${tag}")" != "${mode}" ]]; then
+    bd set -tagID="${tag}" -displayModeNumber="${mode}"
+  fi
+}
+
+show_status() {
+  local main tag line
+  main="$(main_tag)"
+  for tag in $(display_tags all); do
+    # e.g. "151 - 3840x1620 HiDPI 120Hz 10bpc Current" -> "3840x1620 HiDPI 120Hz"
+    line="$(bd get -tagID="${tag}" -displayModeList | awk '/ Current/ { print $3, ($4 == "HiDPI" ? "HiDPI " $5 : $4); exit }')"
+    print -r -- "$(bd get -tagID="${tag}" -identifier=name)$([[ "${tag}" == "${main}" ]] && print -n " (main)"): ${line}"
+  done
+  if sharing; then print -r -- "share: on"; fi
+}
+
+set_size() {
+  local size="${PRESETS[$1]:-$1}"
+  if [[ "${size}" != (max|default|<->x<->) ]]; then
+    usage >&2
+    exit 2
+  fi
+  set_mode "$(main_tag)" "${size}" prefer
+  show_status
+}
+
+set_hidpi() {
+  local value="${1:-on}" tag size
+  [[ "${value}" == (on|off) ]] || { usage >&2; exit 2; }
+  tag="$(main_tag)"
+  size="$(bd get -tagID="${tag}" -resolution)"
+  set_mode "${tag}" "${size}" "${value}"
+  show_status
+}
+
+# Mirroring is set on the source with the mirroring displays as targets.
+# The main display shows the external monitor's content, as macOS does when
+# a laptop is set to mirror its monitor.
+mirror() {
+  local main tag a b
+  local -a tags
+  main="$(main_tag)"
+  tags=($(display_tags physical))
+  case "${1:-on}" in
+    on)
+      for tag in "${tags[@]}"; do
+        if [[ "${tag}" != "${main}" ]]; then
+          bd set -tagID="${tag}" -mirror=on -targetTagID="${main}"
+          show_status
+          return
+        fi
+      done
+      print -u2 -r -- "Mirroring needs a second display."
+      return 1
+      ;;
+    off)
+      # The CLI needs both ends; try every pair (failures mean "not mirrored").
+      for a in "${tags[@]}"; do
+        for b in "${tags[@]}"; do
+          [[ "${a}" == "${b}" ]] || bd set -tagID="${a}" -mirror=off -targetTagID="${b}" >/dev/null 2>&1 || true
+        done
+      done
+      show_status
+      ;;
+    *) usage >&2; exit 2 ;;
+  esac
+}
+
+# While connected the name matches both the virtual screen and its display ("on,on").
+sharing() {
+  [[ "$(bd get -name="${SHARE}" -connected 2>/dev/null)" == on* ]]
+}
+
+share_on() {
+  local target mode
+  if [[ -f "${STATE}" ]]; then
+    read -r target mode < "${STATE}"
+    if sharing; then
+      # Sharing, or a `share off` that could not disconnect: mirror again
+      # (a no-op when already mirrored) and keep the saved mode.
+      bd set -name="${SHARE}" -mirror=on -targetTagID="${target}" >/dev/null 2>&1 || true
+      print -r -- "Already sharing (${SHARE})."
+      return
+    fi
+    # An unfinished `share off` left the original mode saved. Restore it first,
+    # so the new share does not record the mode macOS switched to.
+    share_off >/dev/null
+  elif sharing; then
+    print -r -- "Already sharing (${SHARE})."
+    return
+  fi
+  target="$(main_tag)"
+  mode="$(current_mode "${target}")"
+  mkdir -p "${STATE:h}"
+  print -r -- "${target} ${mode}" > "${STATE}"
+  if ! bd get -name="${SHARE}" -identifier=tagID >/dev/null 2>&1; then
+    bd create -type=VirtualScreen -virtualScreenName="${SHARE}" \
+      -aspectWidth=16 -aspectHeight=9 -virtualScreenHiDPI=on
+  fi
+  bd set -name="${SHARE}" -connected=on
+  # The screen keeps its mode between sessions; set it only when needed.
+  for _ in {1..20}; do
+    bd get -name="${SHARE}" -resolution >/dev/null 2>&1 && break
+    sleep 0.5
+  done
+  if [[ "$(bd get -name="${SHARE}" -resolution)" != "${SHARE_RES}" ||
+        "$(bd get -name="${SHARE}" -hiDPI)" != on ]]; then
+    bd set -name="${SHARE}" -resolution="${SHARE_RES}" -hiDPI=on
+  fi
+  bd set -name="${SHARE}" -mirror=on -targetTagID="${target}"
+  print -r -- "Sharing: share the whole screen \"${SHARE}\". Stop with: res share off"
+}
+
+share_off() {
+  local target="" mode=""
+  if [[ -f "${STATE}" ]]; then
+    read -r target mode < "${STATE}"
+    bd set -name="${SHARE}" -mirror=off -targetTagID="${target}" >/dev/null 2>&1 || true
+  fi
+  # On failure keep the state file, so `res share off` can retry the restore.
+  if sharing && ! bd set -name="${SHARE}" -connected=off; then
+    print -u2 -r -- "Could not disconnect ${SHARE}; run res share off again."
+    return 1
+  fi
+  if [[ -n "${mode}" ]]; then
+    # macOS settles the layout asynchronously; reapply until the mode sticks.
+    for _ in {1..10}; do
+      sleep 1
+      [[ "$(current_mode "${target}")" == "${mode}" ]] && break
+      bd set -tagID="${target}" -displayModeNumber="${mode}" >/dev/null 2>&1 || true
+    done
+    if [[ "$(current_mode "${target}")" != "${mode}" ]]; then
+      print -u2 -r -- "Could not restore display mode ${mode}; run res share off again."
+      return 1
+    fi
+  fi
+  rm -f "${STATE}"
+  show_status
+}
+
+if [[ ! -x "${BD}" ]]; then
+  print -u2 -r -- "BetterDisplay is not installed (brew install --cask betterdisplay)."
+  exit 1
+fi
+if ! bd get -proAvailable >/dev/null 2>&1; then
+  print -u2 -r -- "BetterDisplay is not running (open -a BetterDisplay)."
+  exit 1
+fi
+
+case "${1:-}" in
+  "") show_status ;;
+  hidpi) set_hidpi "${2:-on}" ;;
+  mirror) mirror "${2:-on}" ;;
+  share)
+    case "${2:-on}" in
+      on) share_on ;;
+      off) share_off ;;
+      *) usage >&2; exit 2 ;;
+    esac
+    ;;
+  -h|--help|help) usage ;;
+  *) set_size "$1" ;;
+esac

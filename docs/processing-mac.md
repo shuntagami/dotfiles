@@ -137,7 +137,7 @@ Thunderbolt ケーブルでつなぐ場合は、2台を近くに置きます。
 サービス以外で Mac mini の名前を使っているところです。Mac Studio を普段使いし始めたら直します。
 
 - **SSH・画面共有：** `ssh studio` と `vnc-studio` は足してあります。旧Macを手放したら、`misc/ssh/config` の `macmini` と `zsh/mac.zsh` の `vnc-macmini` を消します。
-- **Jump Desktop の画面設定：** MacBook の Jump Desktop に Studio の接続（表示名 `Shun-Tagami-Mac-Studio`）を作ってから、`misc/jump-desktop/display.json` の `displayName` を `Shun-Tagami-Mac-Studio` にします。接続が無いうちは、deploy.sh はこの設定を飛ばすだけです。
+- **Jump Desktop の画面設定：** `misc/jump-desktop/display.json` の `displayNames` には Studio（`Shun-Tagami-Mac-Studio`）と Mac mini の両方が入っています。MacBook の Jump Desktop に Studio の接続をこの表示名で作れば、deploy.sh か `jump-display-apply` で同じ設定が入ります。旧Macを手放したら `Shun-Tagami-Mac-mini` を消します。
 - **agent-browser：** `codex/AGENTS.md` と `docs/agent-browser.md` の `AGENT_BROWSER_HOST=shun-tagami-mac-mini` を `shun-tagami-mac-studio` にします。
 - **Studio 側の遠隔操作の準備**（Jump Desktop Connect、Tailscale、画面共有）は [remote-macmini.md](remote-macmini.md) の Mac mini 側の手順と同じです。
 

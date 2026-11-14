@@ -249,7 +249,7 @@ brew "zsh-autosuggestions"
 brew "zsh-syntax-highlighting"
 # The best way of working with Protocol Buffers.
 brew "bufbuild/buf/buf", trusted: true
-# Transcribe audio/video files using ElevenLabs Scribe API
+# Transcribe audio/video using local models or ElevenLabs
 brew "ele-inc/tap/scribe", trusted: true
 # Terraform
 brew "hashicorp/tap/terraform", trusted: true
@@ -267,22 +267,20 @@ brew "vectordotdev/brew/vector", trusted: true
 cask "adobe-acrobat-reader"
 # Agent orchestration platform
 cask "antigravity"
+# Terminal interface for Antigravity agents
+cask "antigravity-cli"
 # Speech-to-text system
 cask "aqua-voice"
 # Securely stores and accesses AWS credentials in a development environment
 cask "aws-vault-binary"
-# OpenAI's official ChatGPT desktop app
-cask "chatgpt"
+# Display management tool
+cask "betterdisplay"
 # Remotely access another computer through the Google Chrome browser
 cask "chrome-remote-desktop-host"
-# Anthropic's official Claude AI desktop app
-cask "claude"
 # Screen capturing tool
 cask "cleanshot"
 # Clipboard extension app
 cask "clipy"
-# OpenAI's Codex desktop app for managing coding agents
-cask "codex-app"
 # Write, edit, and chat about your code with AI
 cask "cursor"
 # Voice and text chat software
@@ -293,14 +291,10 @@ cask "docker-desktop"
 cask "dropbox"
 # Cross-platform Text Expander written in Rust
 cask "espanso"
-# Collaborative team software
-cask "figma@beta"
 # GIT client
 cask "fork"
 # Set of tools to manage resources and applications hosted on Google Cloud
 cask "gcloud-cli"
-# Free and open-source image editor
-cask "gimp"
 # Web browser
 cask "google-chrome"
 # Screenshot and screen recording tool
@@ -319,8 +313,6 @@ cask "jump-desktop-connect"
 cask "karabiner-elements"
 # Screen and video recording software
 cask "loom"
-# Tool to control external monitor brightness & volume
-cask "monitorcontrol"
 # Command-line utility to interact with Sentry
 cask "sentry-cli"
 # Team communication and collaboration software
@@ -346,6 +338,7 @@ vscode "formulahendry.auto-close-tag"
 vscode "formulahendry.auto-complete-tag"
 vscode "formulahendry.auto-rename-tag"
 vscode "gera2ld.markmap-vscode"
+vscode "marp-team.marp-vscode"
 vscode "openai.chatgpt"
 vscode "openai.codex-audio"
 vscode "redhat.vscode-yaml"

@@ -160,8 +160,8 @@ fi
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
   # Rebuild and reload the display-mode brightness policy on each deploy.
-  # The installer skips machines where MonitorControl is not installed.
-  bash "${HOME}/dotfiles/scripts/macos-monitorcontrol.sh"
+  # The installer skips machines where BetterDisplay is not installed.
+  bash "${HOME}/dotfiles/scripts/macos-betterdisplay.sh"
 
   # App shortcuts live separately from optional system-wide macOS settings.
   source "${HOME}/dotfiles/scripts/app-settings-status.sh"

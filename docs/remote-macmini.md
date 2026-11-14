@@ -41,41 +41,44 @@ Jump Desktop 10では `Display > Single Virtual Display` で仮想ディスプ�
 
 ### 27インチモニターでローカルと同じ表示サイズにする
 
-表示設定は `misc/jump-desktop/display.json` で管理する。接続元のMacで
-Jump Desktopにサインインし、Mac miniの接続を登録した後、次を実行する。
+表示設定は `misc/jump-desktop/display.json` で管理する。`displayNames` に並べた
+接続（Mac Studio の `Shun-Tagami-Mac-Studio` と Mac mini の `Shun-Tagami-Mac-mini`）に
+同じ設定を適用する。Jump Desktop にまだ登録していない接続は飛ばす。接続元のMacで
+Jump Desktopにサインインし、接続を登録した後、次を実行する。
 
 ```sh
 jump-display-check         # 保存設定との差分を確認（差分ありは終了コード1）
 jump-display-apply --quit  # Jump Desktopを終了→設定適用→アプリ再起動
 ```
 
-`--quit` は接続中のセッションを切断する。既にアプリを終了していれば
-`jump-display-apply` だけでよい。alias未読み込みの場合は
+`--quit` は接続中のセッションを切断する（設定がすでに一致していれば終了しない）。
+既にアプリを終了していれば `jump-display-apply` だけでよい。テストは
+`node --test scripts/test-jump-desktop-display.mjs`。alias未読み込みの場合は
 `node ~/dotfiles/scripts/jump-desktop-display.mjs --quit` を使う。
 再起動後はMac miniに接続する。`scripts/deploy.sh` でも適用するが、
 アプリ起動中・接続未登録ならスキップする。
 
 スクリプトは `~/Documents/JumpDesktop/Viewer/Servers/*.jump` のうち、
-設定ファイルの `displayName` に一致する1件だけに表示設定をマージする。
-接続名を変更した場合は `displayName` も合わせる。認証情報や接続先IDは
+設定ファイルの `displayNames` に一致する接続に表示設定をマージする。同じ名前の
+接続が2つあると、書き込まずに止まる。接続名を変更した場合は `displayNames` も合わせる。認証情報や接続先IDは
 既存ファイルに残し、gitには含めない。変更前の接続ファイルは
 `~/Library/Application Support/dotfiles/backups/jump-desktop/` に保存する。
 復元時はJump Desktopを終了し、バックアップを元の接続ファイルへコピーする。
 保存形式はJump Desktop 9.1.9で確認。保存設定の確認と、接続中の実際の
 表示の確認は別なので、再接続後は以下の解像度も確認する。
 
-MacBook 側で `res.27` を実行して見かけの解像度を `3008×1692` にし、
+MacBook 側で `res 27` を実行して見かけの解像度を `3008×1692` にし、
 Jump Desktop をそのモニターで全画面表示する。上記の仮想ディスプレイ・
 解像度追従・Retina の3設定が有効なら、接続先は見かけの解像度
 `3008×1692`、描画ピクセル数 `6016×3384` となる。
 Jump Desktop の `Displays` メニューでは `Display 1 (6016x3384) Virtual`
 と表示される。ウィンドウ表示では、そのウィンドウサイズに追従する。
 
-Mac mini 側で `res.27` が `cannot be set to 3008x1692` を返す場合、
-その時点の対象ディスプレイに該当モードがない。`display_manager` は既存の
+Mac mini 側で `res 27` が `has no 3008x1692 mode` を返す場合、
+その時点の対象ディスプレイに該当モードがない。`res` は既存の
 解像度を選ぶだけなので、先に Jump Desktop 側で上記の設定を行う。
 接続中の解像度は Jump Desktop の追従機能で揃えられるため、通常は
-Mac mini 側で `res.27` を実行する必要はない。
+Mac mini 側で `res 27` を実行する必要はない。
 
 ### 接続中の文字が小さくなったとき
 
@@ -86,7 +89,9 @@ Mac mini 側で `res.27` を実行する必要はない。
 Jump Desktop 10では、次を接続中に行う。
 
 MacBookのターミナルからは `jump-display-fix` で、以下の1・2をまとめて実行できる。
-接続名は `misc/jump-desktop/display.json` を使い、アプリの再起動や接続切断は行わない。
+対象は `misc/jump-desktop/display.json` の `displayNames` のうち、接続ウィンドウが開いているもの。
+両方つないでいる場合は `jump-display-fix Shun-Tagami-Mac-Studio` のように指定する。
+アプリの再起動や接続切断は行わない。
 全画面で実行した場合は全画面表示を維持する。初回はmacOSからターミナル等の
 「System Events」操作・アクセシビリティの許可を求められる場合がある。
 alias未読み込みの場合は `source ~/dotfiles/zsh/mac.zsh` を実行するか、
