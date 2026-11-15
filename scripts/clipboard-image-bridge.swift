@@ -28,7 +28,9 @@ func validPNG(_ data: Data) -> Bool {
 }
 func imageFrom(_ board: NSPasteboard) -> Data? {
     let types = board.types ?? []
-    guard !types.contains(marker), !types.contains(.fileURL),
+    // CleanShot's default "File & Image" includes a file URL AND real image data.
+    // Read only the embedded PNG/TIFF; never open or transfer the referenced file.
+    guard !types.contains(marker),
           !types.contains(NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")) else { return nil }
     if let png = board.data(forType: .png), validPNG(png) { return png }
     guard let tiff = board.data(forType: .tiff), tiff.count <= limit,
@@ -151,6 +153,13 @@ let board: NSPasteboard
 if args.count >= 2 && args[0] == "--pasteboard" {
     board = NSPasteboard(name: NSPasteboard.Name(args[1])); args.removeFirst(2)
 } else { board = .general }
+#if TESTING
+if args == ["inspect-image"] {
+    guard let data = imageFrom(board) else { exit(1) }
+    output.write(data)
+    exit(0)
+}
+#endif
 do {
     if args == ["receive"] { try receive(board) }
     else if args.count == 3 && args[0] == "watch" {

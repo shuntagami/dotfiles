@@ -22,6 +22,12 @@ case "png": FileHandle.standardOutput.write(png)
 case "converted-png": FileHandle.standardOutput.write(converted)
 case "image": b.clearContents(); b.setData(png,forType:.png)
 case "tiff": b.clearContents(); b.setData(bitmap.tiffRepresentation!,forType:.tiff)
+case "mixed-png", "mixed-tiff", "file-only":
+    let item=NSPasteboardItem()
+    item.setString("file:///nonexistent/cleanshot-test.png",forType:.fileURL)
+    if a[1] == "mixed-png" { item.setData(png,forType:.png) }
+    if a[1] == "mixed-tiff" { item.setData(bitmap.tiffRepresentation!,forType:.tiff) }
+    b.clearContents(); b.writeObjects([item])
 case "text": b.clearContents(); b.setString("test text",forType:.string)
 case "read-text": print(b.string(forType:.string) ?? "")
 case "digest":
@@ -51,7 +57,7 @@ class BridgeTests(unittest.TestCase):
         cls.fixture = Path(cls.temp.name) / "fixture"
         src = Path(cls.temp.name) / "fixture.swift"
         src.write_text(FIXTURE)
-        subprocess.run(["swiftc", str(ROOT / "scripts/clipboard-image-bridge.swift"), "-o", str(cls.binary)], check=True)
+        subprocess.run(["swiftc", "-D", "TESTING", str(ROOT / "scripts/clipboard-image-bridge.swift"), "-o", str(cls.binary)], check=True)
         subprocess.run(["swiftc", str(src), "-o", str(cls.fixture)], check=True)
         cls.png = subprocess.check_output([str(cls.fixture), "unused", "png"])
 
@@ -114,6 +120,23 @@ class BridgeTests(unittest.TestCase):
         self.assertNotEqual(self.process.wait(timeout=5), 0)
         self.assertEqual(self.fixture_run("digest"), b"no image")
         self.assertEqual(self.fixture_run("read-text"), b"test text")
+
+    def test_cleanshot_file_and_png_uses_embedded_image(self):
+        self.fixture_run("mixed-png")
+        actual = subprocess.check_output([str(self.binary), "--pasteboard", self.board, "inspect-image"])
+        self.assertEqual(actual, self.png)
+
+    def test_cleanshot_file_and_tiff_converts_embedded_image(self):
+        self.fixture_run("mixed-tiff")
+        actual = subprocess.check_output([str(self.binary), "--pasteboard", self.board, "inspect-image"])
+        expected = self.fixture_run("converted-png")
+        self.assertEqual(actual, expected)
+
+    def test_file_url_without_image_is_not_transferred(self):
+        self.fixture_run("file-only")
+        result = subprocess.run([str(self.binary), "--pasteboard", self.board, "inspect-image"], capture_output=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, b"")
 
 
 if __name__ == "__main__":
