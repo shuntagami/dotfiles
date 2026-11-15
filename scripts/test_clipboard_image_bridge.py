@@ -23,6 +23,7 @@ case "converted-png": FileHandle.standardOutput.write(converted)
 case "image": b.clearContents(); b.setData(png,forType:.png)
 case "tiff": b.clearContents(); b.setData(bitmap.tiffRepresentation!,forType:.tiff)
 case "text": b.clearContents(); b.setString("test text",forType:.string)
+case "read-text": print(b.string(forType:.string) ?? "")
 case "digest":
     if let d=b.data(forType:.png) { print(SHA256.hash(data:d).map{String(format:"%02x",$0)}.joined()) }
     else { print("no image") }
@@ -92,16 +93,19 @@ class BridgeTests(unittest.TestCase):
         self.process.stdin.write(b"COMMIT\n"); self.process.stdin.flush()
         self.assertNotEqual(self.process.wait(timeout=5), 0)
         self.assertEqual(self.fixture_run("digest"), b"no image")
+        self.assertEqual(self.fixture_run("read-text"), b"test text")
 
     def test_invalid_image_does_not_clear_clipboard(self):
         self.stage(b"not an image")
         self.assertNotEqual(self.process.wait(timeout=5), 0)
         self.assertEqual(self.fixture_run("digest"), b"no image")
+        self.assertEqual(self.fixture_run("read-text"), b"test text")
 
     def test_oversize_rejected_before_allocation(self):
         self.process.stdin.write(b"999999999\n"); self.process.stdin.flush()
         self.assertNotEqual(self.process.wait(timeout=5), 0)
         self.assertEqual(self.fixture_run("digest"), b"no image")
+        self.assertEqual(self.fixture_run("read-text"), b"test text")
 
     def test_disconnect_before_commit_does_not_paste(self):
         self.stage(self.png)
@@ -109,6 +113,7 @@ class BridgeTests(unittest.TestCase):
         self.process.stdin.close()
         self.assertNotEqual(self.process.wait(timeout=5), 0)
         self.assertEqual(self.fixture_run("digest"), b"no image")
+        self.assertEqual(self.fixture_run("read-text"), b"test text")
 
 
 if __name__ == "__main__":

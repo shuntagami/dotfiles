@@ -7,6 +7,7 @@ from pathlib import Path
 import shlex
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
 APP = Path.home() / "Library/Application Support/ClipboardImageBridge"
@@ -21,6 +22,29 @@ def remote(host, code, *args):
     command = "python3 - " + " ".join(shlex.quote(str(a)) for a in args)
     return run(["ssh", "-o", "BatchMode=yes", host, command], input=code,
                text=True, capture_output=True).stdout.strip()
+
+
+def atomic_write_private(path, contents):
+    """Leave existing login keys intact if writing, flushing or closing fails."""
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", dir=path.parent,
+                                         prefix=".clipboard-keys-", delete=False) as f:
+            temporary = Path(f.name)  # mkstemp creates it with mode 0600.
+            f.write(contents)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def send_binary(sender, binary, destination):
+    # stdin avoids legacy scp versus SFTP differences for paths with spaces.
+    with binary.open("rb") as stream:
+        run(["ssh", "-o", "BatchMode=yes", sender,
+             "umask 077; cat > " + shlex.quote(destination)], stdin=stream)
 
 
 def install(sender, receiver):
@@ -61,12 +85,10 @@ print(json.dumps({'home':str(pathlib.Path.home()), 'public_key':key.with_suffix(
     lines = auth.read_text().splitlines() if auth.exists() else []
     lines = [line for line in lines if key_data not in line.split()]
     lines.append(entry)
-    with auth.open("w") as f:
-        os.chmod(auth, 0o600)
-        f.write("\n".join(lines) + "\n")
+    atomic_write_private(auth, "\n".join(lines) + "\n")
     remote_binary = peer["home"] + "/Library/Application Support/ClipboardImageBridge/clipboard-image-bridge"
     # Send the compiled executable, never clipboard data or source checkout copies.
-    run(["scp", "-q", str(binary), sender + ":" + remote_binary + ".new"])
+    send_binary(sender, binary, remote_binary + ".new")
     setup = r'''
 import os, pathlib, plistlib, subprocess, sys
 receiver, label = sys.argv[1:]

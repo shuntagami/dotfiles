@@ -45,6 +45,8 @@ bin/clipboard-image-sync stop --sender shun-tagami-mbp
 
 ```sh
 python3 scripts/test_clipboard_image_bridge.py
+python3 scripts/test_clipboard_image_installer.py
 ```
 
 テストは専用の名前付きクリップボードで、PNG一致、転送中のコピー競合、不正画像、容量制限、確定前の切断を確認する。ユーザーの通常クリップボードは変更しない。
+導入処理のテストでは、SSH鍵ファイルの保存失敗時に既存内容が残ることと、空白・引用符を含む転送先パスを確認する。
