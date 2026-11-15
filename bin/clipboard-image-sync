@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+"""Install the one-way image clipboard bridge from the receiving Mac."""
+import argparse
+import json
+import os
+from pathlib import Path
+import shlex
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+APP = Path.home() / "Library/Application Support/ClipboardImageBridge"
+LABEL = "com.shuntagami.clipboard-image-bridge"
+
+
+def run(args, **kwargs):
+    return subprocess.run(args, check=True, **kwargs)
+
+
+def remote(host, code, *args):
+    command = "python3 - " + " ".join(shlex.quote(str(a)) for a in args)
+    return run(["ssh", "-o", "BatchMode=yes", host, command], input=code,
+               text=True, capture_output=True).stdout.strip()
+
+
+def atomic_write_private(path, contents):
+    """Leave existing login keys intact if writing, flushing or closing fails."""
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", dir=path.parent,
+                                         prefix=".clipboard-keys-", delete=False) as f:
+            temporary = Path(f.name)  # mkstemp creates it with mode 0600.
+            f.write(contents)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def send_binary(sender, binary, destination):
+    # stdin avoids legacy scp versus SFTP differences for paths with spaces.
+    with binary.open("rb") as stream:
+        run(["ssh", "-o", "BatchMode=yes", sender,
+             "umask 077; cat > " + shlex.quote(destination)], stdin=stream)
+
+
+def install(sender, receiver):
+    APP.mkdir(parents=True, exist_ok=True, mode=0o700)
+    binary = APP / "clipboard-image-bridge"
+    temporary = APP / "clipboard-image-bridge.new"
+    run(["swiftc", "-O", str(ROOT / "scripts/clipboard-image-bridge.swift"), "-o", str(temporary)])
+    os.replace(temporary, binary)
+    # Verify the receiver identity against this machine's actual public host key.
+    public_host_key = Path("/etc/ssh/ssh_host_ed25519_key.pub").read_text().split()[:2]
+    provision = r'''
+import json, os, pathlib, subprocess, sys
+receiver, expected = sys.argv[1], json.loads(sys.argv[2])
+scan = subprocess.run(['ssh-keyscan','-T','5','-t','ed25519',receiver], capture_output=True, text=True, check=True)
+line = next((s for s in scan.stdout.splitlines() if s.split()[1:3] == expected), None)
+if not line: raise SystemExit('Receiver host key does not match the installing Mac')
+ssh = pathlib.Path.home()/'.ssh'
+ssh.mkdir(mode=0o700, exist_ok=True)
+known = ssh/'known_hosts'
+with known.open('a+') as f:
+    f.seek(0)
+    if line not in f.read().splitlines(): f.write(line+'\n')
+os.chmod(known, 0o600)
+key = ssh/'id_clipboard_image_bridge'
+if not key.exists():
+    subprocess.run(['ssh-keygen','-q','-t','ed25519','-N','','-C','clipboard-image-bridge','-f',str(key)],check=True)
+app = pathlib.Path.home()/'Library/Application Support/ClipboardImageBridge'
+app.mkdir(parents=True, exist_ok=True, mode=0o700)
+print(json.dumps({'home':str(pathlib.Path.home()), 'public_key':key.with_suffix('.pub').read_text().strip()}))
+'''
+    peer = json.loads(remote(sender, provision, receiver, json.dumps(public_host_key)))
+    auth = Path.home() / ".ssh/authorized_keys"
+    auth.parent.mkdir(mode=0o700, exist_ok=True)
+    forced = shlex.quote(str(binary)) + " receive"
+    entry = 'restrict,command="' + forced.replace('\\', '\\\\').replace('"', '\\"') + '" ' + peer["public_key"]
+    # Keep all unrelated login keys intact; replace only this dedicated key entry.
+    key_data = peer["public_key"].split()[1]
+    lines = auth.read_text().splitlines() if auth.exists() else []
+    lines = [line for line in lines if key_data not in line.split()]
+    lines.append(entry)
+    atomic_write_private(auth, "\n".join(lines) + "\n")
+    remote_binary = peer["home"] + "/Library/Application Support/ClipboardImageBridge/clipboard-image-bridge"
+    # Send the compiled executable, never clipboard data or source checkout copies.
+    send_binary(sender, binary, remote_binary + ".new")
+    setup = r'''
+import os, pathlib, plistlib, subprocess, sys
+receiver, label = sys.argv[1:]
+home=pathlib.Path.home()
+app=home/'Library/Application Support/ClipboardImageBridge'
+binary=app/'clipboard-image-bridge'
+os.replace(str(binary)+'.new', binary)
+os.chmod(binary,0o700)
+key=home/'.ssh/id_clipboard_image_bridge'
+# This key can only run the receiving binary, with no shell or forwarding.
+check=subprocess.run(['ssh','-T','-o','BatchMode=yes','-o','IdentitiesOnly=yes','-o','StrictHostKeyChecking=yes','-o','ConnectTimeout=5','-o','ControlPath=none','-i',str(key),receiver,'receive'],input=b'',capture_output=True,timeout=10)
+if check.stdout != b'READY\n': raise SystemExit('Receiver login failed; sender was not started')
+logs=home/'Library/Logs/ClipboardImageBridge'
+logs.mkdir(parents=True,exist_ok=True,mode=0o700)
+agents=home/'Library/LaunchAgents'
+agents.mkdir(parents=True,exist_ok=True)
+plist=agents/(label+'.plist')
+config={'Label':label,'ProgramArguments':[str(binary),'watch',receiver,str(key)],'RunAtLoad':True,'KeepAlive':True,'ThrottleInterval':10,'LimitLoadToSessionType':'Aqua','StandardOutPath':str(logs/'service.log'),'StandardErrorPath':str(logs/'service.log')}
+plist.write_bytes(plistlib.dumps(config))
+os.chmod(plist,0o600)
+domain='gui/'+str(os.getuid())
+subprocess.run(['launchctl','bootout',domain+'/'+label],capture_output=True)
+subprocess.run(['launchctl','bootstrap',domain,str(plist)],check=True)
+print('Image clipboard watcher installed and started')
+'''
+    print(remote(sender, setup, receiver, LABEL))
+    (APP / "installation.json").write_text(json.dumps({"sender": sender, "receiver": receiver, "public_key": peer["public_key"]}) + "\n")
+
+
+def service(sender, action):
+    code = r'''
+import os,pathlib,subprocess,sys
+action,label=sys.argv[1:]
+domain='gui/'+str(os.getuid())
+plist=pathlib.Path.home()/'Library/LaunchAgents'/(label+'.plist')
+if action=='status':
+    p=subprocess.run(['launchctl','print',domain+'/'+label],capture_output=True,text=True)
+    print('\n'.join(x.strip() for x in p.stdout.splitlines() if any(k in x for k in ['state =','pid =','last exit code ='])))
+    if p.returncode: print('Stopped')
+elif action=='stop':
+    subprocess.run(['launchctl','bootout',domain+'/'+label],capture_output=True)
+    if plist.exists(): plist.unlink()
+    print('Stopped; login autostart removed')
+'''
+    print(remote(sender, code, action, LABEL))
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("action", choices=["install", "status", "stop"])
+    parser.add_argument("--sender", required=True, help="SSH host for the MacBook")
+    parser.add_argument("--receiver", help="This Mac's SSH name as reachable from the MacBook")
+    args = parser.parse_args()
+    if args.action == "install":
+        if not args.receiver: parser.error("install requires --receiver")
+        install(args.sender, args.receiver)
+    else:
+        service(args.sender, args.action)
