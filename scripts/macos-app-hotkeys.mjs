@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { createContext, toPlist, writePlist, parseMode, isMain, cli, NEEDS_APP_ACTION } from './macos-app-settings.mjs';
+import { withQueuedActivation } from './macos-activation.mjs';
 
 export function mergeHotkeys(existing, desired) {
   const byAction = new Map(desired.map(item => [item.action, item]));
@@ -61,18 +62,20 @@ export function aqua(mode, ctx) {
     return Number(mode === 'check');
   }
   backup('aqua-voice', { hotkeys: current, ...Object.fromEntries(changedKeys.filter(key => key in settings).map(key => [key, settings[key]])) }, ctx);
-  settings.hotkeys = merged;
-  Object.assign(settings, managed);
-  const staging = fs.mkdtempSync(path.join(path.dirname(filename), '.dotfiles-hotkeys-'));
-  try {
-    const temporary = path.join(staging, 'settings.json');
-    fs.writeFileSync(temporary, JSON.stringify(settings, null, 2) + '\n', { mode: fs.statSync(filename).mode & 0o777 });
-    fs.chmodSync(temporary, fs.statSync(filename).mode & 0o777);
-    fs.renameSync(temporary, filename);
-  } finally { fs.rmSync(staging, { recursive: true, force: true }); }
-  if (!isDeepStrictEqual(JSON.parse(fs.readFileSync(filename, 'utf8')).hotkeys, merged)) throw new Error('Aqua Voice settings verification failed.');
-  ctx.log('Saved Aqua Voice shortcuts and settings. Restart Aqua Voice to load them.');
-  return 0;
+  return withQueuedActivation('Aqua Voice', ['shortcuts and settings'], ctx, () => {
+    settings.hotkeys = merged;
+    Object.assign(settings, managed);
+    const staging = fs.mkdtempSync(path.join(path.dirname(filename), '.dotfiles-hotkeys-'));
+    try {
+      const temporary = path.join(staging, 'settings.json');
+      fs.writeFileSync(temporary, JSON.stringify(settings, null, 2) + '\n', { mode: fs.statSync(filename).mode & 0o777 });
+      fs.chmodSync(temporary, fs.statSync(filename).mode & 0o777);
+      fs.renameSync(temporary, filename);
+    } finally { fs.rmSync(staging, { recursive: true, force: true }); }
+    if (!isDeepStrictEqual(JSON.parse(fs.readFileSync(filename, 'utf8')).hotkeys, merged)) throw new Error('Aqua Voice settings verification failed.');
+    ctx.log('Saved Aqua Voice shortcuts and settings. Restart Aqua Voice to load them.');
+    return 0;
+  });
 }
 
 export function clipy(mode, ctx) {
@@ -89,13 +92,15 @@ export function clipy(mode, ctx) {
   // Prepare archives before making any changes.
   const writes = changes.map(({ key, value, integer }) => [key, value ? '-data' : '-int', value ? keycombo(value, ctx).toString('hex') : String(integer)]);
   backup('clipy', Object.fromEntries(changes.filter(item => Object.hasOwn(current, item.key)).map(item => [item.key, current[item.key]])), ctx);
-  for (const args of writes) {
-    const result = ctx.run('/usr/bin/defaults', ['write', domain, ...args]);
-    if (result.status !== 0) throw new Error('Could not write Clipy preferences.');
-  }
-  if (clipy('check', ctx)) throw new Error('Clipy preferences verification failed.');
-  ctx.log('Saved Clipy settings. Restart Clipy to load them.');
-  return 0;
+  return withQueuedActivation('Clipy', ['shortcuts and history size'], ctx, () => {
+    for (const args of writes) {
+      const result = ctx.run('/usr/bin/defaults', ['write', domain, ...args]);
+      if (result.status !== 0) throw new Error('Could not write Clipy preferences.');
+    }
+    if (clipy('check', ctx)) throw new Error('Clipy preferences verification failed.');
+    ctx.log('Saved Clipy settings. Restart Clipy to load them.');
+    return 0;
+  });
 }
 
 export function main(args = process.argv.slice(2), ctx = createContext()) {

@@ -1,10 +1,25 @@
 #!/bin/zsh
-# App settings used by deploy.sh; legacy system defaults remain in macos.sh.
+# Persistent macOS settings used by deploy.sh; activation/maintenance are explicit.
 set -eu
 setopt PIPE_FAIL
 DOTFILES="${HOME}/dotfiles"
+if (( $# != 0 )); then
+  echo "Usage: deploy-macos.sh (or deploy.sh); inspect system settings with macos-system-settings.mjs --dry-run/--check." >&2
+  exit 2
+fi
+if [[ -z "${DOTFILES_PROFILE:-}" && -f "$HOME/.dotfiles-profile" ]]; then
+  DOTFILES_PROFILE=$(<"$HOME/.dotfiles-profile")
+fi
+DOTFILES_PROFILE="${DOTFILES_PROFILE:-full}"
+case "$DOTFILES_PROFILE" in
+  full|minimal) export DOTFILES_PROFILE ;;
+  *) echo "Invalid DOTFILES_PROFILE: $DOTFILES_PROFILE" >&2; exit 2 ;;
+esac
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles"
 mkdir -p "$state_dir"
+
+# Save persistent system/machine settings without restarting user applications.
+node "${DOTFILES}/scripts/macos-system-settings.mjs"
 
 # Reconcile the display-mode brightness policy.
 # The installer skips machines where BetterDisplay is not installed.
@@ -95,13 +110,7 @@ if [[ "${DOTFILES_PROFILE:-full}" != "minimal" ]]; then
     [[ ! -f "$state_dir/karabiner.sha256" ]] ||
     [[ "$(<"$state_dir/karabiner.sha256")" != "$karabiner_hash" ]]
   }; then
-    if launchctl print gui/$(id -u)/org.pqrs.service.agent.Karabiner-Console-User-Server &>/dev/null; then
-      launchctl kickstart -k gui/$(id -u)/org.pqrs.service.agent.Karabiner-Console-User-Server
-    elif launchctl print gui/$(id -u)/org.pqrs.service.agent.karabiner_console_user_server &>/dev/null; then
-      launchctl kickstart -k gui/$(id -u)/org.pqrs.service.agent.karabiner_console_user_server
-    else
-      open -a "Karabiner-Elements"
-    fi
+    node "${DOTFILES}/scripts/macos-activation.mjs" --queue Karabiner-Elements karabiner.json
     print -r -- "$karabiner_hash" > "$state_dir/karabiner.sha256"
   fi
 fi
@@ -111,3 +120,5 @@ fi
 # after asking (docs/processing-mac.md). A failure here should not undo the rest of the deploy.
 bash "${DOTFILES}/scripts/processing-mac.sh" deploy ||
   echo "処理用Macの引き継ぎは終わっていません。docs/processing-mac.md を見て、scripts/processing-mac.sh deploy を実行し直してください。"
+
+node "${DOTFILES}/scripts/macos-activation.mjs" --status

@@ -1,0 +1,38 @@
+{
+  "laptop": {
+    "name": "Shun-Tagami-MBP",
+    "dock": "right",
+    "power": {
+      "all": {
+        "autorestart": 1,
+        "displaysleep": 15,
+        "standbydelay": 86400,
+        "lidwake": 1
+      },
+      "ac": {
+        "sleep": 0
+      },
+      "battery": {
+        "sleep": 5
+      }
+    },
+    "nvram": {
+      "SystemAudioVolume": " "
+    }
+  },
+  "desktop": {
+    "name": "Shun-Tagami-${MODEL}",
+    "dock": "left",
+    "power": {
+      "all": {
+        "autorestart": 1,
+        "displaysleep": 15,
+        "standbydelay": 86400,
+        "sleep": 0
+      }
+    },
+    "nvram": {
+      "SystemAudioVolume": " "
+    }
+  }
+}
