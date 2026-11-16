@@ -210,6 +210,9 @@ if (useOriginal && limitBytes != null) {
   } else {
     console.error(`original images total ${fmtMB(total)} (> ${maxSizeMB}MB): re-encoding to JPEG at original resolution`);
     useOriginal = false;
+    // original では -w/-q は無視する約束なので、再変換に切り替えても持ち込まない
+    width = null;
+    qualityExplicit = false;
   }
 }
 
@@ -218,34 +221,65 @@ if (useOriginal) {
 } else if (limitBytes == null) {
   slidePaths = encodeAll(quality ?? 65, join(tmp, "enc")).paths;
 } else {
-  // 1) サンプルで「上限に収まる最大の品質」を二分探索 (全枚数を何度も変換しないため)
-  const step = Math.max(1, Math.floor(images.length / 12));
-  const sample = images.filter((_, idx) => idx % step === 0).slice(0, 12);
-  let hi = qualityExplicit ? Math.min(Math.max(quality, 1), 100) : MAX_Q;
-  let lo = Math.min(MIN_Q, hi);
-  let q = lo;
-  console.error(`searching JPEG quality ${lo}..${hi} for <= ${maxSizeMB}MB (${sample.length}-image sample) ...`);
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    const est = estimateTotal(mid, sample, join(tmp, "sample"));
-    console.error(`  q=${mid}: ~${fmtMB(est * OVERHEAD)}`);
-    if (est * OVERHEAD <= limitBytes) { q = mid; lo = mid + 1; } else { hi = mid - 1; }
+  // サンプル: 元ファイルのサイズ順に並べた全体から均等に選ぶ。
+  // (精細な画像と単色に近い画像が混在しても、どちらも代表させるため)
+  const SAMPLE_N = Math.min(12, images.length);
+  const bySize = images.map((f) => ({ f, s: statSync(f).size })).sort((x, y) => x.s - y.s);
+  const sample = Array.from({ length: SAMPLE_N }, (_, j) => bySize[Math.floor(((j + 0.5) * images.length) / SAMPLE_N)].f);
+  const hiQ = qualityExplicit ? Math.min(Math.max(quality, 1), 100) : MAX_Q;
+  const loQ = Math.min(MIN_Q, hiQ);
+  const fits = (bytes) => bytes * OVERHEAD <= limitBytes;
+
+  // [from, to] の範囲で「上限に収まる最大の品質」をサンプルから二分探索する。
+  // scale はサンプル見積もりの実測補正 (全枚数を変換した結果との比)。収まる品質がなければ null。
+  function searchQuality(from, to, scale) {
+    let lo = from, hi = to, found = null;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      const est = estimateTotal(mid, sample, join(tmp, "sample")) * scale;
+      console.error(`  q=${mid}: ~${fmtMB(est * OVERHEAD)}`);
+      if (fits(est)) { found = mid; lo = mid + 1; } else { hi = mid - 1; }
+    }
+    return found;
   }
+
+  // 1) サンプルで初期候補を決める (全枚数を何度も変換しないため)
+  console.error(`searching JPEG quality ${loQ}..${hiQ} for <= ${maxSizeMB}MB (${SAMPLE_N}-image sample) ...`);
+  let q = searchQuality(loQ, hiQ, 1) ?? loQ;
+
   // 2) 全枚数を変換して実サイズで検証。サンプルの見積もりが外れていたら品質を下げて再変換する
-  const floorQ = Math.min(MIN_Q, q);
+  let best;
   for (;;) {
     rmSync(join(tmp, "enc"), { recursive: true, force: true });
     const r = encodeAll(q, join(tmp, "enc"));
     console.error(`  encoded all at q=${q}: ${fmtMB(r.total * OVERHEAD)}`);
-    if (r.total * OVERHEAD <= limitBytes) { slidePaths = r.paths; break; }
-    if (q <= floorQ) {
+    if (fits(r.total)) { best = { q, ...r }; break; }
+    if (q <= loQ) {
       console.error(`Error: even quality ${q} gives ${fmtMB(r.total * OVERHEAD)} (> ${maxSizeMB}MB). Lower the resolution with -w <px>.`);
       rmSync(tmp, { recursive: true, force: true });
       Deno.exit(1);
     }
-    q = Math.max(floorQ, q - 2);
+    q = Math.max(loQ, q - 2);
   }
-  console.error(`using JPEG quality ${q}`);
+
+  // 3) サンプルが過大に見積もっていて余裕がある場合に備え、実測で補正して品質を上げる再探索を1回行う
+  if (best.q < hiQ) {
+    const scale = best.total / estimateTotal(best.q, sample, join(tmp, "sample"));
+    console.error(`refining upward (sample vs actual x${scale.toFixed(2)}) ...`);
+    const q2 = searchQuality(best.q + 1, hiQ, scale);
+    if (q2 != null) {
+      const r2 = encodeAll(q2, join(tmp, "enc2"));
+      console.error(`  encoded all at q=${q2}: ${fmtMB(r2.total * OVERHEAD)}`);
+      if (fits(r2.total)) {
+        rmSync(join(tmp, "enc"), { recursive: true, force: true });
+        best = { q: q2, ...r2 };
+      } else {
+        rmSync(join(tmp, "enc2"), { recursive: true, force: true });
+      }
+    }
+  }
+  slidePaths = best.paths;
+  console.error(`using JPEG quality ${best.q}`);
 }
 
 const p = new pptxgen();
