@@ -1,0 +1,163 @@
+#!/usr/bin/env -S deno run -A --ext=js
+// 画像フォルダを1枚1ページのPDFにまとめる。画質は落とさない。
+// pdf-to-images の逆変換 (PDF→画像化した資料をPDFに戻す時などに使う)。
+//
+// Usage:
+//   images-to-pdf [options] <image_dir> [output.pdf]
+//
+// Options:
+//   -d, --dpi <n>   ページサイズの換算DPI (default: 150, pdf-to-imagesの既定と同じ)
+//   -h, --help      このヘルプを表示
+//
+// output.pdf を省略すると <image_dir>.pdf (image_dirと同じ階層) に保存する。
+// 対象はPNG/JPEG。並び順はファイル名の自然順 (page-2 < page-10)。
+//
+// 実装メモ: PDF組み立てはpdf-lib (npm:, Denoのグローバルキャッシュ経由でrepo非依存)。
+// JPEGは元のバイト列をそのまま埋め込み (再エンコードなし)。PNGも、非インターレースの
+// グレー/RGB (8/16bit) ならIDATのデflate済みデータをそのままPDFのFlateDecode+
+// PNG Predictorとして貼る (img2pdfと同じ手法。展開も再圧縮もしないので速く、劣化ゼロ)。
+// それ以外のPNG (透過・パレット・インターレース) だけpdf-libのembedPng
+// (展開して再圧縮、ピクセルは保たれるが遅く16bitは8bitに落ちる) にフォールバックする。
+// ページサイズは 画像px × 72 / dpi (pt)。pdf-to-images -r 150 で作った画像なら
+// 元PDFのページサイズに戻る。
+
+import {
+  concatTransformationMatrix,
+  drawObject,
+  PDFDocument,
+  popGraphicsState,
+  pushGraphicsState,
+} from "npm:pdf-lib@1.17.1";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+
+function showHelp() {
+  console.log(`Usage: images-to-pdf [options] <image_dir> [output.pdf]
+
+Combines PNG/JPEG images in a directory into a PDF, one image per page.
+No quality loss: JPEG bytes are embedded as-is, PNG pixels are kept lossless.
+
+Options:
+  -d, --dpi <n>   DPI used to size pages (default: 150)
+  -h, --help      Show this help
+
+If output.pdf is omitted, <image_dir>.pdf is written next to the directory.
+`);
+}
+
+const rawArgs = [...Deno.args];
+let dpi = 150;
+const positional = [];
+
+while (rawArgs.length > 0) {
+  const arg = rawArgs.shift();
+  if (arg === "-h" || arg === "--help") {
+    showHelp();
+    Deno.exit(0);
+  } else if (arg === "-d" || arg === "--dpi") {
+    dpi = Number(rawArgs.shift());
+  } else {
+    positional.push(arg);
+  }
+}
+
+if (!Number.isFinite(dpi) || dpi <= 0) {
+  console.error("Error: --dpi must be a positive number.");
+  Deno.exit(1);
+}
+
+if (positional.length === 0) {
+  showHelp();
+  Deno.exit(1);
+}
+
+const imageDir = resolve(positional[0]);
+const outputPath = positional[1] ? resolve(positional[1]) : `${imageDir.replace(/\/+$/, "")}.pdf`;
+
+if (!existsSync(imageDir)) {
+  console.error(`Error: directory not found: ${imageDir}`);
+  Deno.exit(1);
+}
+
+const collator = new Intl.Collator(undefined, { numeric: true });
+const images = readdirSync(imageDir)
+  .filter((f) => /\.(png|jpe?g)$/i.test(f))
+  .sort((a, b) => collator.compare(a, b))
+  .map((f) => join(imageDir, f));
+
+if (images.length === 0) {
+  console.error(`Error: no PNG/JPEG images found in ${imageDir}`);
+  Deno.exit(1);
+}
+
+// PNGのIDATをそのまま使えるなら { width, height, depth, colors, idat } を返す。
+function pngPassthrough(b) {
+  const sig = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  if (b.length < 33 || sig.some((v, i) => b[i] !== v)) return null;
+  const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  let width = 0, height = 0, depth = 0, colorType = -1, interlace = 1;
+  const idat = [];
+  for (let off = 8; off + 12 <= b.length;) {
+    const len = dv.getUint32(off);
+    const type = String.fromCharCode(b[off + 4], b[off + 5], b[off + 6], b[off + 7]);
+    const data = b.subarray(off + 8, off + 8 + len);
+    if (type === "IHDR") {
+      width = dv.getUint32(off + 8);
+      height = dv.getUint32(off + 12);
+      depth = data[8];
+      colorType = data[9];
+      interlace = data[12];
+    } else if (type === "tRNS") {
+      return null; // 色キー透過はPDFのFlate直貼りでは表現できない
+    } else if (type === "IDAT") {
+      idat.push(data);
+    } else if (type === "IEND") {
+      break;
+    }
+    off += 12 + len;
+  }
+  if (interlace !== 0 || (depth !== 8 && depth !== 16) || idat.length === 0) return null;
+  if (colorType !== 0 && colorType !== 2) return null;
+  const merged = new Uint8Array(idat.reduce((n, c) => n + c.length, 0));
+  let pos = 0;
+  for (const c of idat) { merged.set(c, pos); pos += c.length; }
+  return { width, height, depth, colors: colorType === 2 ? 3 : 1, idat: merged };
+}
+
+const scale = 72 / dpi;
+const pdf = await PDFDocument.create();
+
+let n = 0;
+for (const imgPath of images) {
+  const bytes = readFileSync(imgPath);
+  const isPng = /\.png$/i.test(imgPath);
+  const raw = isPng ? pngPassthrough(bytes) : null;
+  if (raw) {
+    const ref = pdf.context.register(pdf.context.stream(raw.idat, {
+      Type: "XObject",
+      Subtype: "Image",
+      Width: raw.width,
+      Height: raw.height,
+      ColorSpace: raw.colors === 3 ? "DeviceRGB" : "DeviceGray",
+      BitsPerComponent: raw.depth,
+      Filter: "FlateDecode",
+      DecodeParms: { Predictor: 15, Colors: raw.colors, BitsPerComponent: raw.depth, Columns: raw.width },
+    }));
+    const w = raw.width * scale;
+    const h = raw.height * scale;
+    const page = pdf.addPage([w, h]);
+    const name = page.node.newXObject("Img", ref);
+    page.pushOperators(pushGraphicsState(), concatTransformationMatrix(w, 0, 0, h, 0, 0), drawObject(name), popGraphicsState());
+  } else {
+    const image = isPng ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
+    const w = image.width * scale;
+    const h = image.height * scale;
+    const page = pdf.addPage([w, h]);
+    page.drawImage(image, { x: 0, y: 0, width: w, height: h });
+  }
+  n++;
+  if (images.length >= 20 && n % 20 === 0) console.error(`  ${n}/${images.length}`);
+}
+
+writeFileSync(outputPath, await pdf.save());
+console.log(`${images.length} pages -> ${outputPath}`);
