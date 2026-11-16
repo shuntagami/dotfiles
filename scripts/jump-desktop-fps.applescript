@@ -1,8 +1,49 @@
 -- Use the live menu so changes apply without restarting or disconnecting.
+on statsTextFor(sessionName)
+    tell application "System Events" to tell process "Jump Desktop"
+        set textValues to value of every static text of window sessionName
+    end tell
+    repeat with textValue in textValues
+        if textValue is not missing value then
+            set textValue to textValue as text
+            if textValue starts with "Frames" and textValue contains "Max Frames" then return textValue
+        end if
+    end repeat
+    return ""
+end statsTextFor
+
+on toggleStats()
+    tell application "System Events" to tell process "Jump Desktop"
+        -- The menu title stays 'Show ...' even when the overlay is visible.
+        click menu item "Show Fluid Connection Stats" of menu "Help" of menu bar 1
+    end tell
+end toggleStats
+
+on readStats(sessionName)
+    set statsText to my statsTextFor(sessionName)
+    if statsText is not "" then return statsText
+
+    my toggleStats()
+    try
+        -- Statistics update once a second. Wait for a fresh sample after enabling.
+        delay 1.1
+        repeat 20 times
+            set statsText to my statsTextFor(sessionName)
+            if statsText is not "" then exit repeat
+            delay 0.1
+        end repeat
+        if statsText is "" then error "接続統計を取得できませんでした。Jump Desktopの接続状態を確認してください。"
+    on error errorMessage number errorNumber
+        my toggleStats()
+        error errorMessage number errorNumber
+    end try
+    my toggleStats()
+    return statsText
+end readStats
+
 on run argv
-    if (count of argv) is not 1 then error "status・60・30・auto のいずれかを指定してください。"
+    if (count of argv) is not 1 then error "status・stats・rates・auto・fps値のいずれかを指定してください。"
     set mode to item 1 of argv
-    if mode is not in {"status", "60", "30", "auto"} then error "status・60・30・auto のいずれかを指定してください。"
 
     tell application "System Events"
         if not (exists process "Jump Desktop") then error "MacBookでJump Desktopを起動し、接続してから実行してください。"
@@ -39,8 +80,23 @@ on run argv
             delay 0.1
         end repeat
         if not ready then error "接続画面「" & sessionName & "」を表示できませんでした。"
+        if mode is "stats" then
+            set statsText to my readStats(sessionName)
+            return "Jump Desktop [" & sessionName & "]" & linefeed & statsText
+        end if
         if not (exists menu item "Framerate" of menu "Remote" of menu bar 1) then error "接続中のRemote > Framerateが見つかりません。Fluid接続を確認してください。"
         set fpsMenu to menu 1 of menu item "Framerate" of menu "Remote" of menu bar 1
+        set availableRates to ""
+        repeat with entry in menu items of fpsMenu
+            set labelText to name of entry
+            if labelText is not missing value then
+                if labelText is "Auto" or labelText ends with " fps" then
+                    if availableRates is not "" then set availableRates to availableRates & ", "
+                    set availableRates to availableRates & labelText
+                end if
+            end if
+        end repeat
+        if mode is "rates" then return availableRates
 
         if mode is not "status" then
             if mode is "auto" then
@@ -48,7 +104,7 @@ on run argv
             else
                 set targetLabel to mode & " fps"
             end if
-            if not (exists menu item targetLabel of fpsMenu) then error "Framerateに「" & targetLabel & "」がありません。"
+            if not (exists menu item targetLabel of fpsMenu) then error "「" & targetLabel & "」は選択できません。利用可能: " & availableRates
             if not (enabled of menu item targetLabel of fpsMenu) then error "Framerateを変更できません。接続状態を確認してください。"
             click menu item targetLabel of fpsMenu
         end if
