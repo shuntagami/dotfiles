@@ -46,7 +46,7 @@ if [[ "$(uname)" == "Darwin" ]]; then
   bash "${DOTFILES}/scripts/sudo-touch-id.sh"
 fi
 
-# Legacy system defaults remain opt-in: bash ~/dotfiles/scripts/macos.sh.
-# VS Code / Cursor settings are applied by deploy.sh above.
+# System and editor settings are applied by deploy.sh above. App restarts and
+# maintenance are explicit commands; see docs/macos-settings.md.
 
 echo "Setup complete! Run 'exec \$SHELL -l' to reload your shell."

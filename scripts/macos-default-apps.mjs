@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { createContext, toPlist, writePlist, parseMode, isMain, cli, NEEDS_APP_ACTION } from './macos-app-settings.mjs';
+import { withQueuedActivation } from './macos-activation.mjs';
 
 const LSREGISTER = '/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister';
 const ACTIVATE_SETTINGS = '/System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings';
@@ -87,7 +88,8 @@ export function manageDefaultApps(mode, ctx) {
       const value = typeof expected === 'boolean'
         ? ['-bool', String(expected)]
         : ['-data', Buffer.from(JSON.stringify(expected)).toString('hex')];
-      const result = ctx.run('/usr/bin/defaults', ['write', domain, key, ...value]);
+      const result = withQueuedActivation('CleanShot X', ['screenshot shortcuts'], ctx,
+        () => ctx.run('/usr/bin/defaults', ['write', domain, key, ...value]));
       failed ||= result.status !== 0;
       if (result.status === 0) {
         let stored = ctx.preferences(domain)[key];

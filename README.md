@@ -163,7 +163,7 @@ gh repo clone shuntagami/dotfiles ~/dotfiles && ~/dotfiles/scripts/setup.sh
 ```bash
 ~/dotfiles/scripts/install-packages.sh  # パッケージのインストール（Homebrewなど）
 ~/dotfiles/scripts/deploy.sh            # dotfilesのリンク作成・アプリ設定の反映（BetterDisplayなど）
-~/dotfiles/scripts/macos.sh             # macOSシステム設定の適用
+~/dotfiles/scripts/macos.sh             # macOS設定だけ同期（deployからも実行）
 ~/dotfiles/scripts/macos-notifications.sh  # 通知設定（deploy.shに含まれる。Chromeのサイト許可・アプリごとの通知）
 bash ~/dotfiles/scripts/macos-default-apps.sh  # 標準アプリ・CleanShot設定（deploy.shに含まれる）
 ~/dotfiles/vscode/setup.sh              # VSCode/Cursorのセットアップ
@@ -185,8 +185,9 @@ bash ~/dotfiles/scripts/macos-default-apps.sh  # 標準アプリ・CleanShot設�
 | MCP | `mcp/servers.json` から各クライアントへ反映。同じ設定のClaude登録は削除・再追加しない |
 | MulmoTerminal | 共通キーをマージ。端末固有のキー・既存プロジェクトの設定は維持 |
 | Screenpipe | pipe.md・拡張を配置。録画・DB・接続情報は対象外 |
+| macOSのシステム設定 | Finder・Dock・入力・ブラウザなどの共通設定、端末別の電源・Mac名・起動音、ログイン項目を差分だけ同期 |
 | macOSのアプリ設定 | BetterDisplay・Aqua Voice・Clipy・Espanso・通知・標準アプリ・Jump Desktop・Claude Desktop・iTerm2・memo・DownloadsのFolder Action |
-| キーボード | `full` で Hammerspoon・Karabiner を配置。Karabinerの再起動は設定変更時のみ |
+| キーボード | `full` で Hammerspoon・Karabiner を配置。Karabinerの変更は反映待ちを記録し、再起動は明示コマンドで実行 |
 | 処理用Mac | `misc/processing-mac.conf` に指定された端末だけ既存の引き継ぎ処理を実行 |
 
 通常のdeployではPreztoのリモート更新をせず、現在のバージョンのサブモジュールを初期化します。
@@ -203,14 +204,19 @@ Python 3・Node.js・Git がない場合は開始前に停止します。アプ�
 次は別の入口で管理します。
 
 - パッケージ・拡張機能（`misc/Brewfile`）：`scripts/install-packages.sh`。初回の一括導入は `scripts/setup.sh`。
-- macOSのシステム設定（電源・Mac名・Spotlight再構築など）：従来どおり `scripts/macos.sh` を手動実行。
+- macOS設定の反映：`node scripts/macos-activation.mjs --apply`。Finder／Dockやアプリの再起動待ちを実行。`--status` で確認でき、ログアウトやMac再起動は自動実行しません。
+- メンテナンス（Spotlight再構築など）：`node scripts/macos-maintenance.mjs <操作>`。deployからは呼びません。
 - Windows側の設定：`win/scripts/deploy.ps1`。WSLのdeployはLinux側のエディタを設定し、Windowsのユーザー名は推測しません。
 - Gitの端末別ユーザー情報、SSHの秘密情報、認証情報、各種 `.env.example`：端末で用意。ngrokはローカルの `misc/ngrok.yml` がある場合だけ配置。
 - `.claude/`・`.mulmoterminal.local.json` など、このリポジトリ専用の設定：各ツールが直接読み込み。
 - 旧Raycast設定・旧Downloads LaunchAgent：移行前の資料。現在のdeployはEspanso・Folder Actionを使用。
 
 通常の設定配置は `scripts/install-user-configs.py`、macOSアプリの呼び出しは
-`scripts/deploy-macos.sh` にまとめています。共通設定を追加したら、該当する配置処理とこの一覧も更新します。
+`scripts/deploy-macos.sh` にまとめています。システム設定は `misc/macos-settings.json`、
+端末別の電源・Mac名などは `misc/macos-machines.json` に置きます。
+旧 `macos.sh` はmacOSの同期処理への互換入口です。
+差分の確認・端末ごとの上書き・再起動待ち・旧処理の整理は [macOS設定の設計と運用](docs/macos-settings.md) を参照してください。
+共通設定を追加したら、該当する配置処理とこの一覧も更新します。
 
 ### Aqua Voice・Clipyのショートカット
 

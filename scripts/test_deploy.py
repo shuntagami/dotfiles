@@ -52,7 +52,7 @@ class DeployTest(unittest.TestCase):
         self.repo = self.home / 'dotfiles'
         scripts = self.repo / 'scripts'
         scripts.mkdir(parents=True)
-        for name in ('deploy.sh', 'deploy-macos.sh', 'install-user-configs.py', 'app-settings-status.sh'):
+        for name in ('deploy.sh', 'deploy-macos.sh', 'macos.sh', 'install-user-configs.py', 'app-settings-status.sh'):
             shutil.copyfile(ROOT / 'scripts' / name, scripts / name)
         for name in ('remove-cursor-notify.py', 'apply-mulmoterminal-background.py', 'macos-espanso.py'):
             (scripts / name).write_text('pass\n')
@@ -153,6 +153,12 @@ class DeployTest(unittest.TestCase):
         self.assertEqual(result.returncode, 42, result.stderr)
         self.assertNotIn('Deploy complete', result.stdout)
 
+    def test_legacy_macos_entry_rejects_unknown_flags_before_mutation(self):
+        result = subprocess.run(['/bin/bash', str(self.repo / 'scripts/macos.sh'), '--dry-run'],
+                                env=self.env, stdin=subprocess.DEVNULL, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertFalse((self.home / 'commands.jsonl').exists())
+
     @unittest.skipUnless(sys.platform == 'darwin', 'macOS installer paths')
     def test_mac_redeploy_does_not_recompile_or_restart_unchanged_settings(self):
         self.env['TEST_OS'] = 'Darwin'
@@ -166,6 +172,9 @@ class DeployTest(unittest.TestCase):
         self.assertFalse(any(c[:2] == ['launchctl', 'kickstart'] for c in commands))
         self.assertFalse(any(c[:2] == ['defaults', 'write'] for c in commands))
         self.assertFalse(any('macos.sh' in ' '.join(c) for c in commands))
+        self.assertIn(['node', str(self.repo / 'scripts/macos-system-settings.mjs')], commands)
+        self.assertFalse(any('macos-maintenance' in ' '.join(c) for c in commands))
+        self.assertFalse(any('macos-activation' in ' '.join(c) and '--apply' in c for c in commands))
         # Repair drift in the compiled artifact, even with a valid receipt.
         (self.home / 'Library/Scripts/Folder Action Scripts/Copy Downloaded Text.scpt').write_text('drift')
         (self.home / 'commands.jsonl').write_text('')
