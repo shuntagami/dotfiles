@@ -147,6 +147,11 @@ def install_links(home, root=ROOT, profile='full', platform=sys.platform, zdotdi
 def install_skills(home, root=ROOT):
     for agent in ('claude', 'codex'):
         destination = home / f'.{agent}/skills'
+        # A whole-directory link into the repo would make child replacements
+        # rename the sources themselves. Detach that link before descending.
+        if destination.is_symlink() and (destination.resolve() == root.resolve() or
+                                         root.resolve() in destination.resolve().parents):
+            destination.unlink()
         destination.mkdir(parents=True, exist_ok=True)
         managed_roots = (root / agent / 'skills', root / 'agents/skills')
         resolved_roots = {folder.resolve() for folder in managed_roots}

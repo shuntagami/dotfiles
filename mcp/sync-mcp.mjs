@@ -68,8 +68,20 @@ function writeJson(filePath, data, { mode } = {}) {
 }
 
 function writeIfChanged(filePath, content, options) {
-  if (!fs.existsSync(filePath) || fs.readFileSync(filePath, "utf8") !== content) {
-    fs.writeFileSync(filePath, content, options);
+  const exists = fs.existsSync(filePath);
+  if (exists && fs.readFileSync(filePath, "utf8") === content) return;
+  // Update the referent, preserving the app -> repository symlink itself.
+  const linked = fs.lstatSync(filePath, { throwIfNoEntry: false })?.isSymbolicLink();
+  const destination = exists || linked ? fs.realpathSync(filePath) : filePath;
+  const mode = options?.mode ?? (exists ? fs.statSync(destination).mode & 0o777 : 0o600);
+  const staging = fs.mkdtempSync(path.join(path.dirname(destination), ".mcp-sync-"));
+  const temporary = path.join(staging, "config");
+  try {
+    fs.writeFileSync(temporary, content, { mode });
+    fs.chmodSync(temporary, mode);
+    fs.renameSync(temporary, destination);
+  } finally {
+    fs.rmSync(staging, { recursive: true, force: true });
   }
 }
 

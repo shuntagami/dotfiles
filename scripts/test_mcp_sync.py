@@ -72,11 +72,22 @@ class McpSyncTest(unittest.TestCase):
             env.pop('CLAUDE_CONFIG_DIR', None)
             if custom_profile:
                 env['CLAUDE_CONFIG_DIR'] = str(config_dir)
+            codex_source = home / 'dotfiles/codex/config.toml'
+            codex_source.parent.mkdir()
+            codex_source.write_text('[features]\ncustom = true\n')
+            codex_source.chmod(0o640)
+            codex_target = home / '.codex/config.toml'
+            codex_target.parent.mkdir()
+            codex_target.symlink_to(codex_source)
             def sync():
                 result = subprocess.run([shutil.which('node'), str(script)], env=env,
                                         capture_output=True, text=True)
                 self.assertEqual(result.returncode, 0, result.stderr)
             sync()
+            self.assertTrue(codex_target.is_symlink())
+            self.assertEqual(codex_target.resolve(), codex_source.resolve())
+            self.assertEqual(codex_source.stat().st_mode & 0o777, 0o640)
+            self.assertIn('custom = true', codex_source.read_text())
             installed = json.loads(state.read_text())
             self.assertTrue(installed['localFlag'])
             self.assertEqual(installed['mcpServers']['local']['command'], 'keep')

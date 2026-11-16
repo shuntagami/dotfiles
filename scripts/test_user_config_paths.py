@@ -18,17 +18,26 @@ spec.loader.exec_module(configs)
 
 
 class UserConfigPathsTest(unittest.TestCase):
+    def link_sources(self, directory):
+        root = Path(directory) / 'repo'
+        for name in [*configs.LINKS, *configs.MAC_LINKS, *configs.SHELL_FILES, 'hammerspoon']:
+            source = root / name
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.symlink_to(ROOT / name)
+        return root
+
     def test_plain_links_replace_real_directories_once_and_respect_zdotdir(self):
         with tempfile.TemporaryDirectory() as directory:
+            root = self.link_sources(directory)
             home = Path(directory) / 'Another Mac'
             zdotdir = home / '.config/zsh'
             old = home / '.hammerspoon'
             old.mkdir(parents=True)
             (old / 'init.lua').write_text('local settings')
-            configs.install_links(home, profile='full', platform='darwin', zdotdir=zdotdir)
+            configs.install_links(home, root, profile='full', platform='darwin', zdotdir=zdotdir)
             links = [p for p in home.rglob('*') if p.is_symlink()]
             before = {str(p): p.lstat().st_mtime_ns for p in links}
-            configs.install_links(home, profile='full', platform='darwin', zdotdir=zdotdir)
+            configs.install_links(home, root, profile='full', platform='darwin', zdotdir=zdotdir)
             self.assertEqual(before, {str(p): p.lstat().st_mtime_ns for p in links})
             self.assertEqual(old.resolve(), ROOT / 'hammerspoon')
             backups = list(home.glob('.hammerspoon.bak.*'))
@@ -50,14 +59,15 @@ class UserConfigPathsTest(unittest.TestCase):
 
     def test_missing_ngrok_source_removes_only_our_old_dangling_link(self):
         with tempfile.TemporaryDirectory() as directory:
+            root = self.link_sources(directory)
             home = Path(directory)
             target = home / 'Library/Application Support/ngrok/ngrok.yml'
             target.parent.mkdir(parents=True)
-            target.symlink_to(ROOT / 'misc/ngrok.yml')
-            configs.install_links(home, platform='darwin')
+            target.symlink_to(root / 'misc/ngrok.yml')
+            configs.install_links(home, root, platform='darwin')
             self.assertFalse(target.is_symlink())
             target.write_text('machine-local')
-            configs.install_links(home, platform='darwin')
+            configs.install_links(home, root, platform='darwin')
             self.assertEqual(target.read_text(), 'machine-local')
 
     def test_editors_replace_nonempty_snippets_without_nested_links(self):
@@ -109,6 +119,29 @@ class UserConfigPathsTest(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):
                 configs.link(target, Path(directory) / 'missing')
             self.assertEqual(target.read_text(), 'keep')
+
+    def test_whole_skills_directory_links_do_not_mutate_sources(self):
+        for source_name in ('claude/skills', 'codex/skills', 'agents/skills'):
+            with self.subTest(source=source_name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory) / 'repo'
+                home = Path(directory) / 'home'
+                for name in ('claude/skills/claude-only', 'codex/skills/codex-only', 'agents/skills/shared'):
+                    source = root / name / 'SKILL.md'
+                    source.parent.mkdir(parents=True)
+                    source.write_text(name)
+                before = {str(p.relative_to(root)): p.read_bytes() for p in root.rglob('SKILL.md')}
+                for agent in ('claude', 'codex'):
+                    target = home / f'.{agent}/skills'
+                    target.parent.mkdir(parents=True)
+                    target.symlink_to(root / source_name)
+                configs.install_skills(home, root)
+                configs.install_skills(home, root)
+                self.assertEqual(before, {str(p.relative_to(root)): p.read_bytes() for p in root.rglob('SKILL.md')})
+                self.assertFalse(list(root.rglob('*.bak.*')))
+                for agent in ('claude', 'codex'):
+                    target = home / f'.{agent}/skills'
+                    self.assertFalse(target.is_symlink())
+                    self.assertTrue((target / 'shared').is_symlink())
 
     def test_karabiner_replaces_app_created_directory_and_preserves_backup(self):
         with tempfile.TemporaryDirectory() as directory:
