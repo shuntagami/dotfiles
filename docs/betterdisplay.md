@@ -20,6 +20,8 @@
 
 `zsh scripts/deploy.sh` で、ほかのdotfilesと一緒に設定・更新する。`scripts/setup.sh` もdeploy経由で適用する。単独で更新する場合は `bash scripts/macos-betterdisplay.sh` を実行する。`scripts/macos.sh` からは重複実行しない。BetterDisplayとXcode Command Line Toolsが必要で、BetterDisplay未導入のMacではスキップする。
 
+ソース・配置済みのバイナリ・LaunchAgent・キーボード設定が一致し、ヘルパーが登録済みなら再ビルド・再起動しない。ファイル変更やヘルパーの登録解除は次のdeployで修復する。
+
 初回だけ、次の手作業が必要。
 
 - BetterDisplayにアクセシビリティ権限を与える（システム設定 > プライバシーとセキュリティ > アクセシビリティ）。権限がないと明るさ・音量キーが効かない。

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { isDeepStrictEqual } from "node:util";
 
 const home = os.homedir();
 const dotfiles = path.join(home, "dotfiles");
@@ -62,8 +63,50 @@ function serversFor(client) {
 // it creates the file, and a config holding a token must not stay world-readable.
 function writeJson(filePath, data, { mode } = {}) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, mode ? { mode } : undefined);
+  writeIfChanged(filePath, `${JSON.stringify(data, null, 2)}\n`, mode ? { mode } : undefined);
   if (mode) fs.chmodSync(filePath, mode);
+}
+
+// Resolve links component by component, allowing a not-yet-created referent.
+// realpath alone cannot repair a dangling link. Detect cycles before any writes.
+function writeDestination(filePath) {
+  const root = path.parse(filePath).root;
+  let directory = root || process.cwd();
+  let remaining = (root ? filePath.slice(root.length) : filePath).split(path.sep);
+  let links = 0;
+  while (remaining.length) {
+    const component = remaining.shift();
+    if (!component || component === ".") continue;
+    if (component === "..") { directory = path.dirname(directory); continue; }
+    const candidate = path.join(directory, component);
+    const entry = fs.lstatSync(candidate, { throwIfNoEntry: false });
+    if (!entry?.isSymbolicLink()) { directory = candidate; continue; }
+    if (++links > 40) throw new Error(`Cyclic or excessive config links: ${filePath}`);
+    const referent = fs.readlinkSync(candidate);
+    const referentRoot = path.parse(referent).root;
+    if (referentRoot) directory = referentRoot;
+    // Preserve '..' until its preceding directory links have been traversed.
+    remaining = [...(referentRoot ? referent.slice(referentRoot.length) : referent).split(path.sep), ...remaining];
+  }
+  return directory;
+}
+
+function writeIfChanged(filePath, content, options) {
+  const exists = fs.existsSync(filePath);
+  if (exists && fs.readFileSync(filePath, "utf8") === content) return;
+  // Update the referent, preserving the app -> repository symlink itself.
+  const destination = writeDestination(filePath);
+  const mode = options?.mode ?? (exists ? fs.statSync(destination).mode & 0o777 : 0o600);
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  const staging = fs.mkdtempSync(path.join(path.dirname(destination), ".mcp-sync-"));
+  const temporary = path.join(staging, "config");
+  try {
+    fs.writeFileSync(temporary, content, { mode });
+    fs.chmodSync(temporary, mode);
+    fs.renameSync(temporary, destination);
+  } finally {
+    fs.rmSync(staging, { recursive: true, force: true });
+  }
 }
 
 function tomlString(value) {
@@ -164,7 +207,7 @@ function syncCodex() {
   const nextConfig = insertedManagedBlocks
     ? base
     : `${base}\n\n${renderedManagedBlocks}`;
-  fs.writeFileSync(codexConfigPath, `${nextConfig}\n`);
+  writeIfChanged(codexConfigPath, `${nextConfig}\n`);
 }
 
 function keychainSecret({ service, account }) {
@@ -263,14 +306,32 @@ function syncClaude() {
     return;
   }
 
+  const claudeConfig = path.join(process.env.CLAUDE_CONFIG_DIR || home, ".claude.json");
+  const current = fs.existsSync(claudeConfig)
+    ? JSON.parse(fs.readFileSync(claudeConfig, "utf8")).mcpServers ?? {}
+    : {};
+  const wanted = serversFor("claude");
+
+  // Let the CLI keep ownership of its file, but only mutate entries that drift.
+  // Claude normalizes absent stdio args to [], so compare that default too.
+  const normalized = (config) => config?.type === "stdio"
+    ? { ...config, args: config.args ?? [] }
+    : config;
   for (const name of Object.keys(servers)) {
-    spawnSync("claude", ["mcp", "remove", "--scope", "user", name], {
+    if (!(name in current)) continue;
+    if (name in wanted && isDeepStrictEqual(normalized(current[name]), normalized(publicServerConfig(wanted[name])))) continue;
+    const result = spawnSync("claude", ["mcp", "remove", "--scope", "user", name], {
       encoding: "utf8",
     });
+    if (result.status !== 0) {
+      throw new Error(`failed to remove Claude Code MCP server: ${name}`);
+    }
   }
 
-  for (const [name, config] of Object.entries(serversFor("claude"))) {
-    const payload = JSON.stringify(publicServerConfig(config));
+  for (const [name, config] of Object.entries(wanted)) {
+    const desired = publicServerConfig(config);
+    if (isDeepStrictEqual(normalized(current[name]), normalized(desired))) continue;
+    const payload = JSON.stringify(desired);
     const result = spawnSync("claude", ["mcp", "add-json", "--scope", "user", name, payload], {
       encoding: "utf8",
     });

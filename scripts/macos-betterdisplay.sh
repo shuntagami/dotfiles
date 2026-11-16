@@ -21,6 +21,26 @@ readonly DOMAIN="pro.betterdisplay.BetterDisplay"
 readonly OLD_LABEL="local.dotfiles.monitorcontrol-mode"
 readonly OLD_STATE="local.dotfiles.monitorcontrol-mode"
 readonly NEW_STATE="local.dotfiles.betterdisplay-mode"
+readonly RECEIPT="${SUPPORT_DIR}/betterdisplay-mode.sha256"
+readonly VIDEO_KEYS="all"
+readonly AUDIO_KEYS="displayWithAudioDeviceNameMatch"
+keyboard_settings_current() {
+  [[ "$(defaults read "${DOMAIN}" videoKeyboardControl 2>/dev/null)" == "${VIDEO_KEYS}" &&
+     "$(defaults read "${DOMAIN}" audioKeyboardControl 2>/dev/null)" == "${AUDIO_KEYS}" ]]
+}
+installation_signature() {
+  shasum -a 256 "${BASH_SOURCE[0]}" "${SCRIPT_DIR}/betterdisplay-mode.swift" \
+    "${SUPPORT_DIR}/betterdisplay-mode" "${PLIST}" | shasum -a 256 | awk '{print $1}'
+}
+# Include installed artifacts in the receipt, so missing/edited files are repaired.
+# Avoid rebuilding Swift and replacing a healthy running helper on every deploy.
+if [[ -f "${RECEIPT}" && -x "${SUPPORT_DIR}/betterdisplay-mode" && -f "${PLIST}" ]] &&
+   [[ "$(<"${RECEIPT}")" == "$(installation_signature)" ]] &&
+   keyboard_settings_current &&
+   launchctl print "gui/$(id -u)/${LABEL}" >/dev/null 2>&1; then
+  echo "BetterDisplay policy is already current."
+  exit 0
+fi
 readonly BUILD_DIR="$(mktemp -d)"
 betterdisplay_stop_requested=false
 
@@ -91,13 +111,6 @@ install -m 755 "${BUILD_DIR}/betterdisplay-mode" "${SUPPORT_DIR}/betterdisplay-m
 # Brightness keys adjust every display with brightness control; the helper
 # keeps a mirrored laptop panel out of that set. Volume keys drive a monitor
 # over DDC only while it is the default output; otherwise they go to macOS.
-readonly VIDEO_KEYS="all"
-readonly AUDIO_KEYS="displayWithAudioDeviceNameMatch"
-keyboard_settings_current() {
-  [[ "$(defaults read "${DOMAIN}" videoKeyboardControl 2>/dev/null)" == "${VIDEO_KEYS}" &&
-     "$(defaults read "${DOMAIN}" audioKeyboardControl 2>/dev/null)" == "${AUDIO_KEYS}" ]]
-}
-
 # BetterDisplay reads these settings only at launch. Restart it only when they
 # change, because quitting it also drops virtual screens and their mirroring.
 if keyboard_settings_current; then
@@ -139,4 +152,5 @@ with open(plist, "wb") as file:
 PY
 plutil -lint "${PLIST}"
 launchctl bootstrap "gui/$(id -u)" "${PLIST}"
+installation_signature > "${RECEIPT}"
 echo "Installed automatic BetterDisplay policy: mirrored = external only; extended = all displays."
