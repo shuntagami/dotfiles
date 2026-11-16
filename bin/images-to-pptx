@@ -307,6 +307,9 @@ if (built) {
   console.error(`using JPEG quality ${best.q}`);
 }
 
-copyFileSync(built.file, outputPath);
-rmSync(tmp, { recursive: true, force: true });
+try {
+  copyFileSync(built.file, outputPath);
+} finally {
+  rmSync(tmp, { recursive: true, force: true });
+}
 console.log(`${images.length} slides -> ${outputPath} (${fmtMB(built.size)})`);
