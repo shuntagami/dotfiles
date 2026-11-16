@@ -1,4 +1,58 @@
 -- Use the live menu so changes apply without restarting or disconnecting.
+on windowNamesFrom(menuLabels)
+    set windowNames to {}
+    -- AppKit appends window titles after the final separator.
+    repeat with labelText in menuLabels
+        set labelText to contents of labelText
+        if labelText is missing value then
+            set windowNames to {}
+        else if labelText is not "Jump Desktop" then
+            set end of windowNames to labelText as text
+        end if
+    end repeat
+    return windowNames
+end windowNamesFrom
+
+on isAdditionalDisplay(windowName, sessionName)
+    set displayPrefix to sessionName & " - Display "
+    if windowName does not start with displayPrefix then return false
+    if (length of windowName) is not greater than (length of displayPrefix) then return false
+    set displayNumber to text ((length of displayPrefix) + 1) thru -1 of windowName
+    repeat with digit in characters of displayNumber
+        if "0123456789" does not contain (digit as text) then return false
+    end repeat
+    return true
+end isAdditionalDisplay
+
+on chooseSession(windowNames, requestedName)
+    set sessionNames to {}
+    repeat with windowName in windowNames
+        set windowName to windowName as text
+        set additionalDisplay to false
+        -- Only group a numbered display when its exact base title also exists.
+        -- Keep unrelated titles (including settings) as ambiguous candidates.
+        repeat with baseName in windowNames
+            if my isAdditionalDisplay(windowName, baseName as text) then
+                set additionalDisplay to true
+                exit repeat
+            end if
+        end repeat
+        if not additionalDisplay then set end of sessionNames to windowName
+    end repeat
+    if (count of sessionNames) is 0 then error "Jump Desktopの接続が見つかりません。MacBookで接続してから実行してください。"
+    set candidateText to ""
+    repeat with sessionName in sessionNames
+        if candidateText is not "" then set candidateText to candidateText & ", "
+        set candidateText to candidateText & "「" & (sessionName as text) & "」"
+    end repeat
+    if requestedName is not "" then
+        if sessionNames contains requestedName then return requestedName
+        error "接続先「" & requestedName & "」が見つかりません。候補: " & candidateText
+    end if
+    if (count of sessionNames) is not 1 then error "接続先を特定できません。jump-fps 30 '接続名' のように指定するか、設定画面やダイアログを閉じてください。候補: " & candidateText
+    return item 1 of sessionNames
+end chooseSession
+
 on statsTextFor(sessionName)
     tell application "System Events" to tell process "Jump Desktop"
         set textValues to value of every static text of window sessionName
@@ -42,8 +96,13 @@ on readStats(sessionName)
 end readStats
 
 on run argv
-    if (count of argv) is not 1 then error "status・stats・rates・auto・fps値のいずれかを指定してください。"
+    if (count of argv) < 1 or (count of argv) > 2 then error "status・stats・rates・auto・fps値と、必要なら接続名を指定してください。"
     set mode to item 1 of argv
+    set requestedName to ""
+    if (count of argv) is 2 then
+        set requestedName to item 2 of argv
+        if requestedName is "" then error "接続名を空にはできません。"
+    end if
 
     tell application "System Events"
         if not (exists process "Jump Desktop") then error "MacBookでJump Desktopを起動し、接続してから実行してください。"
@@ -55,19 +114,8 @@ on run argv
         set frontmost to true
         delay 0.2
         set windowMenu to menu "Window" of menu bar 1
-        set sessionNames to {}
-        -- AppKit appends window titles after the final separator.
-        repeat with entry in menu items of windowMenu
-            set labelText to name of entry
-            if labelText is missing value then
-                set sessionNames to {}
-            else if labelText is not "Jump Desktop" then
-                set end of sessionNames to labelText as text
-            end if
-        end repeat
-        if (count of sessionNames) is 0 then error "Jump Desktopの接続が見つかりません。MacBookで接続してから実行してください。"
-        if (count of sessionNames) is not 1 then error "接続先を1つにし、設定画面やダイアログを閉じてください。Windowメニューの候補: " & (sessionNames as text)
-        set sessionName to item 1 of sessionNames
+        set windowNames to my windowNamesFrom(name of every menu item of windowMenu)
+        set sessionName to my chooseSession(windowNames, requestedName)
         click menu item sessionName of windowMenu
         set ready to false
         repeat 30 times
