@@ -87,6 +87,22 @@ class AntigravityConfigSyncTests(unittest.TestCase):
         custom = module.live_config_path(env={'ANTIGRAVITY_HOME': '/tmp/custom-agy'})
         self.assertEqual(custom, Path('/tmp/custom-agy/settings.json'))
 
+    def test_distinguishes_null_values_from_missing_keys(self):
+        self.dotfiles_cfg.write_text(json.dumps({'altScreenMode': 'always', 'optionalFlag': None}) + '\n', encoding='utf-8')
+        self.live_cfg.parent.mkdir(parents=True)
+        self.live_cfg.write_text(json.dumps({'altScreenMode': 'always'}) + '\n', encoding='utf-8')
+
+        self.assertEqual(module.apply(home=self.home, dotfiles_config=self.dotfiles_cfg), ['optionalFlag'])
+        self.assertEqual(json.loads(self.live_cfg.read_text(encoding='utf-8')), {
+            'altScreenMode': 'always',
+            'optionalFlag': None,
+        })
+
+        # Dropping a key in live while dotfiles holds null should register on save.
+        self.live_cfg.write_text(json.dumps({'altScreenMode': 'always'}) + '\n', encoding='utf-8')
+        self.assertEqual(module.save(dotfiles_config=self.dotfiles_cfg, live_config=self.live_cfg), ['optionalFlag'])
+        self.assertEqual(json.loads(self.dotfiles_cfg.read_text(encoding='utf-8')), {'altScreenMode': 'always'})
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -72,7 +72,7 @@ def apply(dry_run=False, home=None, dotfiles_config=DOTFILES_CONFIG, live_config
         return sorted(wanted)
 
     live = read_object(live_path)
-    changes = {key: value for key, value in wanted.items() if live.get(key) != value}
+    changes = {key: value for key, value in wanted.items() if key not in live or live[key] != value}
     if not changes and not live_path.is_symlink():
         print('Antigravity config: nothing to apply')
         return []
@@ -101,7 +101,10 @@ def save(dry_run=False, dotfiles_config=DOTFILES_CONFIG, live_config=None):
             merged[key] = saved[key]
     merged.update({key: saved[key] for key in LOCAL_KEYS if key in saved and key not in merged})
 
-    changed = sorted(key for key in merged.keys() | saved.keys() if merged.get(key) != saved.get(key))
+    changed = sorted(
+        key for key in merged.keys() | saved.keys()
+        if (key in merged) != (key in saved) or merged[key] != saved[key]
+    )
     print('Antigravity dotfiles copy: ' + (('would update ' if dry_run else 'updating ') + ', '.join(changed) if changed else 'already up to date'))
     if changed and not dry_run:
         write_object(dotfiles_config, merged, SOURCE_MODE)
