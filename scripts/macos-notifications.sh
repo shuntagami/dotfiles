@@ -2,6 +2,16 @@
 
 set -euo pipefail
 
+# Applying preferences is safe during deploy. Opening the profile installer is
+# a separate explicit action; an unapproved profile must not reopen every run.
+install_profile=false
+case "${1:-}" in
+  '') ;;
+  --install-profile) install_profile=true ;;
+  *) echo "Usage: macos-notifications.sh [--install-profile]" >&2; exit 2 ;;
+esac
+[[ $# -le 1 ]] || { echo "Too many arguments" >&2; exit 2; }
+
 # Notification settings, the parts of them that belong in dotfiles.
 #
 # Three layers stand between "Slack sent a message" and a banner on screen, and
@@ -25,8 +35,8 @@ set -euo pipefail
 #      Slack account and synced between devices, so not ours and not here.
 #
 # Runs from deploy.sh on every deploy, so everything below is idempotent and
-# nothing here waits on a human: the one step that cannot be automated (approving
-# a profile) is asked for only when it is actually needed.
+# nothing here opens a dialog or waits on a human. Profile approval is reported
+# as pending; --install-profile explicitly opens the installer when needed.
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "Skipping macOS notification settings (not running on macOS)."
@@ -77,8 +87,8 @@ fi
 # `profiles -I` was removed in Big Sur -- so installing means opening the file
 # and approving it once, and there is no way around that from a script.
 #
-# Which makes "only when needed" the whole game, since this runs on every
-# deploy. Approval is asked for in three cases: nothing is installed, the
+# On every deploy, report whether approval is needed. The explicit installer
+# opens in three cases: nothing is installed, the
 # settings changed, or the last thing we asked for was never approved.
 #
 # The third case is why the recorded state carries a TIMESTAMP as well as a
@@ -87,7 +97,8 @@ fi
 # would then make a DECLINED update look up to date until the settings moved
 # again. `profiles list -verbose` reports an installationDate, so comparing it
 # against the moment we asked answers what the hash cannot: cancel the dialog
-# and the date stays older than the ask, and the next deploy asks again.
+# and the date stays older than the ask. Deploy keeps reporting pending without
+# opening another window; an explicit --install-profile retries the request.
 #
 # What this still cannot verify is that the installed payload MATCHES ours: only
 # that something was installed after we asked for it. Reading the payload back
@@ -134,6 +145,10 @@ for index, identifier in identifiers.items():
 ask_to_install_profile() {
   local reason="$1" hash="$2"
   echo "Notification profile: ${reason}"
+  if [[ "${install_profile}" != true ]]; then
+    echo "  Pending approval. To open the installer explicitly: bash \"${DOTFILES_DIR}/scripts/macos-notifications.sh\" --install-profile"
+    return 0
+  fi
   if open "${PROFILE_PATH}"; then
     # Recorded only now, with the moment of the ask, and only because `open`
     # succeeded. The date comparison above is what turns this into "approved";

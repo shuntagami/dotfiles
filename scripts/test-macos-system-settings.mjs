@@ -129,6 +129,37 @@ test('read errors fail planning before any writes', () => scenario(({ ctx, calls
   assert.equal(fs.existsSync(ctx.stateRoot), false);
 }, { failRead: true }));
 
+test('protected app container is a manual action, never an empty preference baseline', t => scenario(({ ctx, prefs, calls }) => {
+  const filename = path.join(ctx.configDir, 'macos-settings.json');
+  const config = JSON.parse(fs.readFileSync(filename));
+  config.preferences.push({ domain: 'com.apple.Safari', container: 'com.apple.Safari', values: { ShowFullURLInSmartSearchField: true } });
+  fs.writeFileSync(filename, JSON.stringify(config));
+  const denied = path.join(ctx.home, 'Library/Containers/com.apple.Safari/Data/Library/Preferences');
+  const original = fs.readdirSync;
+  t.mock.method(fs, 'readdirSync', function (directory, ...args) {
+    if (directory === denied) throw Object.assign(new Error('Operation not permitted'), { code: 'EPERM' });
+    return original.call(this, directory, ...args);
+  });
+  assert.equal(applySettings('apply', ctx), 3);
+  assert.equal(prefs.get('com.apple.finder').ShowPathbar, true);
+  assert.ok(!calls.some(([file, args]) => file === '/usr/bin/defaults' && args.includes('com.apple.Safari')));
+  calls.length = 0;
+  assert.equal(applySettings('check', ctx), 1);
+  assert.equal(applySettings('dry-run', ctx), 0);
+  assert.deepEqual(mutations(calls), []);
+}));
+
+test('container preferences synchronize after access is available', () => scenario(({ ctx, prefs }) => {
+  const filename = path.join(ctx.configDir, 'macos-settings.json');
+  const config = JSON.parse(fs.readFileSync(filename));
+  config.preferences.push({ domain: 'com.apple.Safari', container: 'com.apple.Safari', values: { ShowFullURLInSmartSearchField: true } });
+  fs.writeFileSync(filename, JSON.stringify(config));
+  assert.equal(applySettings('apply', ctx), 3);
+  fs.mkdirSync(path.join(ctx.home, 'Library/Containers/com.apple.Safari/Data/Library/Preferences'), { recursive: true });
+  assert.equal(applySettings('apply', ctx), 0);
+  assert.equal(prefs.get('com.apple.Safari').ShowFullURLInSmartSearchField, true);
+}));
+
 test('write failure retains backup and activation across reruns', () => scenario(({ ctx, state, prefs }) => {
   state.failWrite = true;
   assert.throws(() => applySettings('apply', ctx), /Command failed/);

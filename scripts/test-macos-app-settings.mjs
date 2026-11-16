@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { aqua, clipy, shortcutValue } from './macos-app-hotkeys.mjs';
-import { manageDefaultApps } from './macos-default-apps.mjs';
+import { manageDefaultApps, main as defaultAppsMain } from './macos-default-apps.mjs';
 import { createContext, parsePlist, toPlist, run, NEEDS_APP_ACTION } from './macos-app-settings.mjs';
 
 const configDir = fileURLToPath(new URL('../misc/', import.meta.url));
@@ -54,19 +54,21 @@ function associationScenario(mode, accept, options = {}) {
     const directory = path.join(home, 'config');
     fs.mkdirSync(directory);
     fs.writeFileSync(path.join(directory, 'default-apps.json'), JSON.stringify({
-      fileAssociations: [{ name: 'Acrobat', bundleIds: ['com.adobe.Acrobat.Pro', 'com.adobe.Reader'], extensions: ['pdf'] }],
+      fileAssociations: [{ name: 'Acrobat', bundleIds: ['com.adobe.Acrobat.Pro', 'com.adobe.Reader'], extensions: options.extensions ?? ['pdf'] }],
       screenshots: { bundleId: 'pl.maketheweb.cleanshotx', shortcuts: {}, disabledSystemShortcuts: [] },
     }));
     let current = 'com.apple.Preview';
     const writes = [];
+    const commands = [];
     const ctx = createContext({
-      home, configDir: directory, stateRoot: path.join(home, 'state'), log() {},
+      home, associationExtension: 'pdf', configDir: directory, stateRoot: path.join(home, 'state'), log() {},
       command: () => 'duti', preferences: () => ({}), handler: () => current,
       applications: () => new Map([
         ...options.missingReader ? [] : [['com.adobe.reader', '/fake/Reader.app']],
         ...options.missingCleanShot ? [] : [['pl.maketheweb.cleanshotx', '/fake/CleanShot X.app']],
       ]),
       run(file, args) {
+        commands.push([file, args]);
         if (file.endsWith('/lsregister') && options.registrationFails) return { status: 1, stderr: 'registration failed' };
         if (file === 'duti' && args[0] === '-s') {
           writes.push(args);
@@ -76,13 +78,15 @@ function associationScenario(mode, accept, options = {}) {
         return { status: 0, stdout: '', stderr: '' };
       },
     });
-    const result = manageDefaultApps(mode, ctx);
-    return { result, writes, backedUp: fs.existsSync(ctx.stateRoot) };
+    const invoke = () => options.cli ? defaultAppsMain(options.cli, { ...ctx, platform: 'darwin' }) : manageDefaultApps(mode, ctx);
+    const result = invoke();
+    if (options.repeat) assert.equal(invoke(), result);
+    return { result, writes, commands, backedUp: fs.existsSync(ctx.stateRoot) };
   });
 }
 
 test('successful setter without actual association change requests manual action', () => {
-  const { result, writes, backedUp } = associationScenario('apply', false);
+  const { result, writes, backedUp } = associationScenario('set-default', false);
   assert.equal(result, NEEDS_APP_ACTION);
   assert.equal(writes.length, 1);
   assert.equal(backedUp, true);
@@ -94,7 +98,7 @@ test('check still reports an unchanged association as a mismatch', () => {
 
 test('missing apps request installation during apply and fail strict check', () => {
   for (const options of [{ missingReader: true }, { missingCleanShot: true }]) {
-    assert.equal(associationScenario('apply', true, options).result, NEEDS_APP_ACTION);
+    assert.equal(associationScenario(options.missingReader ? 'set-default' : 'deploy', true, options).result, NEEDS_APP_ACTION);
     assert.equal(associationScenario('check', true, options).result, 1);
   }
 });
@@ -102,13 +106,13 @@ test('missing apps request installation during apply and fail strict check', () 
 test('registration and setter failures remain fatal even with a missing screenshot app', () => {
   for (const options of [{ setterFails: true }, { registrationFails: true }]) {
     for (const missingCleanShot of [true, false]) {
-      assert.equal(associationScenario('apply', false, { ...options, missingCleanShot }).result, 1);
+      assert.equal(associationScenario('set-default', false, { ...options, missingCleanShot }).result, 1);
     }
   }
 });
 
 test('Reader fallback accepts case-insensitive bundle ID', () => {
-  const { result, writes } = associationScenario('apply', true);
+  const { result, writes } = associationScenario('set-default', true);
   assert.equal(result, 0);
   assert.equal(writes[0][1], 'com.adobe.Reader');
 });
@@ -118,6 +122,31 @@ test('dry-run makes no writes or backups', () => {
   assert.equal(result, 0);
   assert.deepEqual(writes, []);
   assert.equal(backedUp, false);
+});
+
+test('repeated deploy never sets or registers file handlers, avoiding native dialog storms', () => {
+  const { result, writes, commands, backedUp } = associationScenario('deploy', true, { repeat: true });
+  assert.equal(result, NEEDS_APP_ACTION);
+  assert.deepEqual(writes, []);
+  assert.deepEqual(commands, []);
+  assert.equal(backedUp, false);
+});
+
+test('CLI --apply remains quiet about association changes on every run', () => {
+  const { result, commands } = associationScenario('deploy', true, { cli: ['--apply'], repeat: true });
+  assert.equal(result, NEEDS_APP_ACTION);
+  assert.deepEqual(commands, []);
+});
+
+test('explicit association command changes only the selected extension', () => {
+  const { result, writes } = associationScenario('set-default', true, { cli: ['--set-default', '.PDF'], extensions: ['pdf', 'png'] });
+  assert.equal(result, 0);
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0][2], '.pdf');
+});
+
+test('unmanaged association requests fail before native setter calls', () => {
+  assert.throws(() => associationScenario('set-default', true, { cli: ['--set-default', 'docx'] }), /Choose one managed extension/);
 });
 
 test('preferences read error is not treated as an empty domain', () => {
@@ -208,8 +237,14 @@ function screenshotScenario(options, callback) {
 }
 
 test('saved CleanShot shortcut returns app-action status after verification', () => screenshotScenario({ changeShortcut: true, alreadyDisabled: true }, ctx => {
-  assert.equal(manageDefaultApps('apply', ctx), NEEDS_APP_ACTION);
+  assert.equal(manageDefaultApps('deploy', ctx), NEEDS_APP_ACTION);
   assert.equal(manageDefaultApps('check', ctx), 0);
+}));
+
+test('deploy still synchronizes screenshot preferences without association prompts', () => screenshotScenario({ changeShortcut: true, alreadyDisabled: true }, ctx => {
+  assert.equal(manageDefaultApps('deploy', ctx), NEEDS_APP_ACTION);
+  assert.equal(manageDefaultApps('check', ctx), 0);
+  assert.equal(manageDefaultApps('deploy', ctx), 0);
 }));
 
 test('CleanShot legacy shortcut flags use native booleans and preserve the explicit copy binding', () => {
@@ -219,29 +254,29 @@ test('CleanShot legacy shortcut flags use native booleans and preserve the expli
       initialPrefs: { LAVAtakeArea: flag ? copy : true, LAVAtakeAreaCopy: copy, unrelated: 42 },
       shortcuts: { LAVAtakeArea: flag, LAVAtakeAreaCopy: copy },
     }, ctx => {
-      assert.equal(manageDefaultApps('apply', ctx), NEEDS_APP_ACTION);
+      assert.equal(manageDefaultApps('deploy', ctx), NEEDS_APP_ACTION);
       const stored = ctx.preferences('pl.maketheweb.cleanshotx');
       assert.equal(stored.LAVAtakeArea, flag);
       assert.deepEqual(stored.LAVAtakeAreaCopy, copy);
       assert.equal(stored.unrelated, 42);
       assert.equal(manageDefaultApps('check', ctx), 0);
-      assert.equal(manageDefaultApps('apply', ctx), 0);
+      assert.equal(manageDefaultApps('deploy', ctx), 0);
     });
   }
 });
 
 test('CleanShot write failure is not masked by a restart requirement', () => screenshotScenario({ changeShortcut: true, alreadyDisabled: true, writeFails: true }, ctx => {
-  assert.equal(manageDefaultApps('apply', ctx), 1);
+  assert.equal(manageDefaultApps('deploy', ctx), 1);
 }));
 
 test('CleanShot successful write without a preference change fails verification', () => screenshotScenario({ changeShortcut: true, alreadyDisabled: true, silentWriteFailure: true }, ctx => {
-  assert.equal(manageDefaultApps('apply', ctx), 1);
+  assert.equal(manageDefaultApps('deploy', ctx), 1);
 }));
 
 test('native screenshot changes activate once and matching settings do not activate again', () => screenshotScenario({}, (ctx, activations) => {
-  assert.equal(manageDefaultApps('apply', ctx), 0);
+  assert.equal(manageDefaultApps('deploy', ctx), 0);
   assert.equal(activations(), 1);
-  assert.equal(manageDefaultApps('apply', ctx), 0);
+  assert.equal(manageDefaultApps('deploy', ctx), 0);
   assert.equal(activations(), 1);
 }));
 
@@ -252,7 +287,7 @@ test('check and dry-run never activate native settings', () => screenshotScenari
 }));
 
 test('native settings activation failure is reported', () => screenshotScenario({ activationFails: true }, ctx => {
-  assert.equal(manageDefaultApps('apply', ctx), 1);
+  assert.equal(manageDefaultApps('deploy', ctx), 1);
 }));
 
 test('deploy continues for app-action status and stops for real failures in Bash and Zsh', { skip: process.platform !== 'darwin' }, () => {
