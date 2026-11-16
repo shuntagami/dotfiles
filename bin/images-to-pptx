@@ -9,15 +9,26 @@
 //   -p, --preset <name>     original|high|medium|low (default: medium)
 //   -q, --quality <0-100>   JPEG品質 (sipsのformatOptions値, presetを上書き)
 //   -w, --width <px>        リサイズ後の最大幅 (presetを上書き)
+//   -m, --max-size <MB>     出力PPTXをこのサイズ以下に収める最高のJPEG品質を自動で探す。
+//                           -p/-w を指定しなければ解像度は元のまま (Googleスライドの
+//                           100MB上限には --max-size 100 など)。
 //   -h, --help              このヘルプを表示
 //
 // プリセット:
 //   original  リサイズ・再エンコードなし。元画像をそのまま埋め込む(劣化ゼロ、最大サイズ)
+//   keep      リサイズなし、JPEG品質90のみ (解像度を保ったままサイズだけ減らす)
 //   high      quality=90, width=1920
 //   medium    quality=65, width=1280 (default, 旧デフォルトと同じ)
 //   low       quality=45, width=960  (最小サイズ)
 //
 // output.pptx を省略すると <image_dir>.pptx (image_dirと同じ階層) に保存する。
+//
+// --max-size の挙動:
+//   - -p original と併用: 元画像のままで収まるなら無加工、収まらなければ解像度を保った
+//     まま品質を下げる。
+//   - 品質は 30..95 (-q 指定時はそれが上限) を、数枚のサンプルで二分探索して見積もり、
+//     全枚数を変換して実サイズを検証する (超えたら品質を下げて再変換)。
+//   - 品質30でも収まらない場合はエラー終了する (解像度は黙って下げない。-w で下げる)。
 //
 // 実装メモ: リサイズ・JPEG変換はmacOS標準のsipsで行い、PPTX組み立てはpptxgenjs
 // (npm:, Denoのグローバルキャッシュ経由でrepo非依存) を使う。Pythonは使わない。
@@ -25,13 +36,14 @@
 // (quality=100でのJPEG再エンコードもPNG→JPEG変換も非可逆なため)。
 
 import pptxgen from "npm:pptxgenjs@3.12.0";
-import { readdirSync, mkdtempSync, rmSync, existsSync } from "node:fs";
+import { readdirSync, mkdtempSync, mkdirSync, rmSync, existsSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 
 const PRESETS = {
   original: { quality: null, width: null },
+  keep: { quality: 90, width: null },
   high: { quality: 90, width: 1920 },
   medium: { quality: 65, width: 1280 },
   low: { quality: 45, width: 960 },
@@ -44,11 +56,15 @@ Options:
   -p, --preset <name>     original|high|medium|low (default: medium)
   -q, --quality <0-100>   JPEG quality via sips (overrides preset)
   -w, --width <px>        Max image width in px (overrides preset)
+  -m, --max-size <MB>     Find the highest JPEG quality that keeps the PPTX under this size.
+                          Resolution is kept unless -p/-w is given (e.g. --max-size 100 for
+                          Google Slides' 100MB import limit)
   -h, --help              Show this help
 
 Presets:
   original  No resize/re-encode, embeds source files as-is (zero quality loss, largest file)
-  high      quality=90, width=1920
+  keep      No resize, JPEG quality 90 only (keeps resolution, shrinks the file)
+  high     quality=90, width=1920
   medium    quality=65, width=1280 (default, same as the old fixed defaults)
   low       quality=45, width=960  (smallest file)
 `);
@@ -60,6 +76,8 @@ let quality = null;
 let width = null;
 let qualityExplicit = false;
 let widthExplicit = false;
+let presetExplicit = false;
+let maxSizeMB = null;
 const positional = [];
 
 while (rawArgs.length > 0) {
@@ -69,6 +87,13 @@ while (rawArgs.length > 0) {
     Deno.exit(0);
   } else if (arg === "-p" || arg === "--preset") {
     presetName = rawArgs.shift();
+    presetExplicit = true;
+  } else if (arg === "-m" || arg === "--max-size") {
+    maxSizeMB = Number(rawArgs.shift());
+    if (!Number.isFinite(maxSizeMB) || maxSizeMB <= 0) {
+      console.error("Error: --max-size must be a positive number (MB).");
+      Deno.exit(1);
+    }
   } else if (arg === "-q" || arg === "--quality") {
     quality = parseInt(rawArgs.shift(), 10);
     qualityExplicit = true;
@@ -85,7 +110,11 @@ if (!(presetName in PRESETS)) {
   Deno.exit(1);
 }
 
-const useOriginal = presetName === "original";
+// --max-size だけ指定された場合は「解像度を保ったまま品質で収める」ことが目的なので
+// medium(幅1280)ではなく keep を既定にする。
+if (maxSizeMB != null && !presetExplicit && !widthExplicit) presetName = "keep";
+
+let useOriginal = presetName === "original";
 if (useOriginal && (qualityExplicit || widthExplicit)) {
   console.error("Warning: --quality/--width are ignored with --preset original (no re-encode happens).");
 }
@@ -135,28 +164,103 @@ const slideHeightIn = (slideWidthIn * h0) / w0;
 
 const tmp = mkdtempSync(join(tmpdir(), "images-to-pptx-"));
 
+// --- 画像の準備 (original: 元ファイル / それ以外: sipsでJPEG化) ---
+const MB = 1_000_000; // 十進MB (Googleスライドの「100MB」上限に合わせる)
+const MIN_Q = 30;
+const MAX_Q = 95;
+// JPEGはzipでほぼ縮まない。PPTXのXML・zipヘッダ分の余裕として見込む比率。
+const OVERHEAD = 1.02;
+const limitBytes = maxSizeMB != null ? maxSizeMB * MB : null;
+
+function encode(srcPath, outPath, q) {
+  const sipsArgs = ["-s", "format", "jpeg", "-s", "formatOptions", String(q)];
+  if (width != null) sipsArgs.push("-Z", String(width));
+  sipsArgs.push(srcPath, "--out", outPath);
+  execFileSync("sips", sipsArgs, { stdio: "ignore" });
+  return statSync(outPath).size;
+}
+
+// 全画像を品質qでJPEG化して { paths, total } を返す
+function encodeAll(q, dir) {
+  mkdirSync(dir, { recursive: true });
+  let total = 0;
+  const paths = images.map((src, idx) => {
+    const out = join(dir, `slide-${String(idx + 1).padStart(3, "0")}.jpg`);
+    total += encode(src, out, q);
+    return out;
+  });
+  return { paths, total };
+}
+
+// 数枚のサンプルから、全枚数の合計サイズを品質qで見積もる
+function estimateTotal(q, sample, dir) {
+  mkdirSync(dir, { recursive: true });
+  let sum = 0;
+  sample.forEach((src, idx) => { sum += encode(src, join(dir, `s${idx}.jpg`), q); });
+  return (sum / sample.length) * images.length;
+}
+
+const fmtMB = (b) => `${(b / MB).toFixed(1)}MB`;
+let slidePaths;
+
+if (useOriginal && limitBytes != null) {
+  const total = images.reduce((n, f) => n + statSync(f).size, 0);
+  if (total * OVERHEAD <= limitBytes) {
+    console.error(`original images total ${fmtMB(total)} (<= ${maxSizeMB}MB): embedding as-is`);
+  } else {
+    console.error(`original images total ${fmtMB(total)} (> ${maxSizeMB}MB): re-encoding to JPEG at original resolution`);
+    useOriginal = false;
+  }
+}
+
+if (useOriginal) {
+  slidePaths = images;
+} else if (limitBytes == null) {
+  slidePaths = encodeAll(quality ?? 65, join(tmp, "enc")).paths;
+} else {
+  // 1) サンプルで「上限に収まる最大の品質」を二分探索 (全枚数を何度も変換しないため)
+  const step = Math.max(1, Math.floor(images.length / 12));
+  const sample = images.filter((_, idx) => idx % step === 0).slice(0, 12);
+  let hi = qualityExplicit ? Math.min(Math.max(quality, 1), 100) : MAX_Q;
+  let lo = Math.min(MIN_Q, hi);
+  let q = lo;
+  console.error(`searching JPEG quality ${lo}..${hi} for <= ${maxSizeMB}MB (${sample.length}-image sample) ...`);
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const est = estimateTotal(mid, sample, join(tmp, "sample"));
+    console.error(`  q=${mid}: ~${fmtMB(est * OVERHEAD)}`);
+    if (est * OVERHEAD <= limitBytes) { q = mid; lo = mid + 1; } else { hi = mid - 1; }
+  }
+  // 2) 全枚数を変換して実サイズで検証。サンプルの見積もりが外れていたら品質を下げて再変換する
+  const floorQ = Math.min(MIN_Q, q);
+  for (;;) {
+    rmSync(join(tmp, "enc"), { recursive: true, force: true });
+    const r = encodeAll(q, join(tmp, "enc"));
+    console.error(`  encoded all at q=${q}: ${fmtMB(r.total * OVERHEAD)}`);
+    if (r.total * OVERHEAD <= limitBytes) { slidePaths = r.paths; break; }
+    if (q <= floorQ) {
+      console.error(`Error: even quality ${q} gives ${fmtMB(r.total * OVERHEAD)} (> ${maxSizeMB}MB). Lower the resolution with -w <px>.`);
+      rmSync(tmp, { recursive: true, force: true });
+      Deno.exit(1);
+    }
+    q = Math.max(floorQ, q - 2);
+  }
+  console.error(`using JPEG quality ${q}`);
+}
+
 const p = new pptxgen();
 p.defineLayout({ name: "CUSTOM", width: slideWidthIn, height: slideHeightIn });
 p.layout = "CUSTOM";
 
-let i = 0;
-for (const imgPath of images) {
-  i++;
-  let slideImgPath = imgPath;
-
-  if (!useOriginal) {
-    const outJpg = join(tmp, `slide-${String(i).padStart(3, "0")}.jpg`);
-    const sipsArgs = ["-s", "format", "jpeg", "-s", "formatOptions", String(quality ?? 65)];
-    if (width != null) sipsArgs.push("-Z", String(width));
-    sipsArgs.push(imgPath, "--out", outJpg);
-    execFileSync("sips", sipsArgs, { stdio: "ignore" });
-    slideImgPath = outJpg;
-  }
-
+for (const slideImgPath of slidePaths) {
   const slide = p.addSlide();
   slide.addImage({ path: slideImgPath, x: 0, y: 0, w: slideWidthIn, h: slideHeightIn });
 }
 
 await p.writeFile({ fileName: outputPath });
 rmSync(tmp, { recursive: true, force: true });
-console.log(`${images.length} slides -> ${outputPath}`);
+const outBytes = statSync(outputPath).size;
+console.log(`${images.length} slides -> ${outputPath} (${fmtMB(outBytes)})`);
+if (limitBytes != null && outBytes > limitBytes) {
+  console.error(`Warning: output ${fmtMB(outBytes)} exceeds --max-size ${maxSizeMB}MB.`);
+}
