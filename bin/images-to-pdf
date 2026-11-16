@@ -18,6 +18,9 @@
 // PNG Predictorとして貼る (img2pdfと同じ手法。展開も再圧縮もしないので速く、劣化ゼロ)。
 // それ以外のPNG (透過・パレット・インターレース) だけpdf-libのembedPng
 // (展開して再圧縮、ピクセルは保たれるが遅く16bitは8bitに落ちる) にフォールバックする。
+// JPEGのEXIF Orientation(1-8)は読み取り、ページの縦横と描画の向きに反映する
+// (バイト列は触らない)。PNGのiCCPはICCBased色空間として引き継ぐ (gAMA/cHRMのみの
+// PNGと、フォールバック経路のPNGはDeviceRGB/DeviceGray扱い)。
 // ページサイズは 画像px × 72 / dpi (pt)。pdf-to-images -r 150 で作った画像なら
 // 元PDFのページサイズに戻る。
 
@@ -30,6 +33,7 @@ import {
 } from "npm:pdf-lib@1.17.1";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { inflateSync } from "node:zlib";
 
 function showHelp() {
   console.log(`Usage: images-to-pdf [options] <image_dir> [output.pdf]
@@ -90,38 +94,119 @@ if (images.length === 0) {
   Deno.exit(1);
 }
 
-// PNGのIDATをそのまま使えるなら { width, height, depth, colors, idat } を返す。
+// PNGを最後まで検証し、IDATをそのまま使えるなら { width, height, depth, colors, idat, icc } を返す。
+// 有効だが直貼り不可 (透過・パレット・インターレース等) ならnull (呼び出し側がembedPngにフォールバック)。
+// 途中で切れている/構造が壊れているPNGはエラーにする (embedPngは壊れた入力で固まることがあるため)。
 function pngPassthrough(b) {
   const sig = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
-  if (b.length < 33 || sig.some((v, i) => b[i] !== v)) return null;
+  if (b.length < 8 || sig.some((v, i) => b[i] !== v)) throw new Error("not a valid PNG");
   const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
   let width = 0, height = 0, depth = 0, colorType = -1, interlace = 1;
+  let sawIhdr = false, sawIend = false, eligible = true, icc = null;
   const idat = [];
   for (let off = 8; off + 12 <= b.length;) {
     const len = dv.getUint32(off);
+    if (off + 12 + len > b.length) throw new Error("PNG is truncated (chunk runs past end of file)");
     const type = String.fromCharCode(b[off + 4], b[off + 5], b[off + 6], b[off + 7]);
     const data = b.subarray(off + 8, off + 8 + len);
+    if (!sawIhdr && type !== "IHDR") throw new Error("PNG is corrupt (IHDR is not the first chunk)");
     if (type === "IHDR") {
+      if (len !== 13) throw new Error("PNG is corrupt (bad IHDR)");
+      sawIhdr = true;
       width = dv.getUint32(off + 8);
       height = dv.getUint32(off + 12);
       depth = data[8];
       colorType = data[9];
       interlace = data[12];
     } else if (type === "tRNS") {
-      return null; // 色キー透過はPDFのFlate直貼りでは表現できない
+      eligible = false; // 色キー透過はPDFのFlate直貼りでは表現できない
+    } else if (type === "iCCP") {
+      const z = data.indexOf(0); // プロファイル名の終端
+      if (z > 0 && data[z + 1] === 0) icc = data.subarray(z + 2); // zlibのままPDFのFlateDecodeに使える
     } else if (type === "IDAT") {
       idat.push(data);
     } else if (type === "IEND") {
+      sawIend = true;
       break;
     }
     off += 12 + len;
   }
-  if (interlace !== 0 || (depth !== 8 && depth !== 16) || idat.length === 0) return null;
+  if (!sawIhdr || !sawIend || idat.length === 0) throw new Error("PNG is truncated or corrupt (missing IHDR/IDAT/IEND)");
+  if (!eligible || interlace !== 0 || (depth !== 8 && depth !== 16)) return null;
   if (colorType !== 0 && colorType !== 2) return null;
+  const colors = colorType === 2 ? 3 : 1;
+  if (icc) {
+    // PDFのICCBasedはNとプロファイルの色空間が合っている必要がある。合わなければ捨ててDevice扱いにする。
+    try {
+      const head = new TextDecoder("latin1").decode(inflateSync(icc).subarray(16, 20));
+      if (head !== (colors === 3 ? "RGB " : "GRAY")) icc = null;
+    } catch {
+      icc = null;
+    }
+  }
   const merged = new Uint8Array(idat.reduce((n, c) => n + c.length, 0));
   let pos = 0;
   for (const c of idat) { merged.set(c, pos); pos += c.length; }
-  return { width, height, depth, colors: colorType === 2 ? 3 : 1, idat: merged };
+  return { width, height, depth, colors, idat: merged, icc };
+}
+
+// JPEGのEXIF Orientation (1-8)。無い/読めないときは1。
+function jpegOrientation(b) {
+  try {
+    if (b[0] !== 0xff || b[1] !== 0xd8) return 1;
+    const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    for (let off = 2; off + 4 <= b.length;) {
+      if (b[off] !== 0xff) return 1;
+      const marker = b[off + 1];
+      if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) { off += 2; continue; }
+      if (marker === 0xda || marker === 0xd9) return 1; // 画像データ開始/終端まで来たら無い
+      const len = dv.getUint16(off + 2);
+      const isExif = marker === 0xe1 && b[off + 4] === 0x45 && b[off + 5] === 0x78 && b[off + 6] === 0x69 &&
+        b[off + 7] === 0x66 && b[off + 8] === 0 && b[off + 9] === 0;
+      if (isExif) {
+        const t = off + 10;
+        const le = b[t] === 0x49 && b[t + 1] === 0x49;
+        if (!le && !(b[t] === 0x4d && b[t + 1] === 0x4d)) return 1;
+        const ifd = t + dv.getUint32(t + 4, le);
+        const n = dv.getUint16(ifd, le);
+        for (let i = 0; i < n; i++) {
+          const e = ifd + 2 + i * 12;
+          if (dv.getUint16(e, le) === 0x0112) {
+            const v = dv.getUint16(e + 8, le);
+            return v >= 1 && v <= 8 ? v : 1;
+          }
+        }
+        return 1;
+      }
+      off += 2 + len;
+    }
+  } catch { /* 範囲外などは向きなし扱い */ }
+  return 1;
+}
+
+// 符号化済みの画像 (w x h pt) を表示向きoで置く行列 [a b c d e f] (x'=ax+cy+e, y'=bx+dy+f)。
+const ORIENT = {
+  1: (w, h) => [1, 0, 0, 1, 0, 0],
+  2: (w, h) => [-1, 0, 0, 1, w, 0],
+  3: (w, h) => [-1, 0, 0, -1, w, h],
+  4: (w, h) => [1, 0, 0, -1, 0, h],
+  5: (w, h) => [0, -1, -1, 0, h, w],
+  6: (w, h) => [0, -1, 1, 0, 0, w],
+  7: (w, h) => [0, 1, 1, 0, 0, 0],
+  8: (w, h) => [0, 1, -1, 0, h, 0],
+};
+
+// 画像のXObject参照を、向きoに合わせたページに1枚置く。w,hは符号化済み画像のpt寸法。
+function addImagePage(ref, w, h, o = 1) {
+  const [a, b, c, d, e, f] = ORIENT[o](w, h);
+  const page = pdf.addPage(o >= 5 ? [h, w] : [w, h]);
+  const name = page.node.newXObject("Img", ref);
+  page.pushOperators(
+    pushGraphicsState(),
+    concatTransformationMatrix(a * w, b * w, c * h, d * h, e, f),
+    drawObject(name),
+    popGraphicsState(),
+  );
 }
 
 const scale = 72 / dpi;
@@ -131,29 +216,34 @@ let n = 0;
 for (const imgPath of images) {
   const bytes = readFileSync(imgPath);
   const isPng = /\.png$/i.test(imgPath);
-  const raw = isPng ? pngPassthrough(bytes) : null;
-  if (raw) {
-    const ref = pdf.context.register(pdf.context.stream(raw.idat, {
-      Type: "XObject",
-      Subtype: "Image",
-      Width: raw.width,
-      Height: raw.height,
-      ColorSpace: raw.colors === 3 ? "DeviceRGB" : "DeviceGray",
-      BitsPerComponent: raw.depth,
-      Filter: "FlateDecode",
-      DecodeParms: { Predictor: 15, Colors: raw.colors, BitsPerComponent: raw.depth, Columns: raw.width },
-    }));
-    const w = raw.width * scale;
-    const h = raw.height * scale;
-    const page = pdf.addPage([w, h]);
-    const name = page.node.newXObject("Img", ref);
-    page.pushOperators(pushGraphicsState(), concatTransformationMatrix(w, 0, 0, h, 0, 0), drawObject(name), popGraphicsState());
-  } else {
-    const image = isPng ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
-    const w = image.width * scale;
-    const h = image.height * scale;
-    const page = pdf.addPage([w, h]);
-    page.drawImage(image, { x: 0, y: 0, width: w, height: h });
+  try {
+    const raw = isPng ? pngPassthrough(bytes) : null;
+    if (raw) {
+      let colorSpace = raw.colors === 3 ? "DeviceRGB" : "DeviceGray";
+      if (raw.icc) {
+        const profile = pdf.context.register(
+          pdf.context.stream(raw.icc, { N: raw.colors, Alternate: colorSpace, Filter: "FlateDecode" }),
+        );
+        colorSpace = ["ICCBased", profile];
+      }
+      const ref = pdf.context.register(pdf.context.stream(raw.idat, {
+        Type: "XObject",
+        Subtype: "Image",
+        Width: raw.width,
+        Height: raw.height,
+        ColorSpace: colorSpace,
+        BitsPerComponent: raw.depth,
+        Filter: "FlateDecode",
+        DecodeParms: { Predictor: 15, Colors: raw.colors, BitsPerComponent: raw.depth, Columns: raw.width },
+      }));
+      addImagePage(ref, raw.width * scale, raw.height * scale);
+    } else {
+      const image = isPng ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
+      addImagePage(image.ref, image.width * scale, image.height * scale, isPng ? 1 : jpegOrientation(bytes));
+    }
+  } catch (err) {
+    console.error(`Error: failed to read ${imgPath}: ${err.message}`);
+    Deno.exit(1);
   }
   n++;
   if (images.length >= 20 && n % 20 === 0) console.error(`  ${n}/${images.length}`);
