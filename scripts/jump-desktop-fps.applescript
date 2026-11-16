@@ -7,15 +7,38 @@ on run argv
     tell application "System Events"
         if not (exists process "Jump Desktop") then error "MacBookでJump Desktopを起動し、接続してから実行してください。"
     end tell
-    tell application "Jump Desktop" to activate
-    delay 0.2
-
     tell application "System Events" to tell process "Jump Desktop"
-        -- Refuse ambiguous sessions/dialogs rather than changing another connection.
-        set sessions to windows whose name is not "Jump Desktop"
-        if (count of sessions) is not 1 then error "Jump Desktopの接続ウィンドウを1つにし、設定画面やダイアログを閉じてください。"
-        set sessionName to name of item 1 of sessions
-        perform action "AXRaise" of item 1 of sessions
+        -- Application.activate can open the Computers window and move away from
+        -- a fullscreen session. Focus the process, then select the session via
+        -- Window, which also lists windows on other Spaces.
+        set frontmost to true
+        delay 0.2
+        set windowMenu to menu "Window" of menu bar 1
+        set sessionNames to {}
+        -- AppKit appends window titles after the final separator.
+        repeat with entry in menu items of windowMenu
+            set labelText to name of entry
+            if labelText is missing value then
+                set sessionNames to {}
+            else if labelText is not "Jump Desktop" then
+                set end of sessionNames to labelText as text
+            end if
+        end repeat
+        if (count of sessionNames) is 0 then error "Jump Desktopの接続が見つかりません。MacBookで接続してから実行してください。"
+        if (count of sessionNames) is not 1 then error "接続先を1つにし、設定画面やダイアログを閉じてください。Windowメニューの候補: " & (sessionNames as text)
+        set sessionName to item 1 of sessionNames
+        click menu item sessionName of windowMenu
+        set ready to false
+        repeat 30 times
+            set sessions to windows whose name is sessionName and subrole is "AXStandardWindow"
+            if (count of sessions) is 1 then
+                perform action "AXRaise" of item 1 of sessions
+                set ready to true
+                exit repeat
+            end if
+            delay 0.1
+        end repeat
+        if not ready then error "接続画面「" & sessionName & "」を表示できませんでした。"
         if not (exists menu item "Framerate" of menu "Remote" of menu bar 1) then error "接続中のRemote > Framerateが見つかりません。Fluid接続を確認してください。"
         set fpsMenu to menu 1 of menu item "Framerate" of menu "Remote" of menu bar 1
 

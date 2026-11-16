@@ -96,6 +96,8 @@ jumpauto       # Autoに戻す
 エイリアスは `source ~/dotfiles/zsh/mac.zsh` で読み込める。
 `jump-fps 60`・`jump-fps 30`・`jump-fps auto` でも変更できる。
 接続ウィンドウは1つにし、設定画面やダイアログを閉じて実行する。
+接続先は `Window` メニューから選ぶため、接続一覧が前面にある場合や、
+接続画面が別のSpaceで全画面表示されている場合も操作できる。
 MacBookのSystem Events操作・アクセシビリティ許可と、別のMacからはSSH接続が必要。
 変更後はメニューのチェックを読み直して確認する。現在のAuto設定を調べるだけなら
 `jump-fps` を使う。ネットワーク状況により実際のfpsは設定した上限より低くなる。
