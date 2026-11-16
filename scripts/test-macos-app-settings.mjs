@@ -21,13 +21,14 @@ test('Aqua apply preserves unmanaged actions, fields, settings and repeated appl
   fs.mkdirSync(path.dirname(filename), { recursive: true });
   fs.writeFileSync(filename, JSON.stringify({
     hotkeys: [{ action: 'activate', keys: 'Old', customField: true }, { action: 'open_note', keys: 'Custom' }],
-    unrelated: { value: 'preserve' },
+    unrelated: { value: 'preserve' }, penEnabled: true,
   }));
   fs.chmodSync(filename, 0o640);
   const ctx = createContext({ home, configDir, stateRoot: path.join(home, 'state'), log() {} });
   assert.equal(aqua('apply', ctx), 0);
   const updated = JSON.parse(fs.readFileSync(filename, 'utf8'));
   assert.deepEqual(updated.unrelated, { value: 'preserve' });
+  assert.equal(updated.penEnabled, false);
   assert.ok(updated.hotkeys.some(item => item.action === 'open_note' && item.keys === 'Custom'));
   assert.ok(updated.hotkeys.some(item => item.action === 'activate' && item.keys === 'Fn' && item.customField));
   assert.equal(fs.statSync(filename).mode & 0o777, 0o640);
