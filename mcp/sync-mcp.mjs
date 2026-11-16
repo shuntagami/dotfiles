@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { isDeepStrictEqual } from "node:util";
 
 const home = os.homedir();
 const dotfiles = path.join(home, "dotfiles");
@@ -62,8 +63,14 @@ function serversFor(client) {
 // it creates the file, and a config holding a token must not stay world-readable.
 function writeJson(filePath, data, { mode } = {}) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, mode ? { mode } : undefined);
+  writeIfChanged(filePath, `${JSON.stringify(data, null, 2)}\n`, mode ? { mode } : undefined);
   if (mode) fs.chmodSync(filePath, mode);
+}
+
+function writeIfChanged(filePath, content, options) {
+  if (!fs.existsSync(filePath) || fs.readFileSync(filePath, "utf8") !== content) {
+    fs.writeFileSync(filePath, content, options);
+  }
 }
 
 function tomlString(value) {
@@ -164,7 +171,7 @@ function syncCodex() {
   const nextConfig = insertedManagedBlocks
     ? base
     : `${base}\n\n${renderedManagedBlocks}`;
-  fs.writeFileSync(codexConfigPath, `${nextConfig}\n`);
+  writeIfChanged(codexConfigPath, `${nextConfig}\n`);
 }
 
 function keychainSecret({ service, account }) {
@@ -263,14 +270,32 @@ function syncClaude() {
     return;
   }
 
+  const claudeConfig = path.join(process.env.CLAUDE_CONFIG_DIR || home, ".claude.json");
+  const current = fs.existsSync(claudeConfig)
+    ? JSON.parse(fs.readFileSync(claudeConfig, "utf8")).mcpServers ?? {}
+    : {};
+  const wanted = serversFor("claude");
+
+  // Let the CLI keep ownership of its file, but only mutate entries that drift.
+  // Claude normalizes absent stdio args to [], so compare that default too.
+  const normalized = (config) => config?.type === "stdio"
+    ? { ...config, args: config.args ?? [] }
+    : config;
   for (const name of Object.keys(servers)) {
-    spawnSync("claude", ["mcp", "remove", "--scope", "user", name], {
+    if (!(name in current)) continue;
+    if (name in wanted && isDeepStrictEqual(normalized(current[name]), normalized(publicServerConfig(wanted[name])))) continue;
+    const result = spawnSync("claude", ["mcp", "remove", "--scope", "user", name], {
       encoding: "utf8",
     });
+    if (result.status !== 0) {
+      throw new Error(`failed to remove Claude Code MCP server: ${name}`);
+    }
   }
 
-  for (const [name, config] of Object.entries(serversFor("claude"))) {
-    const payload = JSON.stringify(publicServerConfig(config));
+  for (const [name, config] of Object.entries(wanted)) {
+    const desired = publicServerConfig(config);
+    if (isDeepStrictEqual(normalized(current[name]), normalized(desired))) continue;
+    const payload = JSON.stringify(desired);
     const result = spawnSync("claude", ["mcp", "add-json", "--scope", "user", name, payload], {
       encoding: "utf8",
     });

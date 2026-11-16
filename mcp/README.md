@@ -12,8 +12,10 @@ Run:
 ~/dotfiles/mcp/sync-mcp.mjs
 ```
 
-`~/dotfiles/scripts/deploy.sh` also runs this sync automatically when Node.js
-is available.
+`~/dotfiles/scripts/deploy.sh` also runs this sync automatically. Node.js is a
+required dependency: deploy stops before changing settings if it is missing.
+Unchanged files and Claude Code registrations are left untouched. Managed entries
+that differ are replaced through the Claude CLI; unrelated user entries are kept.
 
 Use `${HOME}` in `servers.json` for paths beneath the current user's home.
 The sync resolves it in command paths, arguments, and environment values before
@@ -23,7 +25,7 @@ This syncs the canonical list to:
 
 - Cursor: `~/dotfiles/mcp/generated/cursor.mcp.json` and `~/.cursor/mcp.json`
 - Codex: `~/.codex/config.toml`
-- Claude Code: user-scope MCP entries in `~/.claude.json`
+- Claude Code: user-scope MCP entries in `~/.claude.json` (or `$CLAUDE_CONFIG_DIR/.claude.json` when set)
 - Antigravity (`agy`): `~/.gemini/config/mcp_config.json`
 
 Antigravity uses its own schema: stdio servers keep `command` / `args` / `env`,

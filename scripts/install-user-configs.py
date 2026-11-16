@@ -7,6 +7,7 @@ from pathlib import Path
 import plistlib
 import re
 import shlex
+import sys
 import tempfile
 import time
 
@@ -22,6 +23,18 @@ CONFIGS = {
     'claude-desktop': ('misc/claude_desktop_config.json',
                        'Library/Application Support/Claude/claude_desktop_config.json'),
 }
+
+# Plain file/directory links share one replacement policy. App-written JSON/TOML
+# above still goes through render(); do not put machine state or secrets here.
+LINKS = {
+    **{name: name for name in ('.dein.toml', '.gitconfig', '.gitignore_global', '.vimrc')},
+    'misc/docker-config.json': '.docker/config.json',
+    'claude/keybindings.json': '.claude/keybindings.json',
+    'misc/ssh/config': '.ssh/config',
+}
+MAC_LINKS = {'misc/memo-config.toml': '.config/memo/config.toml'}
+SHELL_FILES = ('.zpreztorc', '.zprofile', '.zshenv', '.zshrc')
+EDITOR_FILES = ('settings.json', 'keybindings.json', 'tsconfig.json', 'snippets')
 
 
 def relocate_string(value, home):
@@ -92,6 +105,8 @@ def write_if_changed(target, content):
 
 
 def link(target, source):
+    if not source.exists():
+        raise FileNotFoundError(source)
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.is_symlink() and target.resolve() == source.resolve():
         return
@@ -100,6 +115,79 @@ def link(target, source):
     elif target.exists():
         target.rename(target.with_name(target.name + '.bak.' + str(time.time_ns())))
     target.symlink_to(source)
+
+
+def install_links(home, root=ROOT, profile='full', platform=sys.platform, zdotdir=None):
+    links = dict(LINKS)
+    if platform == 'darwin':
+        links.update(MAC_LINKS)
+        if profile == 'full':
+            links['hammerspoon'] = '.hammerspoon'
+        # ngrok.yml is intentionally untracked. A clean clone must not produce
+        # a dangling link, nor replace this machine's private ngrok config.
+        ngrok_source = root / 'misc/ngrok.yml'
+        ngrok_target = home / 'Library/Application Support/ngrok/ngrok.yml'
+        if ngrok_source.is_file():
+            links['misc/ngrok.yml'] = 'Library/Application Support/ngrok/ngrok.yml'
+        elif ngrok_target.is_symlink() and ngrok_target.resolve() == ngrok_source.resolve():
+            ngrok_target.unlink()
+    for source, target in links.items():
+        link(home / target, root / source)
+    for name in SHELL_FILES:
+        link((zdotdir or home) / name, root / name)
+    ssh = home / '.ssh'
+    ssh.chmod(0o700)
+    # chmod through a symlink would modify the tracked source. Only local files
+    # need permissions here; git stores the shared config without secrets.
+    local = ssh / 'config.local'
+    if not local.exists():
+        local.touch(mode=0o600)
+
+
+def install_skills(home, root=ROOT):
+    for agent in ('claude', 'codex'):
+        destination = home / f'.{agent}/skills'
+        destination.mkdir(parents=True, exist_ok=True)
+        managed_roots = (root / agent / 'skills', root / 'agents/skills')
+        resolved_roots = {folder.resolve() for folder in managed_roots}
+        wanted = {}
+        for folder in managed_roots:
+            for skill in sorted(folder.glob('*')):
+                if skill.is_dir():
+                    if skill.name in wanted:
+                        raise ValueError(f'Duplicate {agent} skill: {skill.name}')
+                    wanted[skill.name] = skill
+        for name, source in wanted.items():
+            link(destination / name, source)
+        # Remove only obsolete links directly into our own skill folders. Local
+        # skills and plugin-managed links remain owned by their installers.
+        for target in destination.iterdir():
+            if target.is_symlink() and target.name not in wanted:
+                if target.resolve().parent in resolved_roots:
+                    target.unlink()
+
+
+def install_editors(home, root=ROOT, platform=sys.platform):
+    # WSL deploy configures the Linux editors. Windows editors are configured by
+    # win/scripts/deploy.ps1, rather than guessing a Windows account name.
+    base = home / ('Library/Application Support' if platform == 'darwin' else '.config')
+    for editor in ('Code', 'Cursor'):
+        for name in EDITOR_FILES:
+            link(base / editor / 'User' / name, root / 'vscode' / name)
+
+
+def install_prezto(zdotdir):
+    for source in sorted((zdotdir / '.zprezto/runcoms').iterdir()):
+        if source.is_file() and source.name not in ('README.md', 'zpreztorc', 'zshenv', 'zshrc', 'zprofile'):
+            link(zdotdir / ('.' + source.name), source)
+
+
+def install_screenpipe(home, root=ROOT):
+    for source in sorted((root / 'screenpipe/pipes').glob('*/pipe.md')):
+        target = home / '.screenpipe/pipes' / source.parent.name
+        link(target / 'pipe.md', source)
+        for extension in sorted((source.parent / 'extensions').glob('*.ts')):
+            link(target / '.pi/extensions' / extension.name, extension)
 
 
 def install(name, home, root=ROOT, claude_config_dir=None):
@@ -145,14 +233,32 @@ def install(name, home, root=ROOT, claude_config_dir=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('config', choices=[*CONFIGS, 'iterm2', 'agent-instructions', 'karabiner'])
+    parser.add_argument('config', choices=[*CONFIGS, 'iterm2', 'agent-instructions', 'karabiner',
+                                         'links', 'skills', 'editors', 'prezto', 'screenpipe'])
+    parser.add_argument('--profile', choices=['full', 'minimal'], default=os.environ.get('DOTFILES_PROFILE', 'full'))
     parser.add_argument('--claude-config-dir', type=Path,
                         help='別のCLAUDE_CONFIG_DIRにも共通ルールを配置する（agent-instructionsのみ）')
     args = parser.parse_args()
     if args.claude_config_dir is not None and args.config != 'agent-instructions':
         parser.error('--claude-config-dir は agent-instructions と組み合わせてください')
-    profile = args.claude_config_dir.expanduser().resolve() if args.claude_config_dir is not None else None
-    print(install(args.config, Path.home(), claude_config_dir=profile))
+    claude_config_dir = args.claude_config_dir.expanduser().resolve() if args.claude_config_dir is not None else None
+    if args.config == 'links':
+        install_links(Path.home(), profile=args.profile,
+                      zdotdir=Path(os.environ.get('ZDOTDIR') or str(Path.home())))
+        return
+    if args.config == 'skills':
+        install_skills(Path.home())
+        return
+    if args.config == 'editors':
+        install_editors(Path.home())
+        return
+    if args.config == 'prezto':
+        install_prezto(Path(os.environ.get('ZDOTDIR') or str(Path.home())))
+        return
+    if args.config == 'screenpipe':
+        install_screenpipe(Path.home())
+        return
+    print(install(args.config, Path.home(), claude_config_dir=claude_config_dir))
 
 
 if __name__ == '__main__':

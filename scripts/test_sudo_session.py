@@ -62,6 +62,12 @@ class SudoSessionTest(unittest.TestCase):
         misc = root / 'dotfiles/misc'
         misc.mkdir()
         (misc / 'Brewfile').write_text('cask "google-chrome"\ncask "karabiner-elements" # full-only\n')
+        # Keep the native CLI installer out of this sudo-cache test. Without a
+        # fake installed binary, successful brew setup would fetch a real script.
+        claude = root / '.local/bin/claude'
+        claude.parent.mkdir(parents=True)
+        claude.write_text('#!/bin/sh\nexit 0\n')
+        claude.chmod(0o755)
         env = dict(os.environ, DOTFILES_TEST_USER_ROOT=str(root), DOTFILES_PROFILE='minimal',
                    PATH=str(fake_bin) + os.pathsep + os.environ['PATH'])
         env.pop('DOTFILES_SUDO_KEEPALIVE_PID', None)

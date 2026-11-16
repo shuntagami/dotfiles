@@ -55,7 +55,7 @@ elif name == "python3":
 class InstallerRecoveryTests(unittest.TestCase):
     """Exercise the real installer flow without touching apps, preferences, or launchd."""
 
-    def run_installer(self, failure, monitorcontrol_running=False, keys_current=False):
+    def run_installer(self, failure, monitorcontrol_running=False, keys_current=False, redeploy=None):
         """Stub external commands and redirect only the test copy's support paths."""
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -73,14 +73,40 @@ class InstallerRecoveryTests(unittest.TestCase):
             # in this disposable copy, keeping the real user's shell untouched.
             script = root / "setup.sh"
             script.write_text(source.replace("${HOME}", "${BETTERDISPLAY_TEST_ROOT}"))
+            (root / 'betterdisplay-mode.swift').write_text('// isolated source fixture\n')
             env = dict(os.environ, BETTERDISPLAY_TEST_ROOT=str(root), FAIL_STAGE=failure,
                        KEYS_CURRENT="1" if keys_current else "",
                        PATH=str(fake_bin) + os.pathsep + os.environ["PATH"])
             result = subprocess.run(["/bin/bash", str(script)], env=env, capture_output=True, text=True)
+            if redeploy is not None:
+                self.assertEqual(result.returncode, 0, result.stderr)
+                (root / 'commands.log').write_text('')
+                env['KEYS_CURRENT'] = '1'
+                if redeploy == 'edited binary':
+                    (root / 'Library/Application Support/dotfiles/betterdisplay-mode').write_text('modified')
+                elif redeploy == 'edited source':
+                    (root / 'betterdisplay-mode.swift').write_text('// updated\n')
+                elif redeploy == 'unloaded agent':
+                    env['FAIL_STAGE'] = 'launchctl print'
+                result = subprocess.run(["/bin/bash", str(script)], env=env, capture_output=True, text=True)
             log = (root / "commands.log").read_text().splitlines()
             backup = root / "Library/Application Support/dotfiles/betterdisplay-before.plist"
             running = {app: (root / ("running-" + app)).exists() for app in ("BetterDisplay", "MonitorControl")}
             return result, log, running, backup.exists()
+
+    def test_unchanged_deploy_does_not_rebuild_or_restart_helper(self):
+        result, log, _, _ = self.run_installer('', keys_current=True, redeploy='unchanged')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(any(line.startswith(('swiftc ', 'launchctl bootout ', 'launchctl bootstrap ', 'osascript '))
+                             for line in log))
+
+    def test_deploy_repairs_changed_artifacts_or_unloaded_agent(self):
+        for drift in ('edited binary', 'edited source', 'unloaded agent'):
+            with self.subTest(drift=drift):
+                result, log, _, _ = self.run_installer('', keys_current=True, redeploy=drift)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertTrue(any(line.startswith('swiftc ') for line in log))
+                self.assertTrue(any(line.startswith('launchctl bootstrap ') for line in log))
 
     def test_failures_after_quit_reopen_app(self):
         """Each post-quit failure must preserve exit status and reopen BetterDisplay."""

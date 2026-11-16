@@ -18,6 +18,98 @@ spec.loader.exec_module(configs)
 
 
 class UserConfigPathsTest(unittest.TestCase):
+    def test_plain_links_replace_real_directories_once_and_respect_zdotdir(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory) / 'Another Mac'
+            zdotdir = home / '.config/zsh'
+            old = home / '.hammerspoon'
+            old.mkdir(parents=True)
+            (old / 'init.lua').write_text('local settings')
+            configs.install_links(home, profile='full', platform='darwin', zdotdir=zdotdir)
+            links = [p for p in home.rglob('*') if p.is_symlink()]
+            before = {str(p): p.lstat().st_mtime_ns for p in links}
+            configs.install_links(home, profile='full', platform='darwin', zdotdir=zdotdir)
+            self.assertEqual(before, {str(p): p.lstat().st_mtime_ns for p in links})
+            self.assertEqual(old.resolve(), ROOT / 'hammerspoon')
+            backups = list(home.glob('.hammerspoon.bak.*'))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual((backups[0] / 'init.lua').read_text(), 'local settings')
+            self.assertEqual((zdotdir / '.zshrc').resolve(), ROOT / '.zshrc')
+            self.assertFalse((home / '.zshrc').exists())
+            self.assertFalse((home / 'Library/Application Support/ngrok/ngrok.yml').is_symlink())
+            self.assertEqual((home / '.ssh').stat().st_mode & 0o777, 0o700)
+            self.assertEqual((home / '.ssh/config.local').stat().st_mode & 0o777, 0o600)
+
+    def test_minimal_and_linux_do_not_install_mac_keyboard_settings(self):
+        for profile, platform in [('minimal', 'darwin'), ('full', 'linux')]:
+            with self.subTest(profile=profile, platform=platform), tempfile.TemporaryDirectory() as directory:
+                home = Path(directory)
+                configs.install_links(home, profile=profile, platform=platform)
+                self.assertFalse((home / '.hammerspoon').exists())
+                self.assertFalse((home / '.config/karabiner').exists())
+
+    def test_missing_ngrok_source_removes_only_our_old_dangling_link(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            target = home / 'Library/Application Support/ngrok/ngrok.yml'
+            target.parent.mkdir(parents=True)
+            target.symlink_to(ROOT / 'misc/ngrok.yml')
+            configs.install_links(home, platform='darwin')
+            self.assertFalse(target.is_symlink())
+            target.write_text('machine-local')
+            configs.install_links(home, platform='darwin')
+            self.assertEqual(target.read_text(), 'machine-local')
+
+    def test_editors_replace_nonempty_snippets_without_nested_links(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            for platform, prefix in [('darwin', 'Library/Application Support'), ('linux', '.config')]:
+                with self.subTest(platform=platform):
+                    snippets = home / prefix / 'Cursor/User/snippets'
+                    snippets.mkdir(parents=True)
+                    (snippets / 'local.json').write_text('{}')
+                    configs.install_editors(home, platform=platform)
+                    first = snippets.lstat().st_mtime_ns
+                    configs.install_editors(home, platform=platform)
+                    self.assertEqual(snippets.lstat().st_mtime_ns, first)
+                    self.assertEqual(snippets.resolve(), ROOT / 'vscode/snippets')
+                    backups = list(snippets.parent.glob('snippets.bak.*'))
+                    self.assertEqual(len(backups), 1)
+                    self.assertEqual((backups[0] / 'local.json').read_text(), '{}')
+
+    def test_skills_sync_and_remove_only_obsolete_repository_links(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'repo'
+            home = Path(directory) / 'home'
+            for name in ('codex/skills/specific', 'claude/skills/claude-only', 'agents/skills/shared'):
+                (root / name).mkdir(parents=True)
+            destination = home / '.codex/skills'
+            (destination / 'specific').mkdir(parents=True)
+            (destination / 'specific/local.md').write_text('preserve')
+            (destination / 'unmanaged').mkdir()
+            (destination / 'obsolete').symlink_to(root / 'codex/skills/obsolete')
+            (destination / 'plugin').symlink_to(home / 'plugins/missing')
+            configs.install_skills(home, root)
+            configs.install_skills(home, root)
+            self.assertEqual((destination / 'specific').resolve(), (root / 'codex/skills/specific').resolve())
+            self.assertEqual(len(list(destination.glob('specific.bak.*'))), 1)
+            self.assertFalse((destination / 'obsolete').is_symlink())
+            self.assertTrue((destination / 'plugin').is_symlink())
+            self.assertTrue((destination / 'unmanaged').is_dir())
+            for agent in ('claude', 'codex'):
+                self.assertEqual((home / f'.{agent}/skills/shared').resolve(), (root / 'agents/skills/shared').resolve())
+            shutil.rmtree(root / 'agents/skills/shared')
+            configs.install_skills(home, root)
+            self.assertFalse((destination / 'shared').is_symlink())
+
+    def test_missing_source_does_not_replace_existing_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / 'settings'
+            target.write_text('keep')
+            with self.assertRaises(FileNotFoundError):
+                configs.link(target, Path(directory) / 'missing')
+            self.assertEqual(target.read_text(), 'keep')
+
     def test_karabiner_replaces_app_created_directory_and_preserves_backup(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory) / 'Studio'
@@ -109,10 +201,12 @@ class UserConfigPathsTest(unittest.TestCase):
             claude = json.loads(target.read_text())
             self.assertEqual(shlex.split(claude['statusLine']['command'])[0],
                              str(home / 'dotfiles/claude/statusline.sh'))
-            for hook in claude['hooks']['Stop']:
-                for action in hook['hooks']:
-                    self.assertEqual(shlex.split(action['command'])[1],
-                                     str(home / 'dotfiles/scripts/agent-notify.py'))
+            # Notification hooks can be `true`; the current Stop hook runs the
+            # local iTerm status helper, whose home must be relocated too.
+            commands = [action['command'] for hook in claude['hooks']['Stop']
+                        for action in hook['hooks']]
+            self.assertIn([str(home / '.config/iterm2/cc-status')],
+                          [shlex.split(command) for command in commands])
 
     def test_nested_json_toml_keys_and_shell_quoting(self):
         home = Path('/Users/Hirata "CEO" Mac')

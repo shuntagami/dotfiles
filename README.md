@@ -171,6 +171,47 @@ bash ~/dotfiles/scripts/macos-default-apps.sh  # 標準アプリ・CleanShot設�
 
 </details>
 
+### deploy の同期範囲と再実行
+
+`zsh ~/dotfiles/scripts/deploy.sh` は、リポジトリで管理する共通設定を実行した端末へ反映します。
+反映済みのリンク・生成ファイルは維持し、アプリが作った実ファイルや実ディレクトリを
+置き換える際は `.bak.<時刻>` などに退避します。途中で失敗しても、原因を直して同じコマンドを再実行できます。
+
+| 対象 | deploy の処理 |
+| :--- | :--- |
+| シェル・Vim・Git・Docker・SSH | 共通ファイルへのリンク。Zsh設定は `$ZDOTDIR` があればそこに配置 |
+| Codex・Claude Code・共通指示・スキル | パスを解決して配置。スキルは両エージェントに同期し、削除されたdotfiles管理のスキルリンクだけ除去 |
+| VS Code・Cursor | settings・keybindings・tsconfig・snippets を同期。既存の非空ディレクトリも退避して置換 |
+| MCP | `mcp/servers.json` から各クライアントへ反映。同じ設定のClaude登録は削除・再追加しない |
+| MulmoTerminal | 共通キーをマージ。端末固有のキー・既存プロジェクトの設定は維持 |
+| Screenpipe | pipe.md・拡張を配置。録画・DB・接続情報は対象外 |
+| macOSのアプリ設定 | BetterDisplay・Aqua Voice・Clipy・Espanso・通知・標準アプリ・Jump Desktop・Claude Desktop・iTerm2・memo・DownloadsのFolder Action |
+| キーボード | `full` で Hammerspoon・Karabiner を配置。Karabinerの再起動は設定変更時のみ |
+| 処理用Mac | `misc/processing-mac.conf` に指定された端末だけ既存の引き継ぎ処理を実行 |
+
+通常のdeployではPreztoのリモート更新をせず、現在のバージョンのサブモジュールを初期化します。
+更新したいときは `deploy.sh --update-prezto` を使います。
+ログインシェルはアカウントの登録値が使用するZshと異なる場合だけ変更します。
+BetterDisplayのヘルパーとDownloadsのFolder Actionも、ソースや配置結果が変わらなければ再作成しません。
+
+`DOTFILES_PROFILE` は `full` / `minimal` のみ受け付け、選択を `~/.dotfiles-profile` に保存します。
+未選択・非対話実行なら `full` です。`minimal` は Hammerspoon・Karabiner の新規配置を省略します。
+すでに配置済みのアプリや設定の削除は行いません。
+Python 3・Node.js・Git がない場合は開始前に停止します。アプリごとの権限・初回起動・再起動など、
+手動操作が残る場合は各インストーラーが案内します。
+
+次は別の入口で管理します。
+
+- パッケージ・拡張機能（`misc/Brewfile`）：`scripts/install-packages.sh`。初回の一括導入は `scripts/setup.sh`。
+- macOSのシステム設定（電源・Mac名・Spotlight再構築など）：従来どおり `scripts/macos.sh` を手動実行。
+- Windows側の設定：`win/scripts/deploy.ps1`。WSLのdeployはLinux側のエディタを設定し、Windowsのユーザー名は推測しません。
+- Gitの端末別ユーザー情報、SSHの秘密情報、認証情報、各種 `.env.example`：端末で用意。ngrokはローカルの `misc/ngrok.yml` がある場合だけ配置。
+- `.claude/`・`.mulmoterminal.local.json` など、このリポジトリ専用の設定：各ツールが直接読み込み。
+- 旧Raycast設定・旧Downloads LaunchAgent：移行前の資料。現在のdeployはEspanso・Folder Actionを使用。
+
+通常の設定配置は `scripts/install-user-configs.py`、macOSアプリの呼び出しは
+`scripts/deploy-macos.sh` にまとめています。共通設定を追加したら、該当する配置処理とこの一覧も更新します。
+
 ### Aqua Voice・Clipyのショートカット
 
 アプリごとの設定は `misc/aqua-voice-hotkeys.json` と `misc/clipy-hotkeys.json` に置き、

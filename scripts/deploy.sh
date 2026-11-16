@@ -1,274 +1,104 @@
 #!/bin/zsh
+# Reconcile managed settings. Packages and legacy macOS defaults have separate entry points.
+set -eu
+setopt PIPE_FAIL
 
-set -eux
+DOTFILES="${HOME}/dotfiles"
+update_prezto=false
+case "${1:-}" in
+  --update-prezto) update_prezto=true ;;
+  --help)
+    echo "Usage: deploy.sh [--update-prezto]"
+    echo "Apply managed settings; optionally update Prezto from its remote."
+    exit 0 ;;
+  '') ;;
+  *) echo "Unknown option: $1" >&2; exit 2 ;;
+esac
+(( $# <= 1 )) || { echo "Too many arguments" >&2; exit 2; }
 
-# Load profile: env var > ~/.dotfiles-profile > interactive prompt
+# Fail before changing settings if a required synchronizer cannot run.
+for dependency in python3 node git; do
+  command -v "$dependency" >/dev/null || {
+    echo "Missing $dependency; run scripts/install-packages.sh first." >&2
+    exit 1
+  }
+done
+
+# env > saved choice > first-run prompt (full when run without a terminal).
 if [[ -z "${DOTFILES_PROFILE:-}" ]]; then
   if [[ -f "${HOME}/.dotfiles-profile" ]]; then
-    DOTFILES_PROFILE=$(cat "${HOME}/.dotfiles-profile")
-  else
-    echo ""
-    echo "Select a profile:"
-    echo "  1) full    - All settings (default)"
-    echo "  2) minimal - Without Vim extension, Karabiner, Hammerspoon"
-    echo ""
+    DOTFILES_PROFILE=$(<"${HOME}/.dotfiles-profile")
+  elif [[ -t 0 ]]; then
+    echo "Select a profile: 1) full (default)  2) minimal (without Karabiner/Hammerspoon)"
     read "profile_choice?Enter choice [1]: "
-    case "${profile_choice}" in
-      2|minimal) DOTFILES_PROFILE="minimal" ;;
-      *)         DOTFILES_PROFILE="full" ;;
+    case "$profile_choice" in
+      2|minimal) DOTFILES_PROFILE=minimal ;;
+      *) DOTFILES_PROFILE=full ;;
     esac
-    echo "${DOTFILES_PROFILE}" > "${HOME}/.dotfiles-profile"
+  else
+    DOTFILES_PROFILE=full
   fi
 fi
+case "$DOTFILES_PROFILE" in
+  full|minimal) ;;
+  *) echo "Invalid DOTFILES_PROFILE: $DOTFILES_PROFILE (expected full or minimal)" >&2; exit 2 ;;
+esac
 export DOTFILES_PROFILE
-
-if [ ! -d ${HOME}/.zprezto ]; then
-  git clone --recursive https://github.com/sorin-ionescu/prezto.git "${ZDOTDIR:-$HOME}/.zprezto"
+if [[ ! -f "${HOME}/.dotfiles-profile" ]] || [[ "$(<"${HOME}/.dotfiles-profile")" != "$DOTFILES_PROFILE" ]]; then
+  print -r -- "$DOTFILES_PROFILE" > "${HOME}/.dotfiles-profile"
 fi
 
-# prezto
-setopt EXTENDED_GLOB
-for rcfile in "${ZDOTDIR:-$HOME}"/.zprezto/runcoms/^(README.md|zpreztorc|zshenv|zshrc|zprofile)(.N); do
-  ln -sf "$rcfile" "${ZDOTDIR:-$HOME}/.${rcfile:t}"
+# Bootstrap Prezto when absent. Ordinary deploys do not move its desired version.
+prezto_home="${ZDOTDIR:-$HOME}/.zprezto"
+if [[ ! -d "$prezto_home" ]]; then
+  git clone --recursive https://github.com/sorin-ionescu/prezto.git "$prezto_home"
+fi
+if $update_prezto; then
+  git -C "$prezto_home" pull --ff-only
+fi
+git -C "$prezto_home" submodule sync --recursive
+git -C "$prezto_home" submodule update --init --recursive
+
+# All plain links, including real directories created by apps, use the same
+# backup-and-replace policy. Correct links are left untouched.
+python3 "$DOTFILES/scripts/install-user-configs.py" links
+for config in prezto codex claude agent-instructions skills editors; do
+  python3 "$DOTFILES/scripts/install-user-configs.py" "$config"
 done
-
-# add and update submodule
-git -C ${HOME}/.zprezto pull && git -C ${HOME}/.zprezto submodule sync --recursive && git -C ${HOME}/.zprezto submodule update --init --recursive
-
-# symlink dotfiles
-ln -sf ~/dotfiles/.dein.toml ~/.dein.toml
-ln -sf ~/dotfiles/.gitconfig ~/.gitconfig
-ln -sf ~/dotfiles/.gitignore_global ~/.gitignore_global
-ln -sf ~/dotfiles/.vimrc ~/.vimrc
-ln -sf ~/dotfiles/.zpreztorc ~/.zpreztorc
-ln -sf ~/dotfiles/.zprofile ~/.zprofile
-ln -sf ~/dotfiles/.zshenv ~/.zshenv
-ln -sf ~/dotfiles/.zshrc ~/.zshrc
-mkdir -p ~/.docker
-ln -sf ~/dotfiles/misc/docker-config.json ~/.docker/config.json
-# Resolve app settings to this user's home (JSON/TOML do not expand $HOME).
-python3 ~/dotfiles/scripts/install-user-configs.py codex
-
-# 全リポジトリ共通の指示。本文はdotfiles、ホーム側は標準の場所へのリンク。
-python3 ~/dotfiles/scripts/install-user-configs.py agent-instructions
-# Studioが独立したClaude設定を使っている場合も、同じGit管理下の本文を参照する。
 if [[ -d ~/.marunage-studio-claude ]]; then
-  python3 ~/dotfiles/scripts/install-user-configs.py agent-instructions --claude-config-dir ~/.marunage-studio-claude
+  python3 "$DOTFILES/scripts/install-user-configs.py" agent-instructions --claude-config-dir ~/.marunage-studio-claude
 fi
+python3 "$DOTFILES/scripts/remove-cursor-notify.py"
+bash "$DOTFILES/scripts/install-mulmoterminal-config.sh"
+python3 "$DOTFILES/scripts/apply-mulmoterminal-background.py"
+python3 "$DOTFILES/scripts/install-user-configs.py" screenpipe
+node "$DOTFILES/mcp/sync-mcp.mjs"
 
-# Codex skills: symlink each repository-managed skill directory.
-mkdir -p ~/.codex/skills
-for skill_dir in "${HOME}"/dotfiles/codex/skills/*(/N); do
-  skill_target=~/.codex/skills/"${skill_dir:t}"
-  if [[ -e "${skill_target}" && ! -L "${skill_target}" ]]; then
-    echo "Skipping Codex skill ${skill_dir:t}: ${skill_target} exists and is not a symlink."
-    continue
-  fi
-  ln -sfn "${skill_dir}" "${skill_target}"
-done
-
-# Claude Code: resolve hook commands as well as paths in settings.
-python3 ~/dotfiles/scripts/install-user-configs.py claude
-
-# Claude Code keybindings: Hammerspoon owns Ctrl+S globally, so chords ending in
-# ctrl+s never arrive; keybindings.json adds alternatives that avoid it.
-if [[ -e ~/.claude/keybindings.json && ! -L ~/.claude/keybindings.json ]]; then
-  mv ~/.claude/keybindings.json ~/.claude/keybindings.json.bak.$(date +%Y%m%d%H%M%S)
-fi
-ln -sf ~/dotfiles/claude/keybindings.json ~/.claude/keybindings.json
-
-# Claude Code skills: symlink each skill directory. RIFE binary for vfr-sync-rife
-# is not in git; fetch it once with claude/skills/vfr-sync-rife/scripts/install_rife.sh
-mkdir -p ~/.claude/skills
-for skill_dir in "${HOME}"/dotfiles/claude/skills/*(/N); do
-  ln -sfn "${skill_dir}" ~/.claude/skills/"${skill_dir:t}"
-done
-
-# Shared skills (agents/skills): the same SKILL.md serves Claude Code and Codex,
-# so link each one into both. Agent-specific skills stay in claude/ and codex/.
-for skill_dir in "${HOME}"/dotfiles/agents/skills/*(/N); do
-  for skills_home in ~/.claude/skills ~/.codex/skills; do
-    skill_target="${skills_home}/${skill_dir:t}"
-    if [[ -e "${skill_target}" && ! -L "${skill_target}" ]]; then
-      echo "Skipping shared skill ${skill_dir:t}: ${skill_target} exists and is not a symlink."
-      continue
-    fi
-    ln -sfn "${skill_dir}" "${skill_target}"
-  done
-done
-
-# Cursor: let MulmoTerminal own its hooks and notification sounds.
-python3 ~/dotfiles/scripts/remove-cursor-notify.py
-
-# MulmoTerminal: config.json is written by the app itself (write-temp-then-rename), so a
-# symlink here would get replaced by a real file the moment it saves. Merge instead: seed a
-# missing config, otherwise set only the shared keys that differ from dotfiles, leaving this
-# machine's own keys alone. Settings changed here and not yet saved back with
-# save-mulmoterminal-config.sh ARE overwritten for the shared keys — save them first.
-~/dotfiles/scripts/install-mulmoterminal-config.sh
-python3 ~/dotfiles/scripts/apply-mulmoterminal-background.py
-
-# Screenpipe: manage only prompt/config files that are safe to keep in dotfiles.
-# Databases, recordings, logs, outputs, and connection secrets stay under ~/.screenpipe.
-if [[ -d "${HOME}/dotfiles/screenpipe/pipes" ]]; then
-  mkdir -p "${HOME}/.screenpipe/pipes"
-  for pipe_md in "${HOME}"/dotfiles/screenpipe/pipes/*/pipe.md(.N); do
-    pipe_name="${pipe_md:h:t}"
-    mkdir -p "${HOME}/.screenpipe/pipes/${pipe_name}"
-    ln -sf "${pipe_md}" "${HOME}/.screenpipe/pipes/${pipe_name}/pipe.md"
-    for pipe_extension in "${pipe_md:h}"/extensions/*.ts(.N); do
-      mkdir -p "${HOME}/.screenpipe/pipes/${pipe_name}/.pi/extensions"
-      ln -sf "${pipe_extension}" "${HOME}/.screenpipe/pipes/${pipe_name}/.pi/extensions/${pipe_extension:t}"
-    done
-  done
-fi
-
-# MCP: sync canonical dotfiles config to Cursor, Codex, Claude Code, and Antigravity.
-if command -v node >/dev/null 2>&1; then
-  ~/dotfiles/mcp/sync-mcp.mjs
-else
-  echo "Skipping MCP sync: node is not installed."
-fi
-
-# Per-machine git identity (~/.gitconfig.local is included from ~/.gitconfig)
+# The included local identity is machine-owned. Never rewrite an existing one.
 if [[ ! -f "${HOME}/.gitconfig.local" ]]; then
-  echo ""
-  echo "Setting up per-machine git identity (~/.gitconfig.local)"
-  set +u
-  read "git_user_name?  Git user.name: "
-  read "git_user_email?  Git user.email: "
-  set -u
-  {
-    echo "[user]"
-    echo "	name = ${git_user_name}"
-    echo "	email = ${git_user_email}"
-  } > "${HOME}/.gitconfig.local"
+  if [[ -t 0 ]]; then
+    read "git_user_name?Git user.name: "
+    read "git_user_email?Git user.email: "
+    git config --file "${HOME}/.gitconfig.local" user.name "$git_user_name"
+    git config --file "${HOME}/.gitconfig.local" user.email "$git_user_email"
+  else
+    echo "Warning: ~/.gitconfig.local is missing; set this machine's Git identity there."
+  fi
 fi
 
-# ssh config
-mkdir -p ~/.ssh && chmod 700 ~/.ssh
-# Back up a pre-existing real config so it can be merged into config.local by hand.
-if [[ -e ~/.ssh/config && ! -L ~/.ssh/config ]]; then
-  mv ~/.ssh/config ~/.ssh/config.bak.$(date +%Y%m%d%H%M%S)
-fi
-ln -sf ~/dotfiles/misc/ssh/config ~/.ssh/config
-chmod 600 ~/dotfiles/misc/ssh/config
-# Per-machine / sensitive host entries (Include'd by the tracked config, not tracked)
-if [[ ! -f ~/.ssh/config.local ]]; then
-  touch ~/.ssh/config.local && chmod 600 ~/.ssh/config.local
+if [[ "$(uname -s)" == Darwin ]]; then
+  zsh "$DOTFILES/scripts/deploy-macos.sh"
 fi
 
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  # Rebuild and reload the display-mode brightness policy on each deploy.
-  # The installer skips machines where BetterDisplay is not installed.
-  bash "${HOME}/dotfiles/scripts/macos-betterdisplay.sh"
-
-  # App shortcuts live separately from optional system-wide macOS settings.
-  source "${HOME}/dotfiles/scripts/app-settings-status.sh"
-  dotfiles_apply_app_settings bash "${HOME}/dotfiles/scripts/macos-aqua-voice.sh"
-  dotfiles_apply_app_settings bash "${HOME}/dotfiles/scripts/macos-clipy.sh"
-  # Espanso owns text expansion; retire Raycast and restore Spotlight.
-  dotfiles_apply_app_settings python3 "${HOME}/dotfiles/scripts/macos-espanso.py"
-
-  # Apply the registered Mac mini connection's display policy without interrupting sessions.
-  if command -v node >/dev/null 2>&1; then
-    node "${HOME}/dotfiles/scripts/jump-desktop-display.mjs" --deploy
-  fi
-
-  # Notifications: which sites may notify in Chrome, and whether macOS lets the
-  # apps show anything. Idempotent and non-interactive -- it only opens the
-  # configuration profile when that profile is missing or has changed.
-  bash "${HOME}/dotfiles/scripts/macos-notifications.sh"
-
-  # Keep file associations and CleanShot screenshot shortcuts in sync.
-  dotfiles_apply_app_settings bash "${HOME}/dotfiles/scripts/macos-default-apps.sh"
-
-  # No URL router here any more, and no default-browser step either.
-  #
-  # Finicky used to sit here: it was registered as the system handler, then sent
-  # Discord links to Chrome and everything else to Dia. Both are out of use, and
-  # the indirection was not free -- a browser kept alive in the background still
-  # holds its global keyboard shortcuts, which is how Dia's profile switcher
-  # swallowed Cmd+Shift+P while Chrome was in front.
-  #
-  # The default browser is not set from here because it CANNOT be, on this OS.
-  # `defaultbrowser` (the Homebrew CLI the old block used) reads nothing on
-  # macOS 26: every browser in its listing comes back unmarked even when
-  # LaunchServices has a handler registered, and its write is silent. macOS
-  # wants the request to come from the browser itself, so this is a one-time
-  # click -- Chrome's own "make default" prompt, or System Settings > Desktop &
-  # Dock > Default web browser. Doing it here would only look declarative.
-
-  if [[ "${DOTFILES_PROFILE:-full}" != "minimal" ]]; then
-    ln -sfn ~/dotfiles/hammerspoon ~/.hammerspoon
-  fi
-  python3 ~/dotfiles/scripts/install-user-configs.py claude-desktop
-  mkdir -p ~/.config/memo
-  ln -sf ~/dotfiles/misc/memo-config.toml ~/.config/memo/config.toml
-  mkdir -p ~/Library/Application\ Support/ngrok
-  ln -sf ~/dotfiles/misc/ngrok.yml ~/Library/Application\ Support/ngrok/ngrok.yml
-
-  # git worktree を Spotlight と Time Machine の対象から外す。worktree の置き場所は
-  # リポジトリが増えるたびに増える (Claude Code は <repo>/.claude/worktrees に作り、
-  # 置き場所を変える設定が無い) ので、deploy のたびに探し直して当てる。
-  # 何度実行しても安全 (除外済みはスキップする)。
-  bash ~/dotfiles/scripts/exclude-worktrees-from-indexing.sh
-
-  # watch-downloads-copy: auto-copy plain text files from Downloads to clipboard
-  chmod +x ~/dotfiles/bin/watch-downloads-copy
-  # The old agent is absent on a fresh Mac, or may already be unloaded.
-  if [[ -f ~/Library/LaunchAgents/com.user.watch-downloads.plist ]]; then
-    launchctl unload ~/Library/LaunchAgents/com.user.watch-downloads.plist 2>/dev/null || true
-  fi
-  rm -f ~/Library/LaunchAgents/com.user.watch-downloads.plist
-  mkdir -p ~/Library/Scripts/Folder\ Action\ Scripts
-  osacompile -o ~/Library/Scripts/Folder\ Action\ Scripts/Copy\ Downloaded\ Text.scpt \
-    ~/dotfiles/misc/Copy\ Downloaded\ Text.scpt.applescript
-  # Enable Folder Actions and attach script to Downloads
-  osascript -e 'tell application "System Events" to set folder actions enabled to true'
-  osascript -e '
-    tell application "System Events"
-      set downloadsPath to (POSIX path of (path to downloads folder))
-      set scriptName to "Copy Downloaded Text.scpt"
-      set scriptPath to ((path to home folder as text) & "Library:Scripts:Folder Action Scripts:" & scriptName)
-
-      if not (exists folder action downloadsPath) then
-        make new folder action at end of folder actions with properties {name:downloadsPath, path:downloadsPath, enabled:true}
-      end if
-
-      set fa to folder action downloadsPath
-      set enabled of fa to true
-      if exists script scriptName of fa then delete script scriptName of fa
-      make new script at end of scripts of fa with properties {name:scriptName, path:scriptPath, enabled:true}
-    end tell
-  '
-
-  # iTerm2: load preferences from custom folder
-  iterm_preferences=$(python3 ~/dotfiles/scripts/install-user-configs.py iterm2)
-  defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$iterm_preferences"
-  defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
-
-  # The location of the configuration file for karabiner-elements
-  # https://karabiner-elements.pqrs.org/docs/manual/misc/configuration-file-path/
-  if [[ "${DOTFILES_PROFILE:-full}" != "minimal" ]]; then
-    python3 ~/dotfiles/scripts/install-user-configs.py karabiner
-    if launchctl print gui/$(id -u)/org.pqrs.service.agent.Karabiner-Console-User-Server &>/dev/null; then
-      launchctl kickstart -k gui/$(id -u)/org.pqrs.service.agent.Karabiner-Console-User-Server
-    elif launchctl print gui/$(id -u)/org.pqrs.service.agent.karabiner_console_user_server &>/dev/null; then
-      launchctl kickstart -k gui/$(id -u)/org.pqrs.service.agent.karabiner_console_user_server
-    else
-      open -a "Karabiner-Elements"
-    fi
-  fi
-
-  # Processing Mac (company services). Does nothing unless misc/processing-mac.conf names this
-  # Mac; then it takes over the services that are not running here yet from the previous Mac,
-  # after asking (docs/processing-mac.md). A failure here should not undo the rest of the deploy.
-  bash ~/dotfiles/scripts/processing-mac.sh deploy ||
-    echo "処理用Macの引き継ぎは終わっていません。docs/processing-mac.md を見て、scripts/processing-mac.sh deploy を実行し直してください。"
+# Query the account database: $SHELL may be stale in the running session.
+zsh_path=$(command -v zsh)
+if [[ "$(uname -s)" == Darwin ]]; then
+  current_shell=$(dscl . -read "/Users/$(id -un)" UserShell | awk '{print $2}')
+else
+  current_shell=$(getent passwd "$(id -un)" | cut -d: -f7)
 fi
-
-# change shell
-sudo chsh -s $(which zsh) $(id -un)
+if [[ "$current_shell" != "$zsh_path" ]]; then
+  sudo chsh -s "$zsh_path" "$(id -un)"
+fi
 
 echo "Deploy complete! Run 'exec \$SHELL -l' to reload your shell."
