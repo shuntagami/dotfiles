@@ -48,7 +48,17 @@ class McpSyncTest(unittest.TestCase):
     def test_dangling_relative_link_recreates_referent_and_parent(self):
         self.exercise_sync(missing_referent=True, relative_link=True)
 
-    def exercise_sync(self, custom_profile=False, missing_referent=False, relative_link=False):
+    def test_relative_link_under_linked_parent_updates_the_physical_referent(self):
+        self.exercise_sync(linked_parent=True)
+
+    def test_missing_referent_under_linked_parent_is_recreated_in_the_right_directory(self):
+        self.exercise_sync(linked_parent=True, missing_referent=True)
+
+    def test_dotdot_inside_link_target_traverses_preceding_directory_link(self):
+        self.exercise_sync(linked_parent=True, nested_dotdot=True)
+
+    def exercise_sync(self, custom_profile=False, missing_referent=False, relative_link=False,
+                      linked_parent=False, nested_dotdot=False):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             mcp = home / 'dotfiles/mcp'
@@ -78,14 +88,29 @@ class McpSyncTest(unittest.TestCase):
             env.pop('CLAUDE_CONFIG_DIR', None)
             if custom_profile:
                 env['CLAUDE_CONFIG_DIR'] = str(config_dir)
-            codex_source = home / 'dotfiles/codex/config.toml'
+            codex_source = home / ('dotfiles/other/shared.toml' if nested_dotdot else
+                                   'dotfiles/shared.toml' if linked_parent else 'dotfiles/codex/config.toml')
             if not missing_referent:
-                codex_source.parent.mkdir()
+                codex_source.parent.mkdir(parents=True, exist_ok=True)
                 codex_source.write_text('[features]\ncustom = true\n')
                 codex_source.chmod(0o640)
             codex_target = home / '.codex/config.toml'
-            codex_target.parent.mkdir()
-            codex_target.symlink_to('../dotfiles/codex/config.toml' if relative_link else codex_source)
+            wrong = home / 'shared.toml'
+            wrong.write_text('preserve this sibling')
+            if linked_parent:
+                physical = home / 'dotfiles/codex'
+                physical.mkdir(exist_ok=True)
+                codex_target.parent.symlink_to(physical)
+                if nested_dotdot:
+                    (home / 'dotfiles/other/deep').mkdir(parents=True, exist_ok=True)
+                    (physical / 'linked-dir').symlink_to('../other/deep')
+                    (physical / 'config.toml').symlink_to('linked-dir/../shared.toml')
+                    (physical / 'shared.toml').write_text('preserve logical sibling')
+                else:
+                    (physical / 'config.toml').symlink_to('../shared.toml')
+            else:
+                codex_target.parent.mkdir()
+                codex_target.symlink_to('../dotfiles/codex/config.toml' if relative_link else codex_source)
             def sync():
                 result = subprocess.run([shutil.which('node'), str(script)], env=env,
                                         capture_output=True, text=True)
@@ -93,6 +118,9 @@ class McpSyncTest(unittest.TestCase):
             sync()
             self.assertTrue(codex_target.is_symlink())
             self.assertEqual(codex_target.resolve(), codex_source.resolve())
+            self.assertEqual(wrong.read_text(), 'preserve this sibling')
+            if nested_dotdot:
+                self.assertEqual((physical / 'shared.toml').read_text(), 'preserve logical sibling')
             self.assertEqual(codex_source.stat().st_mode & 0o777, 0o600 if missing_referent else 0o640)
             if not missing_referent:
                 self.assertIn('custom = true', codex_source.read_text())

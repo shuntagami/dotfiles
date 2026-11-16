@@ -69,16 +69,26 @@ function writeJson(filePath, data, { mode } = {}) {
 
 // Resolve links component by component, allowing a not-yet-created referent.
 // realpath alone cannot repair a dangling link. Detect cycles before any writes.
-function writeDestination(filePath, seen = new Set()) {
-  const absolute = path.resolve(filePath);
-  if (seen.has(absolute)) throw new Error(`Cyclic config link: ${filePath}`);
-  seen.add(absolute);
-  const entry = fs.lstatSync(absolute, { throwIfNoEntry: false });
-  if (entry?.isSymbolicLink()) {
-    return writeDestination(path.resolve(path.dirname(absolute), fs.readlinkSync(absolute)), seen);
+function writeDestination(filePath) {
+  const root = path.parse(filePath).root;
+  let directory = root || process.cwd();
+  let remaining = (root ? filePath.slice(root.length) : filePath).split(path.sep);
+  let links = 0;
+  while (remaining.length) {
+    const component = remaining.shift();
+    if (!component || component === ".") continue;
+    if (component === "..") { directory = path.dirname(directory); continue; }
+    const candidate = path.join(directory, component);
+    const entry = fs.lstatSync(candidate, { throwIfNoEntry: false });
+    if (!entry?.isSymbolicLink()) { directory = candidate; continue; }
+    if (++links > 40) throw new Error(`Cyclic or excessive config links: ${filePath}`);
+    const referent = fs.readlinkSync(candidate);
+    const referentRoot = path.parse(referent).root;
+    if (referentRoot) directory = referentRoot;
+    // Preserve '..' until its preceding directory links have been traversed.
+    remaining = [...(referentRoot ? referent.slice(referentRoot.length) : referent).split(path.sep), ...remaining];
   }
-  if (entry) return fs.realpathSync(absolute);
-  return path.join(writeDestination(path.dirname(absolute), seen), path.basename(absolute));
+  return directory;
 }
 
 function writeIfChanged(filePath, content, options) {
