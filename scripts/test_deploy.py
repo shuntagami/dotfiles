@@ -54,8 +54,10 @@ class DeployTest(unittest.TestCase):
         self.repo = self.home / 'dotfiles'
         scripts = self.repo / 'scripts'
         scripts.mkdir(parents=True)
-        for name in ('deploy.sh', 'deploy-macos.sh', 'macos.sh', 'install-user-configs.py', 'app-settings-status.sh'):
+        for name in ('deploy.sh', 'deploy-macos.sh', 'macos.sh', 'install-user-configs.py', 'sync-antigravity-config.py', 'app-settings-status.sh'):
             shutil.copyfile(ROOT / 'scripts' / name, scripts / name)
+        (self.repo / 'antigravity').mkdir()
+        shutil.copyfile(ROOT / 'antigravity/settings.json', self.repo / 'antigravity/settings.json')
         for name in ('remove-cursor-notify.py', 'apply-mulmoterminal-background.py', 'macos-espanso.py'):
             (scripts / name).write_text('pass\n')
         for name in ('install-mulmoterminal-config.sh', 'macos-betterdisplay.sh',
@@ -94,7 +96,7 @@ class DeployTest(unittest.TestCase):
         self.env = dict(os.environ, HOME=str(self.home), DOTFILES_PROFILE='full',
                         TEST_ZSH=ZSH, TEST_OS='Linux',
                         PATH=str(fake_bin) + os.pathsep + os.environ['PATH'])
-        for key in ('ZDOTDIR', 'XDG_STATE_HOME'):
+        for key in ('ZDOTDIR', 'XDG_STATE_HOME', 'ANTIGRAVITY_HOME'):
             self.env.pop(key, None)
 
     def run_deploy(self, *args):
@@ -109,8 +111,12 @@ class DeployTest(unittest.TestCase):
         old = self.home / '.hammerspoon'
         old.mkdir()
         (old / 'local.lua').write_text('preserve')
+        agy_settings = self.home / '.gemini/antigravity-cli/settings.json'
+        agy_settings.parent.mkdir(parents=True)
+        agy_settings.write_text(json.dumps({'trustedWorkspaces': ['/tmp/local-project']}) + '\n')
         first = self.run_deploy()
         self.assertEqual(first.returncode, 0, first.stderr)
+        agy_mtime = agy_settings.lstat().st_mtime_ns
         links = [p for p in self.home.rglob('*') if p.is_symlink()]
         snapshot = {str(p): (str(p.readlink()), p.lstat().st_mtime_ns) for p in links}
         backups = list(self.home.rglob('*.bak.*'))
@@ -118,6 +124,12 @@ class DeployTest(unittest.TestCase):
         self.assertEqual(second.returncode, 0, second.stderr)
         self.assertEqual(snapshot, {str(p): (str(p.readlink()), p.lstat().st_mtime_ns) for p in links})
         self.assertEqual(list(self.home.rglob('*.bak.*')), backups)
+        self.assertEqual(agy_settings.lstat().st_mtime_ns, agy_mtime)
+        self.assertEqual(json.loads(agy_settings.read_text()), {
+            'trustedWorkspaces': ['/tmp/local-project'],
+            'altScreenMode': 'always',
+            'model': 'Gemini 4 Hydrogen (XHigh)',
+        })
         self.assertTrue((self.home / '.claude/skills/shared').is_symlink())
         self.assertTrue((self.home / '.codex/skills/shared').is_symlink())
         editor_prefix = 'Library/Application Support' if sys.platform == 'darwin' else '.config'

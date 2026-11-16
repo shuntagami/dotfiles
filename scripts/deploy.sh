@@ -71,6 +71,7 @@ fi
 python3 "$DOTFILES/scripts/remove-cursor-notify.py"
 bash "$DOTFILES/scripts/install-mulmoterminal-config.sh"
 python3 "$DOTFILES/scripts/apply-mulmoterminal-background.py"
+python3 "$DOTFILES/scripts/sync-antigravity-config.py" apply
 python3 "$DOTFILES/scripts/install-user-configs.py" screenpipe
 node "$DOTFILES/mcp/sync-mcp.mjs"
 
