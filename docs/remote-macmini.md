@@ -80,6 +80,26 @@ Mac mini 側で `res 27` が `has no 3008x1692 mode` を返す場合、
 接続中の解像度は Jump Desktop の追従機能で揃えられるため、通常は
 Mac mini 側で `res 27` を実行する必要はない。
 
+### モバイル回線でフレームレートを下げる
+
+MacBookの接続中のJump Desktopで `Remote > Framerate` を操作するコマンド。
+Mac Studioなど別のMacから実行した場合は、SSHで `shun-tagami-mbp` のビューアーを操作する。
+MacBook上ではローカル実行する。Jump Desktopの再起動や接続切断は行わない。
+
+```sh
+jump-fps       # 現在の設定（実測fpsではなく上限設定）を表示
+jump60         # 60 fps
+jump30         # 30 fps
+jumpauto       # Autoに戻す
+```
+
+エイリアスは `source ~/dotfiles/zsh/mac.zsh` で読み込める。
+`jump-fps 60`・`jump-fps 30`・`jump-fps auto` でも変更できる。
+接続ウィンドウは1つにし、設定画面やダイアログを閉じて実行する。
+MacBookのSystem Events操作・アクセシビリティ許可と、別のMacからはSSH接続が必要。
+変更後はメニューのチェックを読み直して確認する。現在のAuto設定を調べるだけなら
+`jump-fps` を使う。ネットワーク状況により実際のfpsは設定した上限より低くなる。
+
 ### 接続中の文字が小さくなったとき
 
 `jump-display-check` は保存ファイルだけを検査する。差分がなくても、接続中の

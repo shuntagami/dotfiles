@@ -1,0 +1,28 @@
+#!/bin/bash
+# Control the live Jump Desktop viewer on the MacBook, including from a remote Mac.
+set -euo pipefail
+
+usage() {
+  echo 'Usage: jump-fps [status|60|30|auto]'
+  echo 'MacBookのJump Desktopの送信fps上限を変更します。引数なしは現在の設定を表示。'
+  echo 'MacBook以外からはSSHで shun-tagami-mbp に接続します。'
+}
+
+if [[ $# -gt 1 ]]; then usage >&2; exit 2; fi
+mode=${1:-status}
+case "$mode" in
+  status|60|30|auto) ;;
+  -h|--help) usage; exit 0 ;;
+  *) usage >&2; exit 2 ;;
+esac
+
+repo_dir=$(cd "$(dirname "$0")/.." && pwd)
+script="$repo_dir/scripts/jump-desktop-fps.applescript"
+local_host=$(/bin/hostname -s | /usr/bin/tr '[:upper:]' '[:lower:]')
+if [[ "$local_host" == shun-tagami-mbp ]]; then
+  exec /usr/bin/osascript "$script" "$mode"
+else
+  # Send the script on stdin; the MacBook does not need a matching checkout.
+  exec /usr/bin/ssh -o BatchMode=yes -o ConnectTimeout=10 shun-tagami-mbp \
+    /usr/bin/osascript - "$mode" < "$script"
+fi
