@@ -186,6 +186,7 @@ Escape（キャンセル）。ClipyはCommand+Option+V（履歴）、Command+Shi
 ```
 
 Aqua Voiceは管理するアクションだけ更新し、そのほかのショートカットや設定を保持します。
+画面を撮るペン機能は、誤爆でスクショが溜まるため `misc/aqua-voice-settings.json` で`penEnabled: false`に固定しています。
 Clipyも指定した設定キーだけ更新します。変更前の管理対象キーは
 `~/.local/state/dotfiles/app-hotkeys/`に保存します。変更した場合、アプリの再起動後に有効になります。
 アプリが未インストールならスキップします。Aqua Voiceの設定ファイルがまだない場合は、

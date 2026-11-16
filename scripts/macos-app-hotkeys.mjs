@@ -52,10 +52,17 @@ export function aqua(mode, ctx) {
   const desired = JSON.parse(fs.readFileSync(path.join(ctx.configDir, 'aqua-voice-hotkeys.json'), 'utf8'));
   const current = settings.hotkeys ?? [];
   const merged = mergeHotkeys(current, desired);
-  if (isDeepStrictEqual(merged, current)) { ctx.log('OK Aqua Voice shortcuts'); return 0; }
-  if (mode !== 'apply') { ctx.log('Aqua Voice: managed shortcuts differ.'); return Number(mode === 'check'); }
-  backup('aqua-voice', { hotkeys: current }, ctx);
+  // 画面を撮る「ペン」機能など、アプリ側の設定値も管理する（管理するキーだけ上書き）。
+  const managed = JSON.parse(fs.readFileSync(path.join(ctx.configDir, 'aqua-voice-settings.json'), 'utf8'));
+  const changedKeys = Object.keys(managed).filter(key => !isDeepStrictEqual(settings[key], managed[key]));
+  if (isDeepStrictEqual(merged, current) && !changedKeys.length) { ctx.log('OK Aqua Voice shortcuts and settings'); return 0; }
+  if (mode !== 'apply') {
+    ctx.log(`Aqua Voice: managed ${isDeepStrictEqual(merged, current) ? '' : 'shortcuts '}${changedKeys.join(' ')} differ.`.replace(/ +/g, ' '));
+    return Number(mode === 'check');
+  }
+  backup('aqua-voice', { hotkeys: current, ...Object.fromEntries(changedKeys.filter(key => key in settings).map(key => [key, settings[key]])) }, ctx);
   settings.hotkeys = merged;
+  Object.assign(settings, managed);
   const staging = fs.mkdtempSync(path.join(path.dirname(filename), '.dotfiles-hotkeys-'));
   try {
     const temporary = path.join(staging, 'settings.json');
@@ -64,7 +71,7 @@ export function aqua(mode, ctx) {
     fs.renameSync(temporary, filename);
   } finally { fs.rmSync(staging, { recursive: true, force: true }); }
   if (!isDeepStrictEqual(JSON.parse(fs.readFileSync(filename, 'utf8')).hotkeys, merged)) throw new Error('Aqua Voice settings verification failed.');
-  ctx.log('Saved Aqua Voice shortcuts. Restart Aqua Voice to load them.');
+  ctx.log('Saved Aqua Voice shortcuts and settings. Restart Aqua Voice to load them.');
   return 0;
 }
 
