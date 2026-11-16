@@ -21,6 +21,10 @@ preferenceの `values` は管理するキーだけを指定する。辞書の指
 
 書き込みは `defaults` を通し、plist全体の置換は行わない。JSONのboolean・number・string・array・objectを、型付きplist値として保存する。無関係な設定は維持する。変更前の管理対象値は `~/.local/state/dotfiles/macos/backups/` に保存する（`XDG_STATE_HOME` 指定時はその配下）。存在しなかった値も区別して記録する。
 
+Safariなどの保護されたpreferencesには `container` を指定する。フォルダにアクセスできないときは、`defaults export` が空の辞書を返しても「設定なし」と扱わない。該当アプリだけを権限待ちとして報告して終了コード3を返し、deployは他の設定を続行する。権限を付与した端末・エージェントの実行環境から再実行すると、その設定も同期する。一般の読み取り・書き込みエラーは従来どおり失敗として停止する。
+
+関連付けは通常deployでは監査だけ行い、OSの確認画面を開かない。明示的な `macos-default-apps.sh --set-default pdf` などで1拡張子だけ修復を要求する。撮影ショートカットは静かに同期する。通知プロファイルも、通常は承認待ちを表示し、`macos-notifications.sh --install-profile` を明示したときだけ開く。
+
 管理者権限が必要な差分がある場合だけsudo認証を行う。電源設定は実機の `pmset` に出てくる電源・機能を対象とし、利用できない項目は名前を表示してスキップする。`standbydelay`・`lidwake` などは機種によって対象外になる。
 
 保存値の検証と、OSやアプリがその設定を実際に使うことは別。旧スクリプトから継承したpreferencesには古いOS向けのキーもある。読み戻しの成功を、現行OSでの機能の有効化や再起動完了とは扱わない。

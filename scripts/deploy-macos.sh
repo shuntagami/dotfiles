@@ -19,14 +19,14 @@ state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles"
 mkdir -p "$state_dir"
 
 # Save persistent system/machine settings without restarting user applications.
-node "${DOTFILES}/scripts/macos-system-settings.mjs"
+source "${DOTFILES}/scripts/app-settings-status.sh"
+dotfiles_apply_app_settings node "${DOTFILES}/scripts/macos-system-settings.mjs"
 
 # Reconcile the display-mode brightness policy.
 # The installer skips machines where BetterDisplay is not installed.
 bash "${DOTFILES}/scripts/macos-betterdisplay.sh"
 
 # App shortcuts live separately from optional system-wide macOS settings.
-source "${DOTFILES}/scripts/app-settings-status.sh"
 dotfiles_apply_app_settings bash "${DOTFILES}/scripts/macos-aqua-voice.sh"
 dotfiles_apply_app_settings bash "${DOTFILES}/scripts/macos-clipy.sh"
 # Espanso owns text expansion; retire Raycast and restore Spotlight.
@@ -35,13 +35,12 @@ dotfiles_apply_app_settings python3 "${DOTFILES}/scripts/macos-espanso.py"
 # Apply the registered Mac mini connection's display policy without interrupting sessions.
 node "${DOTFILES}/scripts/jump-desktop-display.mjs" --deploy
 
-# Notifications: which sites may notify in Chrome, and whether macOS lets the
-# apps show anything. Idempotent and non-interactive -- it only opens the
-# configuration profile when that profile is missing or has changed.
+# Notifications: apply Chrome policy and report profile approval status.
+# Opening the installer requires an explicit --install-profile command.
 bash "${DOTFILES}/scripts/macos-notifications.sh"
 
-# Keep file associations and CleanShot screenshot shortcuts in sync.
-dotfiles_apply_app_settings bash "${DOTFILES}/scripts/macos-default-apps.sh"
+# Audit file associations without dialogs; synchronize screenshot shortcuts.
+dotfiles_apply_app_settings bash "${DOTFILES}/scripts/macos-default-apps.sh" --deploy
 
 # The default browser is selected in Chrome or System Settings.
 

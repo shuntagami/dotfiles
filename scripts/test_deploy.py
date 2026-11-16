@@ -37,6 +37,8 @@ elif name == 'defaults':
 elif name == 'osacompile':
     Path(args[args.index('-o') + 1]).write_text('compiled')
 elif name == 'node':
+    if args and args[0].endswith('/macos-system-settings.mjs'):
+        sys.exit(int(os.environ.get('SYSTEM_SETUP_RESULT', '0')))
     sys.exit(int(os.environ.get('FAIL_NODE', '0')))
 elif name == 'sudo':
     sys.exit('Unexpected sudo in an already configured account')
@@ -152,6 +154,15 @@ class DeployTest(unittest.TestCase):
         result = self.run_deploy()
         self.assertEqual(result.returncode, 42, result.stderr)
         self.assertNotIn('Deploy complete', result.stdout)
+
+    @unittest.skipUnless(sys.platform == 'darwin', 'macOS installer paths')
+    def test_permission_action_does_not_block_other_mac_settings(self):
+        self.env['TEST_OS'] = 'Darwin'
+        self.env['SYSTEM_SETUP_RESULT'] = '3'
+        result = self.run_deploy()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Deploy complete', result.stdout)
+        self.assertTrue(any('jump-desktop-display.mjs' in ' '.join(c) for c in self.commands()))
 
     def test_legacy_macos_entry_rejects_unknown_flags_before_mutation(self):
         result = subprocess.run(['/bin/bash', str(self.repo / 'scripts/macos.sh'), '--dry-run'],

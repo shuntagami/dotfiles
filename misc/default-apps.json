@@ -22,7 +22,19 @@
         "aif",
         "flac",
         "ogg",
-        "opus"
+        "opus",
+        "wmv",
+        "flv",
+        "3gp",
+        "3g2",
+        "mts",
+        "m2ts",
+        "qt",
+        "m4b",
+        "wma",
+        "caf",
+        "mka",
+        "oga"
       ]
     },
     {
@@ -38,7 +50,9 @@
         "tif",
         "tiff",
         "bmp",
-        "webp"
+        "webp",
+        "heic",
+        "heif"
       ]
     },
     {

@@ -12,8 +12,11 @@ export function manageDefaultApps(mode, ctx) {
   const duti = ctx.command('duti');
   if (!duti) throw new Error('Install duti first: brew install duti');
   const config = JSON.parse(fs.readFileSync(path.join(ctx.configDir, 'default-apps.json'), 'utf8'));
+  if (mode === 'set-default' && (!ctx.associationExtension || !config.fileAssociations.some(group => group.extensions.includes(ctx.associationExtension)))) {
+    throw new Error('Choose one managed extension with --set-default <extension>.');
+  }
   const apps = ctx.applications();
-  const apply = mode === 'apply';
+  const apply = mode === 'set-default' || mode === 'deploy';
   const changes = [];
   let failed = false;
   let needsAppAction = false;
@@ -35,6 +38,7 @@ export function manageDefaultApps(mode, ctx) {
   };
   const plans = [];
   for (const association of config.fileAssociations) {
+    if (mode === 'set-default' && !association.extensions.includes(ctx.associationExtension)) continue;
     const bundle = association.bundleIds.find(id => apps.has(id.toLowerCase()));
     if (!bundle) {
       ctx.log(`Missing app: ${association.name}; install it and rerun deploy.`);
@@ -43,6 +47,7 @@ export function manageDefaultApps(mode, ctx) {
       continue;
     }
     for (const extension of association.extensions) {
+      if (mode === 'set-default' && extension !== ctx.associationExtension) continue;
       const current = ctx.handler(extension);
       plans.push({ bundle, extension, current });
       if (current.toLowerCase() !== bundle.toLowerCase()) changes.push({ extension, before: current, after: bundle });
@@ -51,7 +56,14 @@ export function manageDefaultApps(mode, ctx) {
   const registered = new Set();
   for (const { bundle, extension, current } of plans) {
     if (current.toLowerCase() === bundle.toLowerCase()) { ctx.log(`OK .${extension} -> ${bundle}`); continue; }
-    ctx.log(`${apply ? 'Set' : mode === 'check' ? 'Mismatch' : 'Would set'} .${extension}: ${current || 'unknown'} -> ${bundle}`);
+    // LSSetDefaultRoleHandler (used by duti) opens a native confirmation for
+    // each file type. Normal/repeated deploy must never enqueue those dialogs.
+    if (mode === 'deploy') {
+      ctx.log(`Pending .${extension}: ${current || 'unknown'} -> ${bundle}. Set this once in Finder > Get Info > Open with > Change All; deploy will only check it.`);
+      needsAppAction = true;
+      continue;
+    }
+    ctx.log(`${mode === 'set-default' ? 'Set' : 'Mismatch'} .${extension}: ${current || 'unknown'} -> ${bundle}`);
     if (!apply) { failed ||= mode === 'check'; continue; }
     saveBackup();
     if (!registered.has(bundle)) {
@@ -65,10 +77,11 @@ export function manageDefaultApps(mode, ctx) {
       ctx.log(`Failed .${extension}: ${(result.stderr ?? '').trim()} actual=${actual || 'unknown'}`);
       failed = true;
     } else if (actual.toLowerCase() !== bundle.toLowerCase()) {
-      ctx.log(`Pending .${extension}: actual=${actual || 'unknown'}. In Finder, select a .${extension} file, open Get Info > Open with, choose ${apps.get(bundle.toLowerCase())}, then Change All. Rerun --check to verify.`);
+      ctx.log(`Pending .${extension}: actual=${actual || 'unknown'}. Approve the single macOS confirmation, then rerun --check. If no dialog appears, use Finder > Get Info > Open with > ${apps.get(bundle.toLowerCase())} > Change All.`);
       needsAppAction = true;
     }
   }
+  if (mode === 'set-default') return failed ? 1 : needsAppAction ? NEEDS_APP_ACTION : 0;
   const screenshot = config.screenshots;
   const domain = screenshot.bundleId;
   if (!apps.has(domain.toLowerCase())) {
@@ -132,8 +145,14 @@ export function manageDefaultApps(mode, ctx) {
 }
 
 export function main(args = process.argv.slice(2), ctx = createContext()) {
-  const mode = parseMode(args);
-  if (mode === 'help') { ctx.log('Usage: macos-default-apps.mjs [--apply|--check|--dry-run]'); return 0; }
+  let mode;
+  if (args.length === 2 && args[0] === '--set-default') {
+    ctx.associationExtension = args[1].replace(/^\./, '').toLowerCase();
+    mode = 'set-default';
+  } else {
+    mode = !args.length || args.length === 1 && ['--deploy', '--apply'].includes(args[0]) ? 'deploy' : parseMode(args);
+  }
+  if (mode === 'help') { ctx.log('Usage: macos-default-apps.mjs [--deploy|--apply|--check|--dry-run|--set-default <extension>]. Normal apply is silent; --set-default requests ONE native confirmation.'); return 0; }
   if (ctx.platform !== 'darwin') { ctx.log('Skipping default apps: requires macOS.'); return 0; }
   return manageDefaultApps(mode, ctx);
 }

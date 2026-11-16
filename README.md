@@ -249,15 +249,18 @@ Raycastはアンインストールし、Command+SpaceはSpotlightへ戻します
 
 `misc/default-apps.json` で標準アプリとCleanShotの撮影ショートカットを管理します。
 動画・音声はIINA、画像はCleanShot X、PDFはAcrobat Pro（なければReader）、HTMLはChromeです。
-現在のインストール状況からアプリを選び、`deploy.sh`で毎回適用・確認します。
+現在のインストール状況からアプリを選び、`deploy.sh`で毎回確認します。
+関連付けの変更はOSの確認ダイアログを出すため、通常のdeployでは要求しません。
+CleanShotの撮影設定は、これまでどおり画面を出さずに同期します。
 必要なアプリがない場合は報告します。自動インストールはしません。
 適用時は手動作業が残っていることを終了コード3で知らせ、deployは続行します。
 CleanShot未導入時はmacOS標準の撮影ショートカットを維持します。
 
 ```bash
 ~/dotfiles/scripts/macos-default-apps.sh --dry-run  # 変更予定
-~/dotfiles/scripts/macos-default-apps.sh            # 適用して確認
+~/dotfiles/scripts/macos-default-apps.sh            # 関連付けを監査、撮影設定を同期。確認画面は開かない
 ~/dotfiles/scripts/macos-default-apps.sh --check    # 現状確認。不一致なら終了コード1
+~/dotfiles/scripts/macos-default-apps.sh --set-default pdf  # PDFだけ修復を要求。OSの確認が出る場合がある
 ```
 
 sudo不要で、実行したMacのログインユーザーに適用します。
@@ -270,12 +273,15 @@ Cmd+Shift+4の明示的な割り当てが「範囲撮影」と「範囲をコピ
 すでに有効なCleanShot設定は維持します。ショートカットを書き換えた場合は、撮影中の作業を
 中断せず、CleanShotの再起動が必要なことを表示して終了コード3を返します。
 deployは終了コード3だけを警告として扱って続行し、実際の設定失敗は終了コード1で停止します。
-関連付けの変更コマンドが成功しても反映されない場合も、手動設定待ち（終了コード3）として表示します。
+関連付けが違う場合は修復待ち（終了コード3）として表示し、同じ要求を繰り返してダイアログを増やしません。
 Finderで対象のファイルを選び「情報を見る → このアプリケーションで開く」でアプリを選択し、
 「すべてを変更」を押してから `--check` で確認してください。`--check` は未導入・不一致を終了コード1で報告します。
 macOS標準の撮影ショートカットを書き換えた場合は、保存状態を確認して即時再読み込みします。
 
-別のアプリに関連付けが変わった場合は再実行して戻せます。
+別のアプリに関連付けが変わった場合は、監査して不一致の拡張子だけを `--set-default <拡張子>` で修復します。
+関連付けを一括変更するモードは設けず、`--apply` も通常のdeployと同じ静かな同期です。
+通知プロファイルも通常deployでは開きません。承認が必要な場合だけ、
+`bash scripts/macos-notifications.sh --install-profile` で明示的にインストーラーを開きます。
 ブラウザ内の再生・PDF表示、FinderのQuick Look、ファイル個別の関連付けは対象外です。
 既存のChromeのWeb・メールリンク設定は維持します。OSの標準ブラウザ変更には
 Chrome自身かシステム設定での操作が必要です（`deploy.sh`のコメント参照）。

@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
-import { createContext, parseMode, toPlist, writePlist, isMain, cli } from './macos-app-settings.mjs';
+import { createContext, parseMode, toPlist, writePlist, isMain, cli, NEEDS_APP_ACTION } from './macos-app-settings.mjs';
 import { withQueuedActivation, readPending, reportPending, validateTarget } from './macos-activation.mjs';
 
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -19,11 +19,26 @@ const resolve = (value, variables) => typeof value === 'string'
 function readJson(file) { return JSON.parse(fs.readFileSync(file, 'utf8')); }
 function command(ctx, file, args, options) {
   const result = ctx.run(file, args, options);
-  if (result.status !== 0) throw new Error(`Command failed: ${file} ${args.join(' ')}`);
+  if (result.status !== 0) throw new Error(`Command failed: ${file} ${args.join(' ')}\n${result.stderr ?? ''}`);
   return result.stdout ?? '';
 }
 
+class ContainerAccessRequired extends Error {}
+
 export function preferences(group, ctx) {
+  // defaults can report success with an empty dictionary while TCC blocks a
+  // sandboxed app's real preferences. Do not mistake that for missing settings.
+  if (group.container) {
+    const directory = path.join(ctx.home, 'Library/Containers', group.container, 'Data/Library/Preferences');
+    try { fs.readdirSync(directory); }
+    catch (error) {
+      if (['EACCES', 'EPERM'].includes(error.code)) {
+        throw new ContainerAccessRequired(`${group.domain}: macOS denied access to ${directory}. Grant Full Disk Access to the terminal/agent host and rerun deploy.`);
+      }
+      if (error.code === 'ENOENT') throw new ContainerAccessRequired(`${group.domain}: launch the app once to initialize its preferences, then rerun deploy.`);
+      throw error;
+    }
+  }
   const args = [...group.currentHost ? ['-currentHost'] : [], 'export', group.domain, '-'];
   const result = ctx.run('/usr/bin/defaults', args);
   if (result.status === 0) return ctx.readPlist(result.stdout);
@@ -85,6 +100,7 @@ export function loadPolicy(ctx) {
   const seen = new Set();
   for (const group of policy.preferences) {
     if (!group.domain || typeof group.domain !== 'string' || !object(group.values)) throw new Error('Invalid preference group.');
+    if (group.container !== undefined && (typeof group.container !== 'string' || !/^[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)+$/.test(group.container))) throw new Error('Invalid app container identifier.');
     const id = `${Boolean(group.currentHost)}:${group.domain}`;
     if (seen.has(id)) throw new Error(`Duplicate preference group: ${group.domain}`);
     seen.add(id);
@@ -101,10 +117,17 @@ export function loadPolicy(ctx) {
   return policy;
 }
 
-export function planSettings(policy, ctx) {
+export function planSettings(policy, ctx, blocked = []) {
   const plan = [];
   for (const group of policy.preferences) {
-    const current = preferences(group, ctx);
+    let current;
+    try { current = preferences(group, ctx); }
+    catch (error) {
+      if (!(error instanceof ContainerAccessRequired)) throw error;
+      blocked.push(error.message);
+      ctx.log(`Needs user action: ${error.message}`);
+      continue;
+    }
     for (const [key, managed] of Object.entries(group.values)) {
       const expected = merge(current[key], managed);
       if (isDeepStrictEqual(current[key], expected)) continue;
@@ -194,11 +217,12 @@ function planLoginItems(policy, ctx) {
 
 export function applySettings(mode, ctx) {
   const policy = loadPolicy(ctx);
+  const blocked = [];
   // Finish reading/validating the plan before the first backup or setting write.
-  const plan = [...planSettings(policy, ctx), ...planLoginItems(policy, ctx)];
+  const plan = [...planSettings(policy, ctx, blocked), ...planLoginItems(policy, ctx)];
   if (mode === 'apply') readPending(ctx);
   for (const entry of plan) ctx.log(`${entry.admin ? 'Admin ' : ''}${entry.description}: ${JSON.stringify(entry.before)} -> ${JSON.stringify(entry.expected)}`);
-  if (mode !== 'apply') return Number(mode === 'check' && plan.length > 0);
+  if (mode !== 'apply') return Number(mode === 'check' && (plan.length > 0 || blocked.length > 0));
   if (plan.length) {
     if (plan.some(entry => entry.admin)) command(ctx, '/usr/bin/sudo', ['-v'], { stdio: 'inherit' });
     const root = path.join(ctx.stateRoot, 'macos/backups');
@@ -217,7 +241,7 @@ export function applySettings(mode, ctx) {
     }
   }
   reportPending(ctx);
-  return 0;
+  return blocked.length ? NEEDS_APP_ACTION : 0;
 }
 
 export function main(args = process.argv.slice(2), ctx = createContext()) {

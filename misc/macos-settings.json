@@ -256,6 +256,7 @@
     },
     {
       "domain": "com.apple.Safari",
+      "container": "com.apple.Safari",
       "activation": "login",
       "values": {
         "ShowFullURLInSmartSearchField": true,
