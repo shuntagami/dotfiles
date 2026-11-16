@@ -184,6 +184,7 @@ bash ~/dotfiles/scripts/macos-default-apps.sh  # 標準アプリ・CleanShot設�
 | VS Code・Cursor | settings・keybindings・tsconfig・snippets を同期。既存の非空ディレクトリも退避して置換 |
 | MCP | `mcp/servers.json` から各クライアントへ反映。同じ設定のClaude登録は削除・再追加しない |
 | MulmoTerminal | 共通キーをマージ。端末固有のキー・既存プロジェクトの設定は維持 |
+| Antigravity | `antigravity/settings.json` の共有キーを `~/.gemini/antigravity-cli/settings.json` へマージ。`trustedWorkspaces` は維持 |
 | Screenpipe | pipe.md・拡張を配置。録画・DB・接続情報は対象外 |
 | macOSのシステム設定 | Finder・Dock・入力・ブラウザなどの共通設定、端末別の電源・Mac名・起動音、ログイン項目を差分だけ同期 |
 | macOSのアプリ設定 | BetterDisplay・Aqua Voice・Clipy・Espanso・通知・標準アプリ・Jump Desktop・Claude Desktop・iTerm2・memo・DownloadsのFolder Action |
