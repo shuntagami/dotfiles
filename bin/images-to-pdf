@@ -110,6 +110,10 @@ function pngPassthrough(b) {
     const type = String.fromCharCode(b[off + 4], b[off + 5], b[off + 6], b[off + 7]);
     const data = b.subarray(off + 8, off + 8 + len);
     if (!sawIhdr && type !== "IHDR") throw new Error("PNG is corrupt (IHDR is not the first chunk)");
+    // テキスト系チャンクはキーワードのNUL終端が必須。無いとpdf-libのUPNGが範囲外を読み続けて止まらなくなる。
+    if ((type === "tEXt" || type === "zTXt" || type === "iTXt") && data.indexOf(0) < 0) {
+      throw new Error(`PNG is corrupt (${type} chunk has no NUL terminator)`);
+    }
     if (type === "IHDR") {
       if (len !== 13) throw new Error("PNG is corrupt (bad IHDR)");
       sawIhdr = true;
