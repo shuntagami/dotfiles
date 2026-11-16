@@ -36,7 +36,7 @@
 // (quality=100でのJPEG再エンコードもPNG→JPEG変換も非可逆なため)。
 
 import pptxgen from "npm:pptxgenjs@3.12.0";
-import { readdirSync, mkdtempSync, mkdirSync, rmSync, existsSync, statSync } from "node:fs";
+import { readdirSync, mkdtempSync, mkdirSync, rmSync, existsSync, statSync, copyFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -127,7 +127,11 @@ if (positional.length === 0) {
 }
 
 const imageDir = resolve(positional[0]);
-const outputPath = positional[1] ? resolve(positional[1]) : `${imageDir}.pptx`;
+// 出力名は .pptx に正規化する (表示と実ファイルを一致させ、サイズ確認で別名を参照しないため)
+const outputPath = (() => {
+  const o = positional[1] ? resolve(positional[1]) : imageDir.replace(/\/+$/, "");
+  return /\.pptx$/i.test(o) ? o : `${o}.pptx`;
+})();
 
 if (!existsSync(imageDir)) {
   console.error(`Error: directory not found: ${imageDir}`);
@@ -201,12 +205,31 @@ function estimateTotal(q, sample, dir) {
 }
 
 const fmtMB = (b) => `${(b / MB).toFixed(1)}MB`;
-let slidePaths;
+
+// 画像列からPPTXを一時ファイルに組み立て、実サイズを返す。
+// 上限判定は画像サイズの合計ではなくこの実サイズで行う (XML等の分は固定比率では保証できない)。
+let buildSeq = 0;
+async function buildPptx(paths) {
+  const pp = new pptxgen();
+  pp.defineLayout({ name: "CUSTOM", width: slideWidthIn, height: slideHeightIn });
+  pp.layout = "CUSTOM";
+  for (const imgPath of paths) {
+    pp.addSlide().addImage({ path: imgPath, x: 0, y: 0, w: slideWidthIn, h: slideHeightIn });
+  }
+  const file = join(tmp, `build-${++buildSeq}.pptx`);
+  await pp.writeFile({ fileName: file });
+  return { file, size: statSync(file).size };
+}
+
+let built = null; // { file, size }
+const fitsLimit = (b) => limitBytes == null || b.size <= limitBytes;
 
 if (useOriginal && limitBytes != null) {
   const total = images.reduce((n, f) => n + statSync(f).size, 0);
-  if (total * OVERHEAD <= limitBytes) {
-    console.error(`original images total ${fmtMB(total)} (<= ${maxSizeMB}MB): embedding as-is`);
+  const b = total <= limitBytes ? await buildPptx(images) : null;
+  if (b && fitsLimit(b)) {
+    console.error(`original images embedded as-is: ${fmtMB(b.size)} (<= ${maxSizeMB}MB)`);
+    built = b;
   } else {
     console.error(`original images total ${fmtMB(total)} (> ${maxSizeMB}MB): re-encoding to JPEG at original resolution`);
     useOriginal = false;
@@ -216,10 +239,12 @@ if (useOriginal && limitBytes != null) {
   }
 }
 
-if (useOriginal) {
-  slidePaths = images;
+if (built) {
+  // 無加工のまま上限に収まった
+} else if (useOriginal) {
+  built = await buildPptx(images);
 } else if (limitBytes == null) {
-  slidePaths = encodeAll(quality ?? 65, join(tmp, "enc")).paths;
+  built = await buildPptx(encodeAll(quality ?? 65, join(tmp, "enc")).paths);
 } else {
   // サンプル: 元ファイルのサイズ順に並べた全体から均等に選ぶ。
   // (精細な画像と単色に近い画像が混在しても、どちらも代表させるため)
@@ -228,73 +253,60 @@ if (useOriginal) {
   const sample = Array.from({ length: SAMPLE_N }, (_, j) => bySize[Math.floor(((j + 0.5) * images.length) / SAMPLE_N)].f);
   const hiQ = qualityExplicit ? Math.min(Math.max(quality, 1), 100) : MAX_Q;
   const loQ = Math.min(MIN_Q, hiQ);
-  const fits = (bytes) => bytes * OVERHEAD <= limitBytes;
 
-  // [from, to] の範囲で「上限に収まる最大の品質」をサンプルから二分探索する。
+  // [from, to] の範囲で「上限に収まる最大の品質」をサンプルから二分探索する (初期候補用の見積もり)。
   // scale はサンプル見積もりの実測補正 (全枚数を変換した結果との比)。収まる品質がなければ null。
   function searchQuality(from, to, scale) {
     let lo = from, hi = to, found = null;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
-      const est = estimateTotal(mid, sample, join(tmp, "sample")) * scale;
-      console.error(`  q=${mid}: ~${fmtMB(est * OVERHEAD)}`);
-      if (fits(est)) { found = mid; lo = mid + 1; } else { hi = mid - 1; }
+      const est = estimateTotal(mid, sample, join(tmp, "sample")) * scale * OVERHEAD;
+      console.error(`  q=${mid}: ~${fmtMB(est)}`);
+      if (est <= limitBytes) { found = mid; lo = mid + 1; } else { hi = mid - 1; }
     }
     return found;
+  }
+
+  // 全枚数をqで変換し、PPTXを組み立てて実サイズを返す (変換結果のフォルダは dirName)
+  async function tryQuality(q, dirName) {
+    rmSync(join(tmp, dirName), { recursive: true, force: true });
+    const r = encodeAll(q, join(tmp, dirName));
+    const b = await buildPptx(r.paths);
+    console.error(`  encoded all at q=${q}: pptx ${fmtMB(b.size)}`);
+    return { q, ...r, ...b };
   }
 
   // 1) サンプルで初期候補を決める (全枚数を何度も変換しないため)
   console.error(`searching JPEG quality ${loQ}..${hiQ} for <= ${maxSizeMB}MB (${SAMPLE_N}-image sample) ...`);
   let q = searchQuality(loQ, hiQ, 1) ?? loQ;
 
-  // 2) 全枚数を変換して実サイズで検証。サンプルの見積もりが外れていたら品質を下げて再変換する
+  // 2) 全枚数で実際に組み立てて検証。外れていたら品質を1ずつ下げ、収まる最高品質で止める
   let best;
   for (;;) {
-    rmSync(join(tmp, "enc"), { recursive: true, force: true });
-    const r = encodeAll(q, join(tmp, "enc"));
-    console.error(`  encoded all at q=${q}: ${fmtMB(r.total * OVERHEAD)}`);
-    if (fits(r.total)) { best = { q, ...r }; break; }
+    const t = await tryQuality(q, "enc");
+    if (fitsLimit(t)) { best = t; break; }
     if (q <= loQ) {
-      console.error(`Error: even quality ${q} gives ${fmtMB(r.total * OVERHEAD)} (> ${maxSizeMB}MB). Lower the resolution with -w <px>.`);
+      console.error(`Error: even quality ${q} gives ${fmtMB(t.size)} (> ${maxSizeMB}MB). Lower the resolution with -w <px>.`);
       rmSync(tmp, { recursive: true, force: true });
       Deno.exit(1);
     }
-    q = Math.max(loQ, q - 2);
+    q--;
   }
 
   // 3) サンプルが過大に見積もっていて余裕がある場合に備え、実測で補正して品質を上げる再探索を1回行う
   if (best.q < hiQ) {
-    const scale = best.total / estimateTotal(best.q, sample, join(tmp, "sample"));
+    const scale = best.size / OVERHEAD / estimateTotal(best.q, sample, join(tmp, "sample"));
     console.error(`refining upward (sample vs actual x${scale.toFixed(2)}) ...`);
     const q2 = searchQuality(best.q + 1, hiQ, scale);
     if (q2 != null) {
-      const r2 = encodeAll(q2, join(tmp, "enc2"));
-      console.error(`  encoded all at q=${q2}: ${fmtMB(r2.total * OVERHEAD)}`);
-      if (fits(r2.total)) {
-        rmSync(join(tmp, "enc"), { recursive: true, force: true });
-        best = { q: q2, ...r2 };
-      } else {
-        rmSync(join(tmp, "enc2"), { recursive: true, force: true });
-      }
+      const t2 = await tryQuality(q2, "enc2");
+      if (fitsLimit(t2)) best = t2;
     }
   }
-  slidePaths = best.paths;
+  built = best;
   console.error(`using JPEG quality ${best.q}`);
 }
 
-const p = new pptxgen();
-p.defineLayout({ name: "CUSTOM", width: slideWidthIn, height: slideHeightIn });
-p.layout = "CUSTOM";
-
-for (const slideImgPath of slidePaths) {
-  const slide = p.addSlide();
-  slide.addImage({ path: slideImgPath, x: 0, y: 0, w: slideWidthIn, h: slideHeightIn });
-}
-
-await p.writeFile({ fileName: outputPath });
+copyFileSync(built.file, outputPath);
 rmSync(tmp, { recursive: true, force: true });
-const outBytes = statSync(outputPath).size;
-console.log(`${images.length} slides -> ${outputPath} (${fmtMB(outBytes)})`);
-if (limitBytes != null && outBytes > limitBytes) {
-  console.error(`Warning: output ${fmtMB(outBytes)} exceeds --max-size ${maxSizeMB}MB.`);
-}
+console.log(`${images.length} slides -> ${outputPath} (${fmtMB(built.size)})`);
