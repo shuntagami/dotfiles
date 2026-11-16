@@ -67,13 +67,27 @@ function writeJson(filePath, data, { mode } = {}) {
   if (mode) fs.chmodSync(filePath, mode);
 }
 
+// Resolve links component by component, allowing a not-yet-created referent.
+// realpath alone cannot repair a dangling link. Detect cycles before any writes.
+function writeDestination(filePath, seen = new Set()) {
+  const absolute = path.resolve(filePath);
+  if (seen.has(absolute)) throw new Error(`Cyclic config link: ${filePath}`);
+  seen.add(absolute);
+  const entry = fs.lstatSync(absolute, { throwIfNoEntry: false });
+  if (entry?.isSymbolicLink()) {
+    return writeDestination(path.resolve(path.dirname(absolute), fs.readlinkSync(absolute)), seen);
+  }
+  if (entry) return fs.realpathSync(absolute);
+  return path.join(writeDestination(path.dirname(absolute), seen), path.basename(absolute));
+}
+
 function writeIfChanged(filePath, content, options) {
   const exists = fs.existsSync(filePath);
   if (exists && fs.readFileSync(filePath, "utf8") === content) return;
   // Update the referent, preserving the app -> repository symlink itself.
-  const linked = fs.lstatSync(filePath, { throwIfNoEntry: false })?.isSymbolicLink();
-  const destination = exists || linked ? fs.realpathSync(filePath) : filePath;
+  const destination = writeDestination(filePath);
   const mode = options?.mode ?? (exists ? fs.statSync(destination).mode & 0o777 : 0o600);
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
   const staging = fs.mkdtempSync(path.join(path.dirname(destination), ".mcp-sync-"));
   const temporary = path.join(staging, "config");
   try {

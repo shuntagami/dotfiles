@@ -143,6 +143,28 @@ class UserConfigPathsTest(unittest.TestCase):
                     self.assertFalse(target.is_symlink())
                     self.assertTrue((target / 'shared').is_symlink())
 
+    def test_whole_directory_link_preserves_custom_and_plugin_skills(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'repo'
+            home = Path(directory) / 'home'
+            local = root / 'local-skills'
+            (local / 'custom').mkdir(parents=True)
+            (local / 'custom/SKILL.md').write_text('custom skill')
+            (local / 'plugin').symlink_to(home / 'plugins/missing')
+            (root / 'agents/skills/shared').mkdir(parents=True)
+            target = home / '.claude/skills'
+            target.parent.mkdir(parents=True)
+            target.symlink_to(local)
+            configs.install_skills(home, root)
+            configs.install_skills(home, root)
+            self.assertFalse(target.is_symlink())
+            self.assertEqual((target / 'custom/SKILL.md').read_text(), 'custom skill')
+            self.assertTrue((target / 'plugin').is_symlink())
+            self.assertTrue((target / 'shared').is_symlink())
+            self.assertEqual((local / 'custom/SKILL.md').read_text(), 'custom skill')
+            self.assertTrue((local / 'plugin').is_symlink())
+            self.assertFalse(list(root.rglob('*.bak.*')))
+
     def test_karabiner_replaces_app_created_directory_and_preserves_backup(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory) / 'Studio'

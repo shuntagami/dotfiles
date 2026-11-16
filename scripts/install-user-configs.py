@@ -147,11 +147,16 @@ def install_links(home, root=ROOT, profile='full', platform=sys.platform, zdotdi
 def install_skills(home, root=ROOT):
     for agent in ('claude', 'codex'):
         destination = home / f'.{agent}/skills'
-        # A whole-directory link into the repo would make child replacements
-        # rename the sources themselves. Detach that link before descending.
-        if destination.is_symlink() and (destination.resolve() == root.resolve() or
-                                         root.resolve() in destination.resolve().parents):
+        # Normalize a whole-directory link before descending, preserving every
+        # existing child through its own link. Never mutate the source directory
+        # and do not lose access to unrelated or plugin-managed skills.
+        if destination.is_symlink():
+            previous = destination.resolve()
+            children = list(previous.iterdir()) if previous.is_dir() else []
             destination.unlink()
+            destination.mkdir(parents=True)
+            for child in children:
+                (destination / child.name).symlink_to(child)
         destination.mkdir(parents=True, exist_ok=True)
         managed_roots = (root / agent / 'skills', root / 'agents/skills')
         resolved_roots = {folder.resolve() for folder in managed_roots}
