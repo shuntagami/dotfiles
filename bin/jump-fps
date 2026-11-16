@@ -3,28 +3,42 @@
 set -euo pipefail
 
 usage() {
-  echo 'Usage: jump-fps [status|stats|rates|auto|FPS]'
+  echo 'Usage: jump-fps [status|stats|rates|auto|FPS] [接続名]'
   echo 'MacBookのJump Desktopの送信fps上限を変更します。引数なしは現在の設定を表示。'
   echo 'stats: 接続統計（実測fps・上限・Pingなど）をターミナルに表示。'
   echo 'rates: 選択できるfpsの一覧。例: jump-fps 48'
+  echo '複数画面は自動判定。複数のMacに接続中なら例: jump-fps 30 "Shun-Tagami-Mac-Studio"'
   echo 'MacBook以外からはSSHで shun-tagami-mbp に接続します。'
 }
 
-if [[ $# -gt 1 ]]; then usage >&2; exit 2; fi
+if [[ $# -gt 2 ]]; then usage >&2; exit 2; fi
 mode=${1:-status}
 case "$mode" in
   status|stats|rates|auto) ;;
   -h|--help) usage; exit 0 ;;
   *) if [[ ! "$mode" =~ ^[0-9]+([.][0-9]+)?$ ]]; then usage >&2; exit 2; fi ;;
 esac
+args=("$mode")
+if [[ $# -eq 2 ]]; then
+  if [[ -z "$2" ]]; then usage >&2; exit 2; fi
+  args+=("$2")
+fi
 
 repo_dir=$(cd "$(dirname "$0")/.." && pwd)
 script="$repo_dir/scripts/jump-desktop-fps.applescript"
 local_host=$(/bin/hostname -s | /usr/bin/tr '[:upper:]' '[:lower:]')
 if [[ "$local_host" == shun-tagami-mbp ]]; then
-  exec /usr/bin/osascript "$script" "$mode"
+  exec /usr/bin/osascript "$script" "${args[@]}"
 else
   # Send the script on stdin; the MacBook does not need a matching checkout.
+  # SSH joins command arguments into shell text. Quote each argument for the
+  # remote shell, including spaces, apostrophes and shell syntax in session names.
+  remote_command='/usr/bin/osascript -'
+  single_quote_escape="'\\''"
+  for arg in "${args[@]}"; do
+    escaped_arg=${arg//\'/$single_quote_escape}
+    remote_command+=" '$escaped_arg'"
+  done
   exec /usr/bin/ssh -o BatchMode=yes -o ConnectTimeout=10 shun-tagami-mbp \
-    /usr/bin/osascript - "$mode" < "$script"
+    "$remote_command" < "$script"
 fi
