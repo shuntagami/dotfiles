@@ -204,6 +204,7 @@ class UserConfigPathsTest(unittest.TestCase):
             expected = {
                 '.codex/AGENTS.md': 'codex/AGENTS.md',
                 '.claude/rules/git-workflow.md': 'docs/git-workflow.md',
+                '.claude/rules/personal-procedures.md': 'docs/personal-procedures.md',
             }
             configs.install('agent-instructions', home)
             for target, source in expected.items():
@@ -225,9 +226,10 @@ class UserConfigPathsTest(unittest.TestCase):
             existing.parent.mkdir(parents=True)
             existing.write_text('アプリの既存ルール\n')
             configs.install('agent-instructions', home, claude_config_dir=profile)
-            target = profile / 'rules/git-workflow.md'
-            self.assertEqual(target.resolve(), (ROOT / 'docs/git-workflow.md').resolve())
-            self.assertEqual((home / '.claude/rules/git-workflow.md').resolve(), target.resolve())
+            for rule in ('git-workflow.md', 'personal-procedures.md'):
+                target = profile / 'rules' / rule
+                self.assertEqual(target.resolve(), (ROOT / 'docs' / rule).resolve())
+                self.assertEqual((home / '.claude/rules' / rule).resolve(), target.resolve())
             self.assertEqual(existing.read_text(), 'アプリの既存ルール\n')
 
     def test_deploy_for_another_user_preserves_sources_and_existing_settings(self):

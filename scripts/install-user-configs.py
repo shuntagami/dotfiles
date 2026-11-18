@@ -213,10 +213,15 @@ def install(name, home, root=ROOT, claude_config_dir=None):
         # 本文はGit管理下に置き、標準の共通指示の置き場所にはリンクだけを作る。
         instructions = [
             ('codex/AGENTS.md', home / '.codex/AGENTS.md'),
-            ('docs/git-workflow.md', home / '.claude/rules/git-workflow.md'),
         ]
+        claude_rules = ('git-workflow.md', 'personal-procedures.md')
+        instructions.extend(
+            (f'docs/{rule}', home / '.claude/rules' / rule) for rule in claude_rules
+        )
         if claude_config_dir is not None:
-            instructions.append(('docs/git-workflow.md', Path(claude_config_dir) / 'rules/git-workflow.md'))
+            instructions.extend(
+                (f'docs/{rule}', Path(claude_config_dir) / 'rules' / rule) for rule in claude_rules
+            )
         for source, _ in instructions:
             if not (root / source).is_file():
                 raise FileNotFoundError(root / source)
