@@ -1,0 +1,182 @@
+#!/usr/bin/env -S deno run -A --ext=js
+// @ts-nocheck
+// PDFをGoogleスライドに変換する。1ページ=1スライドで、ページ画像を画面いっぱいに貼る。
+// 解像度は落とさない: 既定300dpiでラスタライズし、再エンコード・リサイズなしで埋め込む。
+//
+// Usage:
+//   pdf-to-gslides [options] <input.pdf>
+//
+// Options:
+//   -r, --resolution <dpi>   ラスタライズ解像度 (default: 300)
+//   -n, --name <name>        スライドのタイトル (default: PDFのファイル名)
+//   -f, --folder <id|url>    保存先のDriveフォルダ
+//       --share <email>      編集者として共有する (カンマ区切りで複数可)
+//       --keep-pptx [path]   中間のPPTXを残す (pathなしなら <input>.pptx)
+//       --no-upload          Driveに上げず、PPTX作成までで止める (認証不要で確認できる)
+//   -h, --help               このヘルプを表示
+//
+// 仕組み: Ghostscript (PNG) → images-to-pptx --preset original (無加工で埋め込み)
+//        → Drive API で PPTX を Googleスライドに変換アップロード。
+//   スライドの比率はPDFページと同じになる (16:9固定にはしない)。
+//   文字は画像になるのでスライド上では編集できない。編集可能にしたい場合は別手段が要る。
+//
+// 認証: md2gdoc と同じ。~/dotfiles/.env.local の GOOGLE_SERVICE_ACCOUNT_KEY
+//   (+ 任意で GOOGLE_IMPERSONATE_EMAIL) を使う。impersonate なしだとファイルの所有者が
+//   サービスアカウントになり自分から見えないので、--share か --folder (共有済み) を使うこと。
+
+import { existsSync, readFileSync, createReadStream, mkdtempSync, mkdirSync, rmSync, statSync, copyFileSync, readdirSync } from "node:fs";
+import { resolve, dirname, basename, join } from "node:path";
+import { homedir, tmpdir } from "node:os";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+const PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+const SLIDES_MIME = "application/vnd.google-apps.presentation";
+// Googleスライドに入れられる画像の上限 (25メガピクセル)。超えると取り込みに失敗する。
+const MAX_PIXELS = 25_000_000;
+
+function usage(code = 0) {
+  (code === 0 ? console.log : console.error)(`Usage: pdf-to-gslides [options] <input.pdf>
+
+Options:
+  -r, --resolution <dpi>   Rasterize DPI (default: 300)
+  -n, --name <name>        Slides title (default: PDF file name)
+  -f, --folder <id|url>    Destination Drive folder
+      --share <email>      Share as editor (comma-separated for several)
+      --keep-pptx [path]   Keep the intermediate PPTX (default path: <input>.pptx)
+      --no-upload          Stop after building the PPTX (no credentials needed)
+  -h, --help               Show this help
+`);
+  process.exit(code);
+}
+
+const argv = Deno.args;
+const opt = { dpi: 300, name: null, folder: null, share: [], keepPptx: null, upload: true };
+const positional = [];
+for (let i = 0; i < argv.length; i++) {
+  const a = argv[i];
+  const next = () => {
+    if (i + 1 >= argv.length) { console.error(`Error: ${a} requires a value`); usage(1); }
+    return argv[++i];
+  };
+  if (a === "-h" || a === "--help") usage(0);
+  else if (a === "-r" || a === "--resolution") opt.dpi = Number(next());
+  else if (a === "-n" || a === "--name") opt.name = next();
+  else if (a === "-f" || a === "--folder") opt.folder = next();
+  else if (a === "--share") opt.share.push(...next().split(",").map((s) => s.trim()).filter(Boolean));
+  else if (a === "--keep-pptx") {
+    const peek = argv[i + 1];
+    opt.keepPptx = peek && !peek.startsWith("-") ? (i++, peek) : true;
+  } else if (a === "--no-upload") opt.upload = false;
+  else if (a.startsWith("-")) { console.error(`Error: unknown option ${a}`); usage(1); }
+  else positional.push(a);
+}
+if (positional.length !== 1) usage(1);
+if (!Number.isFinite(opt.dpi) || opt.dpi <= 0) { console.error("Error: --resolution must be a positive number"); process.exit(1); }
+
+const input = resolve(positional[0]);
+if (!existsSync(input)) { console.error(`Error: file not found: ${input}`); process.exit(1); }
+if (!/\.pdf$/i.test(input)) { console.error("Error: input must be a .pdf file"); process.exit(1); }
+
+const binDir = dirname(fileURLToPath(import.meta.url));
+const imagesToPptx = join(binDir, "images-to-pptx");
+if (!existsSync(imagesToPptx)) { console.error(`Error: required script not found: ${imagesToPptx}`); process.exit(1); }
+try { execFileSync("gs", ["--version"], { stdio: "ignore" }); } catch { console.error("Error: ghostscript not installed (brew install ghostscript)"); process.exit(1); }
+
+const title = opt.name ?? basename(input).replace(/\.pdf$/i, "");
+const folderId = opt.folder ? (opt.folder.match(/\/folders\/([\w-]+)/)?.[1] ?? opt.folder) : null;
+
+const tmp = mkdtempSync(join(tmpdir(), "pdf-to-gslides-"));
+async function run() {
+  // 1. PDF → PNG (ページごと)。cpdf不要でGhostscriptだけで全ページを描画する。
+  const imgDir = join(tmp, "pages");
+  mkdirSync(imgDir);
+  console.error(`[1/3] rasterizing at ${opt.dpi} dpi ...`);
+  execFileSync("gs", [
+    "-sDEVICE=png16m", `-r${opt.dpi}`, "-dTextAlphaBits=4", "-dGraphicsAlphaBits=4",
+    "-dNOPAUSE", "-dBATCH", "-dQUIET", `-sOutputFile=${join(imgDir, "page-%04d.png")}`, input,
+  ], { stdio: ["ignore", "ignore", "inherit"] });
+
+  // Googleスライドの25MP上限チェック (超えるとアップロードが失敗する)
+  const pngs = readdirSync(imgDir).filter((f) => f.endsWith(".png")).sort();
+  if (pngs.length === 0) throw new Error("no pages were rendered");
+  const sips = (f) => execFileSync("sips", ["-g", "pixelWidth", "-g", "pixelHeight", join(imgDir, f)], { encoding: "utf8" });
+  const dims = (f) => { const o = sips(f); return [+o.match(/pixelWidth: (\d+)/)[1], +o.match(/pixelHeight: (\d+)/)[1]]; };
+  const [w0, h0] = dims(pngs[0]);
+  if (w0 * h0 > MAX_PIXELS) {
+    throw new Error(`page image is ${w0}x${h0} (${(w0 * h0 / 1e6).toFixed(1)}MP), over Google Slides' 25MP limit. Lower --resolution.`);
+  }
+  console.error(`      ${pngs.length} pages, ${w0}x${h0}px each`);
+
+  // 2. PNG → PPTX (無加工で埋め込み)
+  const pptx = join(tmp, "slides.pptx");
+  console.error("[2/3] building pptx (original quality) ...");
+  execFileSync(imagesToPptx, ["-p", "original", imgDir, pptx], { stdio: ["ignore", "ignore", "inherit"] });
+
+  if (opt.keepPptx) {
+    const dest = opt.keepPptx === true ? input.replace(/\.pdf$/i, ".pptx") : resolve(opt.keepPptx);
+    copyFileSync(pptx, dest);
+    console.error(`      kept pptx: ${dest}`);
+  }
+
+  if (!opt.upload) {
+    console.error("[3/3] skipped upload (--no-upload)");
+    return;
+  }
+
+  // 3. PPTX → Googleスライドへ変換アップロード
+  console.error(`[3/3] uploading (${(statSync(pptx).size / 1048576).toFixed(1)} MB) ...`);
+  const ENV_PATH = resolve(homedir(), "dotfiles/.env.local");
+  if (!existsSync(ENV_PATH)) throw new Error(`.env.local not found: ${ENV_PATH}`);
+  for (const line of readFileSync(ENV_PATH, "utf8").split("\n")) {
+    const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
+    if (!m) continue;
+    let v = m[2];
+    if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1, -1);
+    if (!process.env[m[1]]) process.env[m[1]] = v;
+  }
+  const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+  if (!keyJson) throw new Error("GOOGLE_SERVICE_ACCOUNT_KEY is not set in .env.local");
+
+  const { google } = await import("npm:googleapis");
+  const credentials = JSON.parse(keyJson.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t"));
+  const impersonate = process.env.GOOGLE_IMPERSONATE_EMAIL;
+  const auth = new google.auth.GoogleAuth({
+    credentials,
+    scopes: ["https://www.googleapis.com/auth/drive"],
+    ...(impersonate ? { clientOptions: { subject: impersonate } } : {}),
+  });
+  const drive = google.drive({ version: "v3", auth });
+
+  const res = await drive.files.create({
+    requestBody: { name: title, mimeType: SLIDES_MIME, ...(folderId ? { parents: [folderId] } : {}) },
+    media: { mimeType: PPTX_MIME, body: createReadStream(pptx) },
+    fields: "id, webViewLink",
+    supportsAllDrives: true,
+  });
+  const { id, webViewLink } = res.data;
+
+  for (const email of opt.share) {
+    await drive.permissions.create({
+      fileId: id,
+      requestBody: { type: "user", role: "writer", emailAddress: email },
+      sendNotificationEmail: false,
+      supportsAllDrives: true,
+    });
+    console.error(`      shared with ${email}`);
+  }
+  if (!impersonate && !folderId && opt.share.length === 0) {
+    console.error("Warning: owned by the service account and not shared. Use --share <email> or --folder.");
+  }
+
+  console.log(webViewLink ?? `https://docs.google.com/presentation/d/${id}/edit`);
+}
+
+try {
+  await run();
+} catch (e) {
+  console.error(`Error: ${e.message ?? e}`);
+  process.exitCode = 1;
+} finally {
+  rmSync(tmp, { recursive: true, force: true });
+}
