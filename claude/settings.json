@@ -10,7 +10,7 @@
     ],
     "defaultMode": "auto"
   },
-  "model": "fable",
+  "model": "opus",
   "hooks": {
     "Notification": [
       {
@@ -138,7 +138,7 @@
       "effortLevel": "high"
     },
     "claude-fable-5-2": {
-      "effortLevel": "high"
+      "effortLevel": "xhigh"
     }
   },
   "autoCompactWindow": 800000,
