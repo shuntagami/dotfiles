@@ -1,4 +1,6 @@
 bin/private/*
+# Personal procedure profile and identity documents kept on this Mac.
+/private/
 extra.zsh
 karabiner/*
 !karabiner.json
