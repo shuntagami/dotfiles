@@ -210,23 +210,32 @@ Touch ID、AirDrop、近距離通信を使うContinuity機能などはリモー�
 
 ### 左右Commandによる英数・かな切り替え
 
-Karabiner-Elementsが左Command単押しを `japanese_eisuu`、右Command単押しを
-`japanese_kana` へ変換し、Jump Desktopへ渡す。Jump専用のF18/F19への変換や、
-Hammerspoonによる入力ソース切り替え・監視・自動復旧は使用しない。
+接続元のMacBookでは、Jump Desktopが前面のとき、Karabiner-Elementsが
+左Command単押しをF18、右Command単押しをF19に変換する。接続先のMac Studioや
+Mac miniでは、HammerspoonがF18でABC、F19で日本語入力に切り替える。
+Commandを使うショートカットはそのまま使える。MacBookの通常アプリでは、
+Karabiner-Elementsが単押しを直接 `japanese_eisuu` / `japanese_kana` に変換する。
 
-Jump Desktop公式は[10.15.36（2026-10-03）の更新履歴](https://docs.jumpdesktop.com/whats-new/changelog/jump-desktop/#jump-desktop-101536)で、
-Fluid接続中に英数・かなキーが効かない不具合の修正を公表している。
-9月に導入したF18/F19の迂回は、この既知不具合を踏まえて2026-11-01に撤去した。
-当時の導入記録には転送経路の比較検証がなく、個別の原因が確定していたわけではない。
+[Jump Desktop 10.15.36の更新履歴](https://docs.jumpdesktop.com/whats-new/changelog/jump-desktop/#jump-desktop-101536)では、
+Fluid接続中の英数・かなキーの不具合修正が公表されている。2026-11-01に
+F18/F19経由の設定を外したが、同日の10.15.46での確認では接続先に英数だけが届き、
+2026-11-21にMac Studioへの接続でも左右Command単押しの問題が報告されたため、
+F18/F19経由の設定を復元した。
 
-同日の10.15.46での一時テストでは、利用者が左右Commandを押しても英数のままで、
-Mac mini側では英数のキーイベントのみを観測した。公式修正の存在だけを根拠に、
-この環境でも切り替えが正常になったとは判断しない。更新後の実機確認では、
-右Commandで日本語、左Commandで英数になるかを両方向で確認する。
+両方のMacにdotfilesを反映し、接続先のHammerspoonの設定をリロードする。
+Jump Desktopで接続先の入力欄を選び、右Commandで日本語入力、左CommandでABCに
+戻ることを確認する。
 
-最新版は[公式ダウンロード](https://jumpdesktop.com/download-web-mac.html)を確認する。
-2026-11-01時点ではMac版の更新フィードとHomebrewは10.15.46を案内したが、
-公式ダウンロードのアプリ実体は10.15.51だった。Connectも10.15.51を使用する。
+接続先のHammerspoon Consoleで次を実行すると、キーの受信に使うイベント監視の
+状態を確認できる。
+
+```lua
+hs.inspect(require('keyboard.remote-input-source').status())
+```
+
+`probeReplies` が増えていれば、監視がイベントを受信できている。
+`secureInput = true` の間は、パスワード欄などでmacOSがキー監視を遮断している。
+監視は解除後に復旧する。
 
 ## SSH の改善
 
