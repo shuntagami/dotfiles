@@ -19,6 +19,7 @@
                                 },
                                 "to": [{ "key_code": "left_command" }],
                                 "to_if_alone": [{ "key_code": "f18" }],
+                                "parameters": { "basic.to_if_alone_timeout_milliseconds": 2000 },
                                 "type": "basic"
                             },
                             {
@@ -34,6 +35,7 @@
                                 },
                                 "to": [{ "key_code": "right_command" }],
                                 "to_if_alone": [{ "key_code": "f19" }],
+                                "parameters": { "basic.to_if_alone_timeout_milliseconds": 2000 },
                                 "type": "basic"
                             }
                         ]

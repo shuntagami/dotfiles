@@ -216,6 +216,9 @@ Mac miniでは、HammerspoonがF18でABC、F19で日本語入力に切り替え�
 Commandを使うショートカットはそのまま使える。MacBookの通常アプリでは、
 Karabiner-Elementsが単押しを直接 `japanese_eisuu` / `japanese_kana` に変換する。
 
+Jump Desktop用の単押し判定は、接続元でCommandを押してから離すまで2秒以内とする。
+Commandを押している間に別のキーやクリック、スクロールが入ると、切り替えは行わない。
+
 [Jump Desktop 10.15.36の更新履歴](https://docs.jumpdesktop.com/whats-new/changelog/jump-desktop/#jump-desktop-101536)では、
 Fluid接続中の英数・かなキーの不具合修正が公表されている。2026-11-01に
 F18/F19経由の設定を外したが、同日の10.15.46での確認では接続先に英数だけが届き、
